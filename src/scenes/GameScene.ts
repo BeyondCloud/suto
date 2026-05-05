@@ -18,6 +18,7 @@ const CARDINAL_DIRS: Direction[] = ['U', 'D', 'L', 'R'];
 const CHECKPOINT_RADIUS = 18;
 const HIT_RADIUS = 30;
 const FALSE_TOUCH_DAMAGE = 5;
+const PENALTY_COOLDOWN_MS = 200;
 const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   U: 'prompt_U',
   D: 'prompt_D',
@@ -127,6 +128,8 @@ export class GameScene extends Phaser.Scene {
   };
   private lifeBar!: Phaser.GameObjects.Graphics;
   private lifeValue = 100;
+  private scoreValue = 0;
+  private scoreText!: Phaser.GameObjects.Text;
   private stageText!: Phaser.GameObjects.Text;
   private roundText!: Phaser.GameObjects.Text;
   private beatTimer!: Phaser.Time.TimerEvent;
@@ -144,6 +147,7 @@ export class GameScene extends Phaser.Scene {
   private activeShrinks: Map<number, ActiveShrink> = new Map();
   private nextShrinkId = 1;
   private falseTouchedLines: Set<Direction> = new Set();
+  private penaltyCooldownUntil = 0;
 
   // Pause
   private isPaused = false;
@@ -176,6 +180,7 @@ export class GameScene extends Phaser.Scene {
     this.currentStage = LEVEL_DATA.stages[this.stageIndex];
     this.sectionIndex = 0;
     this.lifeValue = 100;
+    this.scoreValue = 0;
     this.shrinkTweens.clear();
 
     this.ellipseGraphics = this.add.graphics();
@@ -212,12 +217,18 @@ export class GameScene extends Phaser.Scene {
     const cx = GAME_WIDTH / 2;
     this.stageText = this.add.text(cx, 24, '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(10);
     this.roundText = this.add.text(cx, 58, '', { fontSize: '20px', color: '#cccccc' }).setOrigin(0.5, 0).setDepth(10);
+    this.scoreText = this.add.text(GAME_WIDTH - 24, 24, '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(1, 0).setDepth(10);
     this.updateHUD();
+    this.updateScoreText();
   }
 
   private updateHUD() {
     this.stageText.setText(`Stage ${this.currentStage.stage_number}`);
     this.roundText.setText(`${this.sectionIndex + 1}/${this.currentStage.sections.length}`);
+  }
+
+  private updateScoreText() {
+    this.scoreText.setText(`Score ${this.scoreValue}`);
   }
 
   private createLifeBar() {
@@ -344,6 +355,7 @@ export class GameScene extends Phaser.Scene {
     this.shrinkTweens.clear();
     this.activeShrinks.clear();
     this.falseTouchedLines.clear();
+    this.penaltyCooldownUntil = 0;
   }
 
   private createPauseMenu() {
@@ -695,6 +707,7 @@ export class GameScene extends Phaser.Scene {
     this.shrinkTweens.clear();
     this.activeShrinks.clear();
     this.falseTouchedLines.clear();
+    this.penaltyCooldownUntil = 0;
     this.cursorGifAngleTween?.stop();
     for (const cp of this.checkpoints) {
       if (!cp.outerCircle.active || !cp.outerCircle.geom) continue;
@@ -763,6 +776,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (this.isPenaltyCooldownActive()) {
+      this.falseTouchedLines.clear();
+      return;
+    }
+
     const rect = this.getHitboxRect(x, y);
     const touchedLines = this.getTouchedCardinalLines(rect);
     const allowedLines = this.getAllowedCardinalLines();
@@ -806,6 +824,10 @@ export class GameScene extends Phaser.Scene {
     if (dir === 'DL') return ['D', 'L'];
     if (dir === 'DR') return ['D', 'R'];
     return CARDINAL_DIRS.includes(dir) ? [dir] : [];
+  }
+
+  private isPenaltyCooldownActive(): boolean {
+    return this.time.now < this.penaltyCooldownUntil;
   }
 
   private setGifCursorVisible(visible: boolean) {
@@ -918,6 +940,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPerfect(dir: Direction) {
+    this.penaltyCooldownUntil = this.time.now + PENALTY_COOLDOWN_MS;
+    this.falseTouchedLines.clear();
+    this.scoreValue++;
+    this.updateScoreText();
     this.lifeValue = Math.min(100, this.lifeValue + 2);
     this.drawLifeBar();
     this.showJudgement(dir, 'perfect', '#7cff8f');

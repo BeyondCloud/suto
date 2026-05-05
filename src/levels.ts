@@ -29,10 +29,10 @@ export const LEVEL_DATA: LevelData = {
       stage_number: 1,
       bpm: 183,
       sections: [
-        {
-          type: 'normal',
-          prompts: ['U', 'U', 'U', 'U', 'D', 'D', 'D', 'D'],
-        },
+        // {
+        //   type: 'normal',
+        //   prompts: ['U', 'U', 'U', 'U', 'D', 'D', 'D', 'D'],
+        // },
         {
           type: 'normal',
           prompts: ['U', 'D', 'L', 'R', 'U', 'D', 'L', 'R'],
