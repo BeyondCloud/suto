@@ -4,6 +4,7 @@ export const GAME_HEIGHT = 720;
 export interface GameSettings {
   bpm: number;
   shrinkLeadMs: number;
+  perfectJudgeWindowMs: number;
   hitboxWidth: number;
   hitboxHeight: number;
   checkDepth: number;
@@ -13,6 +14,7 @@ export interface GameSettings {
 export const DEFAULT_SETTINGS: GameSettings = {
   bpm: 183,
   shrinkLeadMs: 500,
+  perfectJudgeWindowMs: 80,
   hitboxWidth: 500,
   hitboxHeight: 300,
   checkDepth: 50,

@@ -38,14 +38,14 @@ export const LEVEL_DATA: LevelData = {
           start: 'U',
           rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
         },
-        {
-          type: 'normal',
-          prompts: ['U', 'D', 'L', 'R', 'U', 'D', 'L', 'R'],
-        },
-        {
-          type: 'normal',
-          prompts: ['L', 'R', 'U', 'R', 'L', 'D', 'U', 'L'],
-        },
+        // {
+        //   type: 'normal',
+        //   prompts: ['U', 'D', 'L', 'R', 'U', 'D', 'L', 'R'],
+        // },
+        // {
+        //   type: 'normal',
+        //   prompts: ['L', 'R', 'U', 'R', 'L', 'D', 'U', 'L'],
+        // },
         {
           type: 'normal',
           prompts: ['U', 'R', 'R', 'L', 'D', 'L', 'R', 'U'],
@@ -54,7 +54,7 @@ export const LEVEL_DATA: LevelData = {
     },
     {
       stage_number: 2,
-      bpm: 183,
+      bpm: 120,
       sections: [
         {
           type: 'normal',
@@ -64,7 +64,7 @@ export const LEVEL_DATA: LevelData = {
     },
     {
       stage_number: 3,
-      bpm: 183,
+      bpm: 120,
       sections: [
         {
           type: 'rotation',

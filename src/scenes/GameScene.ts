@@ -18,7 +18,6 @@ const CARDINAL_DIRS: Direction[] = ['U', 'D', 'L', 'R'];
 const CHECKPOINT_RADIUS = 18;
 const HIT_RADIUS = 30;
 const FALSE_TOUCH_DAMAGE = 5;
-const PENALTY_COOLDOWN_MS = 200;
 const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   U: 'prompt_U',
   D: 'prompt_D',
@@ -39,6 +38,7 @@ interface ActiveShrink {
   id: number;
   dir: Direction;
   hit: boolean;
+  judgementTimeMs: number;
   tween?: Phaser.Tweens.Tween;
 }
 
@@ -128,8 +128,10 @@ export class GameScene extends Phaser.Scene {
   };
   private lifeBar!: Phaser.GameObjects.Graphics;
   private lifeValue = 100;
-  private scoreValue = 0;
-  private scoreText!: Phaser.GameObjects.Text;
+  private perfectCount = 0;
+  private missCount = 0;
+  private falseTouchCount = 0;
+  private judgementText!: Phaser.GameObjects.Text;
   private stageText!: Phaser.GameObjects.Text;
   private roundText!: Phaser.GameObjects.Text;
   private beatTimer!: Phaser.Time.TimerEvent;
@@ -179,7 +181,9 @@ export class GameScene extends Phaser.Scene {
     this.loadStage(this.stageIndex);
     this.sectionIndex = 0;
     this.lifeValue = 100;
-    this.scoreValue = 0;
+    this.perfectCount = 0;
+    this.missCount = 0;
+    this.falseTouchCount = 0;
     this.shrinkTweens.clear();
 
     this.ellipseGraphics = this.add.graphics();
@@ -221,9 +225,9 @@ export class GameScene extends Phaser.Scene {
     const cx = GAME_WIDTH / 2;
     this.stageText = this.add.text(cx, 24, '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(10);
     this.roundText = this.add.text(cx, 58, '', { fontSize: '20px', color: '#cccccc' }).setOrigin(0.5, 0).setDepth(10);
-    this.scoreText = this.add.text(GAME_WIDTH - 24, 24, '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(1, 0).setDepth(10);
+    this.judgementText = this.add.text(GAME_WIDTH - 24, 24, '', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold', align: 'right' }).setOrigin(1, 0).setDepth(10);
     this.updateHUD();
-    this.updateScoreText();
+    this.updateJudgementText();
   }
 
   private updateHUD() {
@@ -231,8 +235,12 @@ export class GameScene extends Phaser.Scene {
     this.roundText.setText(`${this.sectionIndex + 1}/${this.currentStage.sections.length}`);
   }
 
-  private updateScoreText() {
-    this.scoreText.setText(`Score ${this.scoreValue}`);
+  private updateJudgementText() {
+    this.judgementText.setText([
+      `Perfect ${this.perfectCount}`,
+      `Miss ${this.missCount}`,
+      `X ${this.falseTouchCount}`,
+    ]);
   }
 
   private createLifeBar() {
@@ -707,7 +715,12 @@ export class GameScene extends Phaser.Scene {
     const delay = Math.max(0, this.beatMs - leadMs);
     const event = this.time.delayedCall(delay, () => {
       const id = this.nextShrinkId++;
-      const active: ActiveShrink = { id, dir, hit: false };
+      const active: ActiveShrink = {
+        id,
+        dir,
+        hit: false,
+        judgementTimeMs: this.time.now + leadMs,
+      };
       this.activeShrinks.set(id, active);
 
       if (this.isCardinal(dir)) {
@@ -820,7 +833,7 @@ export class GameScene extends Phaser.Scene {
     const hits: ActiveShrink[] = [];
 
     for (const active of this.activeShrinks.values()) {
-      if (!active.hit && this.checkHit(x, y, active.dir)) {
+      if (!active.hit && this.isWithinPerfectWindow(active) && this.checkHit(x, y, active.dir)) {
         hits.push(active);
       }
     }
@@ -833,6 +846,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.checkFalseTouches(x, y);
+  }
+
+  private isWithinPerfectWindow(active: ActiveShrink): boolean {
+    const windowMs = Math.max(0, this.settings.perfectJudgeWindowMs ?? 0);
+    return Math.abs(this.time.now - active.judgementTimeMs) <= windowMs;
   }
 
   private checkFalseTouches(x: number, y: number) {
@@ -875,10 +893,15 @@ export class GameScene extends Phaser.Scene {
 
   private getAllowedCardinalLines(): Set<Direction> {
     const allowed = new Set<Direction>();
+    let hasDiagonal = false;
     for (const active of this.activeShrinks.values()) {
       for (const line of this.getCardinalLinesForDir(active.dir)) {
         allowed.add(line);
       }
+      if (!this.isCardinal(active.dir)) hasDiagonal = true;
+    }
+    if (hasDiagonal) {
+      for (const dir of CARDINAL_DIRS) allowed.add(dir);
     }
     return allowed;
   }
@@ -1005,10 +1028,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPerfect(dir: Direction) {
-    this.penaltyCooldownUntil = this.time.now + PENALTY_COOLDOWN_MS;
+    this.penaltyCooldownUntil = this.time.now + this.beatMs;
     this.falseTouchedLines.clear();
-    this.scoreValue++;
-    this.updateScoreText();
+    this.perfectCount++;
+    this.updateJudgementText();
     this.lifeValue = Math.min(100, this.lifeValue + 4);
     this.drawLifeBar();
     this.playEdgeHitEffect(dir);
@@ -1018,6 +1041,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onMiss(dir: Direction) {
+    this.missCount++;
+    this.updateJudgementText();
     this.lifeValue = Math.max(0, this.lifeValue - 20);
     this.drawLifeBar();
     this.showJudgement(dir, 'miss', '#ff5a6b');
@@ -1025,6 +1050,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onFalseTouch(dir: Direction) {
+    this.falseTouchCount++;
+    this.updateJudgementText();
     this.lifeValue = Math.max(0, this.lifeValue - FALSE_TOUCH_DAMAGE);
     this.drawLifeBar();
     this.showJudgement(dir, 'X', '#ffb14a');
@@ -1168,6 +1195,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   update() {
+    if (this.gamePhase === 'check' && !this.isPaused) {
+      this.checkActiveHits(this.cursorWorldX, this.cursorWorldY);
+    }
     if (this.settings.debugMode) this.drawEllipse();
   }
 }
