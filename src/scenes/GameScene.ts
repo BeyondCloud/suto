@@ -624,6 +624,58 @@ export class GameScene extends Phaser.Scene {
     return this.add.rectangle(GAME_WIDTH - d, GAME_HEIGHT / 2, thickness, GAME_HEIGHT, 0xffffff, 0.95);
   }
 
+  private createEdgeHitFlash(dir: Direction): Phaser.GameObjects.Rectangle {
+    const d = this.checkDepth();
+    const color = 0xffde4a;
+    if (dir === 'U') return this.add.rectangle(GAME_WIDTH / 2, d / 2, GAME_WIDTH, d, color, 0);
+    if (dir === 'D') return this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - d / 2, GAME_WIDTH, d, color, 0);
+    if (dir === 'L') return this.add.rectangle(d / 2, GAME_HEIGHT / 2, d, GAME_HEIGHT, color, 0);
+    return this.add.rectangle(GAME_WIDTH - d / 2, GAME_HEIGHT / 2, d, GAME_HEIGHT, color, 0);
+  }
+
+  private playEdgeHitEffect(dir: Direction) {
+    if (!this.isCardinal(dir)) return;
+
+    const d = this.checkDepth();
+    const thickness = 6;
+    const flyRatio = 0.25;
+    const flash = this.createEdgeHitFlash(dir).setDepth(7);
+    const line = this.createEdgeLine(dir)
+      .setDepth(8)
+      .setFillStyle(0xfff1a8, 1)
+      .setAlpha(1);
+
+    const target: { x?: number; y?: number } = {};
+    if (dir === 'U' || dir === 'D') {
+      const startY = dir === 'U' ? d : GAME_HEIGHT - d;
+      target.y = Phaser.Math.Linear(startY, GAME_HEIGHT / 2, flyRatio);
+      line.setSize(GAME_WIDTH, thickness);
+      line.setPosition(GAME_WIDTH / 2, startY);
+    } else {
+      const startX = dir === 'L' ? d : GAME_WIDTH - d;
+      target.x = Phaser.Math.Linear(startX, GAME_WIDTH / 2, flyRatio);
+      line.setSize(thickness, GAME_HEIGHT);
+      line.setPosition(startX, GAME_HEIGHT / 2);
+    }
+
+    this.tweens.add({
+      targets: flash,
+      alpha: { from: 0.62, to: 0 },
+      duration: 180,
+      ease: 'Quad.easeOut',
+      onComplete: () => flash.destroy(),
+    });
+
+    this.tweens.add({
+      targets: line,
+      ...target,
+      alpha: 0,
+      duration: 260,
+      ease: 'Cubic.easeOut',
+      onComplete: () => line.destroy(),
+    });
+  }
+
   private triggerShrinkForBeat(beat: number) {
     const lead = this.settings.shrinkLeadMs;
     if (this.isRotation) {
@@ -946,6 +998,7 @@ export class GameScene extends Phaser.Scene {
     this.updateScoreText();
     this.lifeValue = Math.min(100, this.lifeValue + 2);
     this.drawLifeBar();
+    this.playEdgeHitEffect(dir);
     this.showJudgement(dir, 'perfect', '#7cff8f');
     this.flashOverlay.setAlpha(0.35);
     this.tweens.add({ targets: this.flashOverlay, alpha: 0, duration: 180, ease: 'Linear' });
