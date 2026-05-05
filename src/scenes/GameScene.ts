@@ -45,9 +45,44 @@ export class GameScene extends Phaser.Scene {
   private hitboxGraphics!: Phaser.GameObjects.Graphics;
   private cursorGifFrame!: HTMLDivElement;
   private cursorGif!: HTMLImageElement;
-  private cursorGifVisible = false;
   private cursorGifAngle = { value: 180 };
   private cursorGifAngleTween?: Phaser.Tweens.Tween;
+  private cursorScaleX = 1;
+  private cursorScaleY = 1;
+  private cursorCanvasLeft = 0;
+  private cursorCanvasTop = 0;
+  private cursorWidth = 0;
+  private cursorHeight = 0;
+  private lastCursorX = Number.NaN;
+  private lastCursorY = Number.NaN;
+  private lastCursorAngle = Number.NaN;
+  private resetGifCursorCache() {
+    this.cursorWidth = 0;
+    this.cursorHeight = 0;
+    this.lastCursorX = Number.NaN;
+    this.lastCursorY = Number.NaN;
+    this.lastCursorAngle = Number.NaN;
+  }
+  private readonly refreshGifCursorMetrics = () => {
+    if (!this.cursorGifFrame || !this.cursorGif) return;
+
+    const rect = this.game.canvas.getBoundingClientRect();
+    this.cursorCanvasLeft = rect.left;
+    this.cursorCanvasTop = rect.top;
+    this.cursorScaleX = rect.width / GAME_WIDTH;
+    this.cursorScaleY = rect.height / GAME_HEIGHT;
+
+    const width = this.settings.hitboxWidth * this.cursorScaleX;
+    const height = this.settings.hitboxHeight * this.cursorScaleY;
+    if (width !== this.cursorWidth || height !== this.cursorHeight) {
+      this.cursorWidth = width;
+      this.cursorHeight = height;
+      this.cursorGifFrame.style.width = `${width}px`;
+      this.cursorGifFrame.style.height = `${height}px`;
+      this.cursorGif.style.width = `${width}px`;
+      this.cursorGif.style.height = `${height}px`;
+    }
+  };
   private lifeBar!: Phaser.GameObjects.Graphics;
   private lifeValue = 100;
   private stageText!: Phaser.GameObjects.Text;
@@ -180,10 +215,14 @@ export class GameScene extends Phaser.Scene {
 
   private createCursors() {
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
+    this.resetGifCursorCache();
     this.cursorGifFrame = document.createElement('div');
     this.cursorGifFrame.style.position = 'fixed';
     this.cursorGifFrame.style.pointerEvents = 'none';
-    this.cursorGifFrame.style.transform = 'translate(-50%, -50%)';
+    this.cursorGifFrame.style.left = '0';
+    this.cursorGifFrame.style.top = '0';
+    this.cursorGifFrame.style.transform = 'translate3d(-9999px, -9999px, 0) translate(-50%, -50%)';
+    this.cursorGifFrame.style.willChange = 'transform';
     this.cursorGifFrame.style.zIndex = '10';
     this.cursorGifFrame.style.display = 'none';
     this.cursorGifFrame.style.overflow = 'hidden';
@@ -201,11 +240,14 @@ export class GameScene extends Phaser.Scene {
     this.cursorGif.style.pointerEvents = 'none';
     this.cursorGif.style.transformOrigin = 'center center';
     this.cursorGif.style.userSelect = 'none';
+    this.cursorGif.style.willChange = 'transform';
     this.cursorGif.style.opacity = '0.85';
     this.cursorGifFrame.appendChild(this.cursorGif);
     document.body.appendChild(this.cursorGifFrame);
+    this.refreshGifCursorMetrics();
     this.setGifCursorAngle(this.cursorGifAngle.value);
     this.updateGifCursorPosition(cx, cy);
+    window.addEventListener('resize', this.refreshGifCursorMetrics);
     this.input.setDefaultCursor('none');
   }
 
@@ -213,7 +255,9 @@ export class GameScene extends Phaser.Scene {
     this.input.setDefaultCursor('default');
     this.setGifCursorVisible(false);
     this.cursorGifAngleTween?.stop();
+    window.removeEventListener('resize', this.refreshGifCursorMetrics);
     this.cursorGifFrame?.remove();
+    this.resetGifCursorCache();
     this.beatTimer?.remove(false);
     for (const event of this.shrinkStartEvents) event.remove(false);
     this.shrinkStartEvents = [];
@@ -544,7 +588,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private setGifCursorVisible(visible: boolean) {
-    this.cursorGifVisible = visible;
     if (!this.cursorGifFrame) return;
 
     this.cursorGifFrame.style.display = visible ? 'block' : 'none';
@@ -556,19 +599,16 @@ export class GameScene extends Phaser.Scene {
 
   private updateGifCursorPosition(x: number, y: number) {
     if (!this.cursorGifFrame || !this.cursorGif) return;
+    if (this.cursorWidth === 0 || this.cursorHeight === 0) {
+      this.refreshGifCursorMetrics();
+    }
+    if (x === this.lastCursorX && y === this.lastCursorY) return;
 
-    const rect = this.game.canvas.getBoundingClientRect();
-    const scaleX = rect.width / GAME_WIDTH;
-    const scaleY = rect.height / GAME_HEIGHT;
-    const width = this.settings.hitboxWidth * scaleX;
-    const height = this.settings.hitboxHeight * scaleY;
-    this.cursorGifFrame.style.left = `${rect.left + x * scaleX}px`;
-    this.cursorGifFrame.style.top = `${rect.top + y * scaleY}px`;
-    this.cursorGifFrame.style.width = `${width}px`;
-    this.cursorGifFrame.style.height = `${height}px`;
-    this.cursorGif.style.width = `${width}px`;
-    this.cursorGif.style.height = `${height}px`;
-    this.setGifCursorAngle(this.cursorGifAngle.value);
+    this.lastCursorX = x;
+    this.lastCursorY = y;
+    const screenX = this.cursorCanvasLeft + x * this.cursorScaleX;
+    const screenY = this.cursorCanvasTop + y * this.cursorScaleY;
+    this.cursorGifFrame.style.transform = `translate3d(${screenX}px, ${screenY}px, 0) translate(-50%, -50%)`;
   }
 
   private rotateGifCursorTo(dir: Direction, duration: number) {
@@ -594,6 +634,8 @@ export class GameScene extends Phaser.Scene {
 
   private setGifCursorAngle(angle: number) {
     if (!this.cursorGif) return;
+    if (angle === this.lastCursorAngle) return;
+    this.lastCursorAngle = angle;
     this.cursorGif.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
   }
 
@@ -743,9 +785,5 @@ export class GameScene extends Phaser.Scene {
 
   update() {
     if (this.settings.debugMode) this.drawEllipse();
-    if (this.cursorGifVisible) {
-      const pointer = this.input.activePointer;
-      this.updateGifCursorPosition(pointer.x, pointer.y);
-    }
   }
 }
