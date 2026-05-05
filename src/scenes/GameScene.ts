@@ -14,8 +14,10 @@ import { LEVEL_DATA } from '../levels';
 import type { Stage, Section, NormalSection, RotationSection } from '../levels';
 
 const ALL_DIRS: Direction[] = ['U', 'UR', 'R', 'DR', 'D', 'DL', 'L', 'UL'];
+const CARDINAL_DIRS: Direction[] = ['U', 'D', 'L', 'R'];
 const CHECKPOINT_RADIUS = 18;
 const HIT_RADIUS = 30;
+const FALSE_TOUCH_DAMAGE = 5;
 const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   U: 'prompt_U',
   D: 'prompt_D',
@@ -137,11 +139,11 @@ export class GameScene extends Phaser.Scene {
   // Check phase
   private beatTargets: Direction[] = [];
   private beatTargetPairs: [Direction, Direction][] = [];
-  private shrinkTweens: Map<Direction, Phaser.Tweens.Tween> = new Map();
+  private shrinkTweens: Map<number, Phaser.Tweens.Tween> = new Map();
   private shrinkStartEvents: Phaser.Time.TimerEvent[] = [];
   private activeShrinks: Map<number, ActiveShrink> = new Map();
-  private activeShrinkIdsByDir: Map<Direction, number> = new Map();
   private nextShrinkId = 1;
+  private falseTouchedLines: Set<Direction> = new Set();
 
   // Pause
   private isPaused = false;
@@ -341,7 +343,7 @@ export class GameScene extends Phaser.Scene {
     for (const t of this.shrinkTweens.values()) t.stop();
     this.shrinkTweens.clear();
     this.activeShrinks.clear();
-    this.activeShrinkIdsByDir.clear();
+    this.falseTouchedLines.clear();
   }
 
   private createPauseMenu() {
@@ -634,15 +636,11 @@ export class GameScene extends Phaser.Scene {
     outer.setRadius(60).setAlpha(1).setVisible(false);
     cp.edgeLine?.setAlpha(1).setVisible(false);
 
-    const existing = this.shrinkTweens.get(dir);
-    if (existing) existing.stop();
-
     const delay = Math.max(0, this.beatMs - leadMs);
     const event = this.time.delayedCall(delay, () => {
       const id = this.nextShrinkId++;
       const active: ActiveShrink = { id, dir, hit: false };
       this.activeShrinks.set(id, active);
-      this.activeShrinkIdsByDir.set(dir, id);
 
       if (this.isCardinal(dir)) {
         cp.edgeZone?.setVisible(true).setAlpha(0.24);
@@ -655,7 +653,7 @@ export class GameScene extends Phaser.Scene {
           onComplete: () => this.finishShrink(id),
         });
         active.tween = t;
-        this.shrinkTweens.set(dir, t);
+        this.shrinkTweens.set(id, t);
       } else {
         outer.setVisible(true);
         const t = this.tweens.add({
@@ -666,7 +664,7 @@ export class GameScene extends Phaser.Scene {
           onComplete: () => this.finishShrink(id),
         });
         active.tween = t;
-        this.shrinkTweens.set(dir, t);
+        this.shrinkTweens.set(id, t);
       }
 
       this.checkActiveHits(this.cursorWorldX, this.cursorWorldY);
@@ -681,9 +679,8 @@ export class GameScene extends Phaser.Scene {
     if (!active.hit) this.onMiss(active.dir);
 
     this.activeShrinks.delete(id);
-    if (this.activeShrinkIdsByDir.get(active.dir) === id) {
-      this.activeShrinkIdsByDir.delete(active.dir);
-      this.shrinkTweens.delete(active.dir);
+    this.shrinkTweens.delete(id);
+    if (!this.hasActiveShrinkForDir(active.dir)) {
       const cp = this.checkpoints.find(c => c.dir === active.dir)!;
       cp.outerCircle.setRadius(60).setAlpha(1).setVisible(false);
       cp.edgeZone?.setAlpha(0.16);
@@ -697,7 +694,7 @@ export class GameScene extends Phaser.Scene {
     for (const t of this.shrinkTweens.values()) t.stop();
     this.shrinkTweens.clear();
     this.activeShrinks.clear();
-    this.activeShrinkIdsByDir.clear();
+    this.falseTouchedLines.clear();
     this.cursorGifAngleTween?.stop();
     for (const cp of this.checkpoints) {
       if (!cp.outerCircle.active || !cp.outerCircle.geom) continue;
@@ -751,11 +748,64 @@ export class GameScene extends Phaser.Scene {
   }
 
   private checkActiveHits(x: number, y: number) {
+    this.checkFalseTouches(x, y);
+
     for (const active of this.activeShrinks.values()) {
       if (!active.hit && this.checkHit(x, y, active.dir)) {
         this.resolvePerfect(active);
       }
     }
+  }
+
+  private checkFalseTouches(x: number, y: number) {
+    if (this.activeShrinks.size === 0) {
+      this.falseTouchedLines.clear();
+      return;
+    }
+
+    const rect = this.getHitboxRect(x, y);
+    const touchedLines = this.getTouchedCardinalLines(rect);
+    const allowedLines = this.getAllowedCardinalLines();
+    const currentFalseTouches = new Set<Direction>();
+
+    for (const line of touchedLines) {
+      if (allowedLines.has(line)) continue;
+
+      currentFalseTouches.add(line);
+      if (!this.falseTouchedLines.has(line)) {
+        this.onFalseTouch(line);
+      }
+    }
+
+    this.falseTouchedLines = currentFalseTouches;
+  }
+
+  private getTouchedCardinalLines(rect: HitboxRect): Direction[] {
+    const d = this.checkDepth();
+    const touched: Direction[] = [];
+    if (rect.top <= d) touched.push('U');
+    if (rect.bottom >= GAME_HEIGHT - d) touched.push('D');
+    if (rect.left <= d) touched.push('L');
+    if (rect.right >= GAME_WIDTH - d) touched.push('R');
+    return touched;
+  }
+
+  private getAllowedCardinalLines(): Set<Direction> {
+    const allowed = new Set<Direction>();
+    for (const active of this.activeShrinks.values()) {
+      for (const line of this.getCardinalLinesForDir(active.dir)) {
+        allowed.add(line);
+      }
+    }
+    return allowed;
+  }
+
+  private getCardinalLinesForDir(dir: Direction): Direction[] {
+    if (dir === 'UL') return ['U', 'L'];
+    if (dir === 'UR') return ['U', 'R'];
+    if (dir === 'DL') return ['D', 'L'];
+    if (dir === 'DR') return ['D', 'R'];
+    return CARDINAL_DIRS.includes(dir) ? [dir] : [];
   }
 
   private setGifCursorVisible(visible: boolean) {
@@ -827,39 +877,48 @@ export class GameScene extends Phaser.Scene {
   private getJudgementPos(dir: Direction): { x: number; y: number } {
     const rect = this.getHitboxRect(this.cursorWorldX, this.cursorWorldY);
     const d = this.checkDepth();
+    const clampPos = (pos: { x: number; y: number }) => ({
+      x: Phaser.Math.Clamp(pos.x, 120, GAME_WIDTH - 120),
+      y: Phaser.Math.Clamp(pos.y, 146, GAME_HEIGHT - 50),
+    });
 
-    if (dir === 'U') return { x: Phaser.Math.Clamp(rect.centerX, 0, GAME_WIDTH), y: d };
-    if (dir === 'D') return { x: Phaser.Math.Clamp(rect.centerX, 0, GAME_WIDTH), y: GAME_HEIGHT - d };
-    if (dir === 'L') return { x: d, y: Phaser.Math.Clamp(rect.centerY, 0, GAME_HEIGHT) };
-    if (dir === 'R') return { x: GAME_WIDTH - d, y: Phaser.Math.Clamp(rect.centerY, 0, GAME_HEIGHT) };
+    if (dir === 'U') return clampPos({ x: Phaser.Math.Clamp(rect.centerX, 0, GAME_WIDTH), y: d });
+    if (dir === 'D') return clampPos({ x: Phaser.Math.Clamp(rect.centerX, 0, GAME_WIDTH), y: GAME_HEIGHT - d });
+    if (dir === 'L') return clampPos({ x: d, y: Phaser.Math.Clamp(rect.centerY, 0, GAME_HEIGHT) });
+    if (dir === 'R') return clampPos({ x: GAME_WIDTH - d, y: Phaser.Math.Clamp(rect.centerY, 0, GAME_HEIGHT) });
 
     const pos = this.getTargetPos(dir);
     const cx = Phaser.Math.Clamp(pos.x, rect.left, rect.right);
     const cy = Phaser.Math.Clamp(pos.y, rect.top, rect.bottom);
     const dx = pos.x - cx, dy = pos.y - cy;
-    if (dx * dx + dy * dy <= HIT_RADIUS * HIT_RADIUS) return { x: pos.x, y: pos.y };
-    return { x: cx, y: cy };
+    if (dx * dx + dy * dy <= HIT_RADIUS * HIT_RADIUS) return clampPos({ x: pos.x, y: pos.y });
+    return clampPos({ x: cx, y: cy });
   }
 
   private resolvePerfect(active: ActiveShrink) {
     active.hit = true;
     active.tween?.stop();
     this.activeShrinks.delete(active.id);
+    this.shrinkTweens.delete(active.id);
 
-    if (this.activeShrinkIdsByDir.get(active.dir) === active.id) {
-      this.activeShrinkIdsByDir.delete(active.dir);
-      this.shrinkTweens.delete(active.dir);
+    if (!this.hasActiveShrinkForDir(active.dir)) {
+      const cp = this.checkpoints.find(c => c.dir === active.dir)!;
+      cp.outerCircle.setRadius(60).setAlpha(1).setVisible(false);
+      cp.edgeZone?.setAlpha(0.16);
+      cp.edgeLine?.setAlpha(1).setVisible(false);
     }
-
-    const cp = this.checkpoints.find(c => c.dir === active.dir)!;
-    cp.outerCircle.setRadius(60).setAlpha(1).setVisible(false);
-    cp.edgeZone?.setAlpha(0.16);
-    cp.edgeLine?.setAlpha(1).setVisible(false);
     this.onPerfect(active.dir);
   }
 
+  private hasActiveShrinkForDir(dir: Direction): boolean {
+    for (const active of this.activeShrinks.values()) {
+      if (active.dir === dir) return true;
+    }
+    return false;
+  }
+
   private onPerfect(dir: Direction) {
-    this.lifeValue = Math.min(100, this.lifeValue + 5);
+    this.lifeValue = Math.min(100, this.lifeValue + 2);
     this.drawLifeBar();
     this.showJudgement(dir, 'perfect', '#7cff8f');
     this.flashOverlay.setAlpha(0.35);
@@ -873,31 +932,69 @@ export class GameScene extends Phaser.Scene {
     if (this.lifeValue <= 0) this.triggerGameOver();
   }
 
-  private showJudgement(dir: Direction, label: 'perfect' | 'miss', color: string) {
+  private onFalseTouch(dir: Direction) {
+    this.lifeValue = Math.max(0, this.lifeValue - FALSE_TOUCH_DAMAGE);
+    this.drawLifeBar();
+    this.showJudgement(dir, 'X', '#ffb14a');
+    if (this.lifeValue <= 0) this.triggerGameOver();
+  }
+
+  private showJudgement(dir: Direction, label: 'perfect' | 'miss' | 'X', color: string) {
     const pos = this.getJudgementPos(dir);
-    const text = this.add.text(pos.x, pos.y - 48, label, {
-      fontSize: label === 'perfect' ? '34px' : '30px',
-      color,
-      fontStyle: 'bold',
-      stroke: '#111118',
-      strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(60).setAlpha(0);
+    this.refreshGifCursorMetrics();
+
+    if (!this.cursorClipFrame) return;
+
+    const text = document.createElement('div');
+    const baseFontSize = label === 'perfect' ? 34 : 30;
+    const fontScale = Math.min(this.cursorScaleX, this.cursorScaleY);
+    text.textContent = label;
+    text.style.position = 'absolute';
+    text.style.left = `${pos.x * this.cursorScaleX}px`;
+    text.style.top = `${(pos.y - 48) * this.cursorScaleY}px`;
+    text.style.pointerEvents = 'none';
+    text.style.zIndex = '30';
+    text.style.color = color;
+    text.style.fontSize = `${baseFontSize * fontScale}px`;
+    text.style.fontWeight = '700';
+    text.style.fontFamily = "system-ui, 'Segoe UI', Roboto, sans-serif";
+    text.style.lineHeight = '1';
+    text.style.whiteSpace = 'nowrap';
+    text.style.webkitTextStroke = `${5 * fontScale}px #111118`;
+    text.style.paintOrder = 'stroke fill';
+    text.style.transformOrigin = 'center center';
+    text.style.willChange = 'transform, opacity';
+    this.cursorClipFrame.appendChild(text);
+
+    const state = {
+      y: pos.y - 48,
+      alpha: 0,
+      scale: 1,
+    };
+    const render = () => {
+      text.style.top = `${state.y * this.cursorScaleY}px`;
+      text.style.opacity = `${state.alpha}`;
+      text.style.transform = `translate(-50%, -50%) scale(${state.scale})`;
+    };
+    render();
 
     this.tweens.add({
-      targets: text,
-      y: text.y - 28,
+      targets: state,
+      y: state.y - 28,
       alpha: 1,
       scale: label === 'perfect' ? 1.14 : 1,
       duration: 120,
       ease: 'Quad.easeOut',
+      onUpdate: render,
       onComplete: () => {
         this.tweens.add({
-          targets: text,
-          y: text.y - 18,
+          targets: state,
+          y: state.y - 18,
           alpha: 0,
           duration: 420,
           ease: 'Quad.easeIn',
-          onComplete: () => text.destroy(),
+          onUpdate: render,
+          onComplete: () => text.remove(),
         });
       },
     });

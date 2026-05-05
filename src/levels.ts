@@ -31,6 +31,10 @@ export const LEVEL_DATA: LevelData = {
       sections: [
         {
           type: 'normal',
+          prompts: ['U', 'U', 'U', 'U', 'D', 'D', 'D', 'D'],
+        },
+        {
+          type: 'normal',
           prompts: ['U', 'D', 'L', 'R', 'U', 'D', 'L', 'R'],
         },
         {
