@@ -54,6 +54,7 @@ export class GameScene extends Phaser.Scene {
   private currentBeatHit = false;
   private firstHitDone = false;
   private shrinkTweens: Map<Direction, Phaser.Tweens.Tween> = new Map();
+  private shrinkStartEvents: Phaser.Time.TimerEvent[] = [];
 
   // Pause
   private isPaused = false;
@@ -396,15 +397,21 @@ export class GameScene extends Phaser.Scene {
     if (existing) existing.stop();
 
     const delay = Math.max(0, this.beatMs - leadMs);
-    this.time.delayedCall(delay, () => {
+    const event = this.time.delayedCall(delay, () => {
       const t = this.tweens.add({ targets: outer, radius: CHECKPOINT_RADIUS, duration: leadMs, ease: 'Linear' });
       this.shrinkTweens.set(dir, t);
     });
+    this.shrinkStartEvents.push(event);
   }
 
   private stopAllShrinks() {
+    for (const event of this.shrinkStartEvents) event.remove(false);
+    this.shrinkStartEvents = [];
     for (const t of this.shrinkTweens.values()) t.stop();
     this.shrinkTweens.clear();
+    for (const cp of this.checkpoints) {
+      cp.outerCircle.setRadius(60).setAlpha(1);
+    }
   }
 
   // ---------- Input ----------
