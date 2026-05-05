@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import suto400GifUrl from '../assets/suto400_2x.gif';
 import {
   GAME_WIDTH, GAME_HEIGHT,
   DIR_ANGLE, ELLIPSE_CX, ELLIPSE_CY, ELLIPSE_RX, ELLIPSE_RY,
@@ -43,7 +44,8 @@ export class GameScene extends Phaser.Scene {
   private checkpoints: CheckpointUI[] = [];
   private hitboxGraphics!: Phaser.GameObjects.Graphics;
   private cursorStatic!: Phaser.GameObjects.Image;
-  private cursorGif!: Phaser.GameObjects.Image;
+  private cursorGif!: HTMLImageElement;
+  private cursorGifVisible = false;
   private lifeBar!: Phaser.GameObjects.Graphics;
   private lifeValue = 100;
   private stageText!: Phaser.GameObjects.Text;
@@ -85,7 +87,6 @@ export class GameScene extends Phaser.Scene {
     this.load.image('down', 'src/assets/down.png');
     this.load.image('down_left', 'src/assets/down_left.png');
     this.load.image('suto400_static', 'src/assets/suto400.png');
-    this.load.image('suto400_gif', 'src/assets/suto400.gif');
   }
 
   create() {
@@ -181,14 +182,25 @@ export class GameScene extends Phaser.Scene {
     this.cursorStatic = this.add.image(cx, cy, 'suto400_static')
       .setDisplaySize(this.settings.hitboxWidth, this.settings.hitboxHeight)
       .setDepth(20).setVisible(false).setAlpha(0.85);
-    this.cursorGif = this.add.image(cx, cy, 'suto400_gif')
-      .setDisplaySize(this.settings.hitboxWidth, this.settings.hitboxHeight)
-      .setDepth(20).setVisible(false).setAlpha(0.85);
+    this.cursorGif = document.createElement('img');
+    this.cursorGif.src = suto400GifUrl;
+    this.cursorGif.alt = '';
+    this.cursorGif.draggable = false;
+    this.cursorGif.style.position = 'fixed';
+    this.cursorGif.style.pointerEvents = 'none';
+    this.cursorGif.style.transform = 'translate(-50%, -50%)';
+    this.cursorGif.style.opacity = '0.85';
+    this.cursorGif.style.zIndex = '10';
+    this.cursorGif.style.display = 'none';
+    document.body.appendChild(this.cursorGif);
+    this.updateGifCursorPosition(cx, cy);
     this.input.setDefaultCursor('none');
   }
 
   private cleanupScene() {
     this.input.setDefaultCursor('default');
+    this.setGifCursorVisible(false);
+    this.cursorGif?.remove();
     this.beatTimer?.remove(false);
     for (const event of this.shrinkStartEvents) event.remove(false);
     this.shrinkStartEvents = [];
@@ -235,7 +247,7 @@ export class GameScene extends Phaser.Scene {
     this.clearPromptGrid();
     this.buildPromptGrid();
     this.cursorStatic.setVisible(true);
-    this.cursorGif.setVisible(false);
+    this.setGifCursorVisible(false);
     this.beatCount = 0;
 
     // Fire first beat immediately, then repeat
@@ -249,7 +261,7 @@ export class GameScene extends Phaser.Scene {
     this.clearPromptGrid();
     this.setInnerCheckpointsVisible(true);
     this.cursorStatic.setVisible(false);
-    this.cursorGif.setVisible(true);
+    this.setGifCursorVisible(true);
     this.beatCount = 0;
     this.buildBeatTargets();
 
@@ -283,7 +295,7 @@ export class GameScene extends Phaser.Scene {
   private onCheckPhaseEnd() {
     this.stopAllShrinks();
     this.setCheckpointsVisible(false);
-    this.cursorGif.setVisible(false);
+    this.setGifCursorVisible(false);
     this.sectionIndex++;
     if (this.sectionIndex >= this.currentStage.sections.length) {
       this.stageIndex++;
@@ -474,7 +486,7 @@ export class GameScene extends Phaser.Scene {
   private onMouseMove(ptr: Phaser.Input.Pointer) {
     const { x, y } = ptr;
     this.cursorStatic.setPosition(x, y);
-    this.cursorGif.setPosition(x, y);
+    this.updateGifCursorPosition(x, y);
 
     this.hitboxGraphics.clear();
     if (this.settings.debugMode && this.gamePhase === 'check') {
@@ -492,6 +504,29 @@ export class GameScene extends Phaser.Scene {
         this.resolvePerfect(active);
       }
     }
+  }
+
+  private setGifCursorVisible(visible: boolean) {
+    this.cursorGifVisible = visible;
+    if (!this.cursorGif) return;
+
+    this.cursorGif.style.display = visible ? 'block' : 'none';
+    if (visible) {
+      const pointer = this.input.activePointer;
+      this.updateGifCursorPosition(pointer.x, pointer.y);
+    }
+  }
+
+  private updateGifCursorPosition(x: number, y: number) {
+    if (!this.cursorGif) return;
+
+    const rect = this.game.canvas.getBoundingClientRect();
+    const scaleX = rect.width / GAME_WIDTH;
+    const scaleY = rect.height / GAME_HEIGHT;
+    this.cursorGif.style.left = `${rect.left + x * scaleX}px`;
+    this.cursorGif.style.top = `${rect.top + y * scaleY}px`;
+    this.cursorGif.style.width = `${this.settings.hitboxWidth * scaleX}px`;
+    this.cursorGif.style.height = `${this.settings.hitboxHeight * scaleY}px`;
   }
 
   private checkHit(mx: number, my: number, dir: Direction): boolean {
@@ -567,7 +602,7 @@ export class GameScene extends Phaser.Scene {
     this.beatTimer?.remove();
     this.stopAllShrinks();
     this.setCheckpointsVisible(false);
-    this.cursorGif.setVisible(false);
+    this.setGifCursorVisible(false);
     this.cursorStatic.setVisible(false);
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
     this.add.text(cx, cy - 40, 'GAME OVER', { fontSize: '64px', color: '#ff4444' }).setOrigin(0.5).setDepth(200);
@@ -594,6 +629,7 @@ export class GameScene extends Phaser.Scene {
     this.isPaused = false;
     this.setGameplayTimersPaused(false);
     this.input.setDefaultCursor('default');
+    this.setGifCursorVisible(false);
     this.pauseContainer.setVisible(false);
     this.countdownText.setVisible(false);
     this.beatTimer?.remove(false);
@@ -606,6 +642,7 @@ export class GameScene extends Phaser.Scene {
     this.isPaused = true;
     this.setGameplayTimersPaused(true);
     this.pauseContainer.setVisible(true);
+    this.setGifCursorVisible(false);
     this.input.setDefaultCursor('default');
   }
 
@@ -623,6 +660,7 @@ export class GameScene extends Phaser.Scene {
         this.isPaused = false;
         this.setGameplayTimersPaused(false);
         this.input.setDefaultCursor('none');
+        this.setGifCursorVisible(this.gamePhase === 'check');
       }
     };
     tick();
@@ -630,5 +668,9 @@ export class GameScene extends Phaser.Scene {
 
   update() {
     if (this.settings.debugMode) this.drawEllipse();
+    if (this.cursorGifVisible) {
+      const pointer = this.input.activePointer;
+      this.updateGifCursorPosition(pointer.x, pointer.y);
+    }
   }
 }
