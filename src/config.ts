@@ -12,8 +12,8 @@ export interface GameSettings {
 export const DEFAULT_SETTINGS: GameSettings = {
   bpm: 183,
   shrinkLeadMs: 500,
-  hitboxWidth: 400,
-  hitboxHeight: 240,
+  hitboxWidth: 600,
+  hitboxHeight: 360,
   debugMode: false,
 };
 

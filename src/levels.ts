@@ -52,7 +52,7 @@ export const LEVEL_DATA: LevelData = {
         {
           type: 'rotation',
           start: 'U',
-          rotate: ['R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'],
+          rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
         },
       ],
     },

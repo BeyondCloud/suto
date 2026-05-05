@@ -43,7 +43,6 @@ export class GameScene extends Phaser.Scene {
   private ellipseGraphics!: Phaser.GameObjects.Graphics;
   private checkpoints: CheckpointUI[] = [];
   private hitboxGraphics!: Phaser.GameObjects.Graphics;
-  private cursorStatic!: Phaser.GameObjects.Image;
   private cursorGifFrame!: HTMLDivElement;
   private cursorGif!: HTMLImageElement;
   private cursorGifVisible = false;
@@ -89,7 +88,6 @@ export class GameScene extends Phaser.Scene {
   preload() {
     this.load.image('down', 'src/assets/down.png');
     this.load.image('down_left', 'src/assets/down_left.png');
-    this.load.image('suto400_static', 'src/assets/suto400.png');
   }
 
   create() {
@@ -182,10 +180,6 @@ export class GameScene extends Phaser.Scene {
 
   private createCursors() {
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
-    this.cursorStatic = this.add.image(cx, cy, 'suto400_static')
-      .setDisplaySize(this.settings.hitboxWidth, this.settings.hitboxHeight)
-      .setDepth(20).setVisible(false).setAlpha(0.85);
-
     this.cursorGifFrame = document.createElement('div');
     this.cursorGifFrame.style.position = 'fixed';
     this.cursorGifFrame.style.pointerEvents = 'none';
@@ -265,7 +259,6 @@ export class GameScene extends Phaser.Scene {
     this.setCheckpointsVisible(false);
     this.clearPromptGrid();
     this.buildPromptGrid();
-    this.cursorStatic.setVisible(true);
     this.setGifCursorVisible(false);
     this.beatCount = 0;
 
@@ -279,7 +272,6 @@ export class GameScene extends Phaser.Scene {
     this.gamePhase = 'check';
     this.clearPromptGrid();
     this.setInnerCheckpointsVisible(true);
-    this.cursorStatic.setVisible(false);
     this.beatCount = 0;
     this.buildBeatTargets();
     const firstDir = this.isRotation ? this.beatTargetPairs[0]?.[0] : this.beatTargets[0];
@@ -340,34 +332,48 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildPromptGrid() {
-    const cols = 4, cellW = 100, cellH = 100;
-    const startX = GAME_WIDTH / 2 - (cols * cellW) / 2 + cellW / 2;
-    const startY = GAME_HEIGHT / 2 - (2 * cellH) / 2 + cellH / 2;
+    const pointer = this.input.activePointer;
+    const x = pointer.x || GAME_WIDTH / 2;
+    const y = pointer.y || GAME_HEIGHT / 2;
 
     if (this.isRotation) {
       const sec = this.currentSection as RotationSection;
       this.rotCurrentDir = sec.start;
       for (let i = 0; i < 8; i++) {
-        const x = startX + (i % cols) * cellW;
-        const y = startY + Math.floor(i / cols) * cellH;
-        this.promptImages.push(this.addArrowImage(x, y, sec.start));
+        this.promptImages.push(this.addArrowImage(0, 0, sec.start));
       }
     } else {
       const sec = this.currentSection as NormalSection;
       for (let i = 0; i < 8; i++) {
-        const x = startX + (i % cols) * cellW;
-        const y = startY + Math.floor(i / cols) * cellH;
-        this.promptImages.push(this.addArrowImage(x, y, sec.prompts[i]));
+        this.promptImages.push(this.addArrowImage(0, 0, sec.prompts[i]));
       }
     }
+    this.positionPromptGrid(x, y);
+    this.drawHitbox(x, y);
   }
 
   private addArrowImage(x: number, y: number, dir: Direction): Phaser.GameObjects.Image {
     const isDiagonal = dir === 'UL' || dir === 'UR' || dir === 'DL' || dir === 'DR';
     const key = isDiagonal ? 'down_left' : 'down';
-    const img = this.add.image(x, y, key).setDisplaySize(70, 70).setDepth(15).setAlpha(0.4);
+    const img = this.add.image(x, y, key).setDepth(15).setAlpha(0.4);
     img.setAngle(isDiagonal ? DIR_ANGLE[dir] - 45 : DIR_ANGLE[dir]);
     return img;
+  }
+
+  private positionPromptGrid(x: number, y: number) {
+    const cols = 4;
+    const rows = 2;
+    const cellW = this.settings.hitboxWidth / cols;
+    const cellH = this.settings.hitboxHeight / rows;
+    const arrowSize = Math.max(24, Math.min(cellW, cellH) * 0.55);
+    const startX = x - this.settings.hitboxWidth / 2 + cellW / 2;
+    const startY = y - this.settings.hitboxHeight / 2 + cellH / 2;
+
+    for (let i = 0; i < this.promptImages.length; i++) {
+      this.promptImages[i]
+        .setPosition(startX + (i % cols) * cellW, startY + Math.floor(i / cols) * cellH)
+        .setDisplaySize(arrowSize, arrowSize);
+    }
   }
 
   private highlightPromptBeat(beat: number) {
@@ -513,17 +519,20 @@ export class GameScene extends Phaser.Scene {
 
   private onMouseMove(ptr: Phaser.Input.Pointer) {
     const { x, y } = ptr;
-    this.cursorStatic.setPosition(x, y);
+    if (this.gamePhase === 'prompt') this.positionPromptGrid(x, y);
     this.updateGifCursorPosition(x, y);
-
-    this.hitboxGraphics.clear();
-    if (this.gamePhase === 'check' && !this.isPaused) {
-      this.hitboxGraphics.lineStyle(2, 0xffffff, 1);
-      this.hitboxGraphics.strokeRect(x - this.settings.hitboxWidth / 2, y - this.settings.hitboxHeight / 2, this.settings.hitboxWidth, this.settings.hitboxHeight);
-    }
+    this.drawHitbox(x, y);
 
     if (this.gamePhase !== 'check' || this.isPaused) return;
     this.checkActiveHits(x, y);
+  }
+
+  private drawHitbox(x: number, y: number) {
+    this.hitboxGraphics.clear();
+    if ((this.gamePhase === 'prompt' || this.gamePhase === 'check') && !this.isPaused) {
+      this.hitboxGraphics.lineStyle(2, 0xffffff, 1);
+      this.hitboxGraphics.strokeRect(x - this.settings.hitboxWidth / 2, y - this.settings.hitboxHeight / 2, this.settings.hitboxWidth, this.settings.hitboxHeight);
+    }
   }
 
   private checkActiveHits(x: number, y: number) {
@@ -662,7 +671,7 @@ export class GameScene extends Phaser.Scene {
     this.stopAllShrinks();
     this.setCheckpointsVisible(false);
     this.setGifCursorVisible(false);
-    this.cursorStatic.setVisible(false);
+    this.hitboxGraphics.clear();
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
     this.add.text(cx, cy - 40, 'GAME OVER', { fontSize: '64px', color: '#ff4444' }).setOrigin(0.5).setDepth(200);
     this.add.text(cx, cy + 40, '按任意鍵繼續', { fontSize: '28px', color: '#ffffff' }).setOrigin(0.5).setDepth(200);
