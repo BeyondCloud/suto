@@ -27,7 +27,7 @@ export const LEVEL_DATA: LevelData = {
   stages: [
     {
       stage_number: 1,
-      bpm: 120,
+      bpm: 183,
       sections: [
         {
           type: 'normal',
@@ -37,7 +37,7 @@ export const LEVEL_DATA: LevelData = {
     },
     {
       stage_number: 2,
-      bpm: 120,
+      bpm: 183,
       sections: [
         {
           type: 'normal',
@@ -47,7 +47,7 @@ export const LEVEL_DATA: LevelData = {
     },
     {
       stage_number: 3,
-      bpm: 120,
+      bpm: 183,
       sections: [
         {
           type: 'rotation',

@@ -10,7 +10,7 @@ export interface GameSettings {
 }
 
 export const DEFAULT_SETTINGS: GameSettings = {
-  bpm: 120,
+  bpm: 183,
   shrinkLeadMs: 1000,
   hitboxWidth: 400,
   hitboxHeight: 240,
@@ -54,8 +54,8 @@ export function getRotationPoints(current: Direction, rotDir: 'L' | 'R'): [Direc
 // Ellipse parameters
 export const ELLIPSE_CX = GAME_WIDTH / 2;
 export const ELLIPSE_CY = GAME_HEIGHT / 2;
-export const ELLIPSE_RX = 420;
-export const ELLIPSE_RY = 260;
+export const ELLIPSE_RX = (GAME_WIDTH - 200) / 2; // Leave some margin on sides
+export const ELLIPSE_RY = (GAME_HEIGHT - 100) / 2; // Leave some margin on top/bottom
 
 // Get screen position of a direction's checkpoint on the ellipse edge
 export function getCheckpointPos(dir: Direction): { x: number; y: number } {

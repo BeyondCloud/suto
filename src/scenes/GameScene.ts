@@ -264,16 +264,19 @@ export class GameScene extends Phaser.Scene {
       this.beatCount++;
       if (this.beatCount >= 8) {
         this.beatTimer?.remove();
-        this.time.delayedCall(this.beatMs, () => this.startCheckPhase());
+        this.startCheckPhase();
       }
     } else {
       if (this.beatCount >= 8) {
         this.beatTimer?.remove();
-        this.time.delayedCall(this.settings.shrinkLeadMs, () => this.onCheckPhaseEnd());
         return;
       }
       this.triggerShrinkForBeat(this.beatCount);
       this.beatCount++;
+      if (this.beatCount >= 8) {
+        this.beatTimer?.remove();
+        this.time.delayedCall(this.settings.shrinkLeadMs, () => this.onCheckPhaseEnd());
+      }
     }
   }
 
@@ -289,10 +292,10 @@ export class GameScene extends Phaser.Scene {
       } else {
         this.currentStage = LEVEL_DATA.stages[this.stageIndex];
         this.sectionIndex = 0;
-        this.time.delayedCall(500, () => this.startSection());
+        this.startSection();
       }
     } else {
-      this.time.delayedCall(500, () => this.startSection());
+      this.startSection();
     }
   }
 
@@ -402,7 +405,8 @@ export class GameScene extends Phaser.Scene {
     if (this.isRotation) {
       const [first, second] = this.beatTargetPairs[beat];
       this.startShrink(first, lead);
-      this.time.delayedCall(this.beatMs / 2, () => this.startShrink(second, lead));
+      const secondShrinkEvent = this.time.delayedCall(this.beatMs / 2, () => this.startShrink(second, lead));
+      this.shrinkStartEvents.push(secondShrinkEvent);
     } else {
       this.startShrink(this.beatTargets[beat], lead);
     }
@@ -574,8 +578,21 @@ export class GameScene extends Phaser.Scene {
 
   // ---------- Pause ----------
 
+  private setGameplayTimersPaused(paused: boolean) {
+    if (this.beatTimer) this.beatTimer.paused = paused;
+    for (const event of this.shrinkStartEvents) event.paused = paused;
+    for (const tween of this.shrinkTweens.values()) {
+      if (paused) {
+        tween.pause();
+      } else {
+        tween.resume();
+      }
+    }
+  }
+
   private returnToMenu() {
     this.isPaused = false;
+    this.setGameplayTimersPaused(false);
     this.input.setDefaultCursor('default');
     this.pauseContainer.setVisible(false);
     this.countdownText.setVisible(false);
@@ -587,7 +604,7 @@ export class GameScene extends Phaser.Scene {
   private onEsc() {
     if (this.isPaused) return;
     this.isPaused = true;
-    this.beatTimer.paused = true;
+    this.setGameplayTimersPaused(true);
     this.pauseContainer.setVisible(true);
     this.input.setDefaultCursor('default');
   }
@@ -604,7 +621,7 @@ export class GameScene extends Phaser.Scene {
       } else {
         this.countdownText.setVisible(false);
         this.isPaused = false;
-        this.beatTimer.paused = false;
+        this.setGameplayTimersPaused(false);
         this.input.setDefaultCursor('none');
       }
     };
