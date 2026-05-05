@@ -604,15 +604,16 @@ export class GameScene extends Phaser.Scene {
 
   private getTargetPos(dir: Direction): { x: number; y: number } {
     const d = this.checkDepth();
+    const diagonalInset = 100;
     const positions: Record<Direction, { x: number; y: number }> = {
       U: { x: GAME_WIDTH / 2, y: d },
       D: { x: GAME_WIDTH / 2, y: GAME_HEIGHT - d },
       L: { x: d, y: GAME_HEIGHT / 2 },
       R: { x: GAME_WIDTH - d, y: GAME_HEIGHT / 2 },
-      UL: { x: d, y: d },
-      UR: { x: GAME_WIDTH - d, y: d },
-      DL: { x: d, y: GAME_HEIGHT - d },
-      DR: { x: GAME_WIDTH - d, y: GAME_HEIGHT - d },
+      UL: { x: d + diagonalInset, y: d + diagonalInset },
+      UR: { x: GAME_WIDTH - d - diagonalInset, y: d + diagonalInset },
+      DL: { x: d + diagonalInset, y: GAME_HEIGHT - d - diagonalInset },
+      DR: { x: GAME_WIDTH - d - diagonalInset, y: GAME_HEIGHT - d - diagonalInset },
     };
     return positions[dir];
   }
