@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
 import suto400GifUrl from '../assets/suto400_2x.gif';
+import promptDUrl from '../assets/audio/D.wav';
+import promptLUrl from '../assets/audio/L.wav';
+import promptRUrl from '../assets/audio/R.wav';
+import promptUUrl from '../assets/audio/U.wav';
 import {
   GAME_WIDTH, GAME_HEIGHT,
   DIR_ANGLE, ELLIPSE_CX, ELLIPSE_CY, ELLIPSE_RX, ELLIPSE_RY,
@@ -12,6 +16,12 @@ import type { Stage, Section, NormalSection, RotationSection } from '../levels';
 const ALL_DIRS: Direction[] = ['U', 'UR', 'R', 'DR', 'D', 'DL', 'L', 'UL'];
 const CHECKPOINT_RADIUS = 18;
 const HIT_RADIUS = 30;
+const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
+  U: 'prompt_U',
+  D: 'prompt_D',
+  L: 'prompt_L',
+  R: 'prompt_R',
+};
 
 interface CheckpointUI {
   dir: Direction;
@@ -123,6 +133,10 @@ export class GameScene extends Phaser.Scene {
   preload() {
     this.load.image('down', 'src/assets/down.png');
     this.load.image('down_left', 'src/assets/down_left.png');
+    this.load.audio('prompt_U', promptUUrl);
+    this.load.audio('prompt_D', promptDUrl);
+    this.load.audio('prompt_L', promptLUrl);
+    this.load.audio('prompt_R', promptRUrl);
   }
 
   create() {
@@ -448,10 +462,20 @@ export class GameScene extends Phaser.Scene {
       }
       this.rotCurrentDir = next;
     } else {
+      const sec = this.currentSection as NormalSection;
+      this.playPromptAudio(sec.prompts[beat]);
+
       for (let i = 0; i < this.promptImages.length; i++) {
         this.promptImages[i].setAlpha(i === beat ? 1 : 0.35);
       }
     }
+  }
+
+  private playPromptAudio(dir: Direction) {
+    const key = PROMPT_AUDIO_KEYS[dir];
+    if (!key) return;
+
+    this.sound.play(key);
   }
 
   private getArrowAngle(dir: Direction): number {
