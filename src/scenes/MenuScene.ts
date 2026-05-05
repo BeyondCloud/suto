@@ -19,6 +19,7 @@ export class MenuScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
     const cx = width / 2;
+    this.input.setDefaultCursor('default');
 
     // Title
     this.add.text(cx, height * 0.28, 'SUTO', {

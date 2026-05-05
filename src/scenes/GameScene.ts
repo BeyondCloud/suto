@@ -109,6 +109,7 @@ export class GameScene extends Phaser.Scene {
 
     this.input.keyboard!.on('keydown-ESC', () => this.onEsc());
     this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => this.onMouseMove(ptr));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanupScene());
 
     this.startSection();
   }
@@ -186,6 +187,17 @@ export class GameScene extends Phaser.Scene {
     this.input.setDefaultCursor('none');
   }
 
+  private cleanupScene() {
+    this.input.setDefaultCursor('default');
+    this.beatTimer?.remove(false);
+    for (const event of this.shrinkStartEvents) event.remove(false);
+    this.shrinkStartEvents = [];
+    for (const t of this.shrinkTweens.values()) t.stop();
+    this.shrinkTweens.clear();
+    this.activeShrinks.clear();
+    this.activeShrinkIdsByDir.clear();
+  }
+
   private createPauseMenu() {
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
     this.pauseContainer = this.add.container(cx, cy).setDepth(100).setVisible(false);
@@ -201,7 +213,7 @@ export class GameScene extends Phaser.Scene {
     };
 
     const resumeBtn = makeBtn('繼續', -30, () => this.resumeWithCountdown());
-    const homeBtn = makeBtn('返回主頁', 30, () => { this.beatTimer?.remove(); this.scene.start('MenuScene'); });
+    const homeBtn = makeBtn('返回主頁', 30, () => this.returnToMenu());
 
     this.pauseContainer.add([bg, title, resumeBtn, homeBtn]);
     this.countdownText = this.add.text(cx, cy, '', { fontSize: '80px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(110).setVisible(false);
@@ -448,6 +460,7 @@ export class GameScene extends Phaser.Scene {
     this.activeShrinks.clear();
     this.activeShrinkIdsByDir.clear();
     for (const cp of this.checkpoints) {
+      if (!cp.outerCircle.active || !cp.outerCircle.geom) continue;
       cp.outerCircle.setRadius(60).setAlpha(1).setVisible(false);
     }
   }
@@ -560,6 +573,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ---------- Pause ----------
+
+  private returnToMenu() {
+    this.isPaused = false;
+    this.input.setDefaultCursor('default');
+    this.pauseContainer.setVisible(false);
+    this.countdownText.setVisible(false);
+    this.beatTimer?.remove(false);
+    this.stopAllShrinks();
+    this.time.delayedCall(0, () => this.scene.start('MenuScene'));
+  }
 
   private onEsc() {
     if (this.isPaused) return;
