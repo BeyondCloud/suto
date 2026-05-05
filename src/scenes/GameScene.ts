@@ -7,7 +7,7 @@ import promptUUrl from '../assets/audio/U.wav';
 import {
   GAME_WIDTH, GAME_HEIGHT,
   DIR_ANGLE, ELLIPSE_CX, ELLIPSE_CY, ELLIPSE_RX, ELLIPSE_RY,
-  getCheckpointPos, getRotationPoints,
+  getRotationPoints,
 } from '../config';
 import type { GameSettings, Direction } from '../config';
 import { LEVEL_DATA } from '../levels';
@@ -28,6 +28,8 @@ interface CheckpointUI {
   pos: { x: number; y: number };
   outerCircle: Phaser.GameObjects.Arc;
   innerCircle: Phaser.GameObjects.Arc;
+  edgeZone?: Phaser.GameObjects.Rectangle;
+  edgeLine?: Phaser.GameObjects.Rectangle;
 }
 
 interface ActiveShrink {
@@ -35,6 +37,15 @@ interface ActiveShrink {
   dir: Direction;
   hit: boolean;
   tween?: Phaser.Tweens.Tween;
+}
+
+interface HitboxRect {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  centerX: number;
+  centerY: number;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -189,6 +200,9 @@ export class GameScene extends Phaser.Scene {
     if (this.settings.debugMode) {
       this.ellipseGraphics.lineStyle(2, 0xffffff, 1);
       this.ellipseGraphics.strokeEllipse(ELLIPSE_CX, ELLIPSE_CY, ELLIPSE_RX * 2, ELLIPSE_RY * 2);
+      const d = this.checkDepth();
+      this.ellipseGraphics.lineStyle(1, 0x66d9ff, 0.6);
+      this.ellipseGraphics.strokeRect(d, d, GAME_WIDTH - d * 2, GAME_HEIGHT - d * 2);
     }
   }
 
@@ -225,24 +239,40 @@ export class GameScene extends Phaser.Scene {
   private createCheckpoints() {
     this.checkpoints = [];
     for (const dir of ALL_DIRS) {
-      const pos = getCheckpointPos(dir);
+      const pos = this.getTargetPos(dir);
       const outer = this.add.arc(pos.x, pos.y, 60, 0, 360, false, 0xffffff, 0).setStrokeStyle(3, 0xffffff, 1).setDepth(5);
       const inner = this.add.arc(pos.x, pos.y, CHECKPOINT_RADIUS, 0, 360, false, 0xffffff, 0.5).setDepth(5);
-      this.checkpoints.push({ dir, pos, outerCircle: outer, innerCircle: inner });
+      const cp: CheckpointUI = { dir, pos, outerCircle: outer, innerCircle: inner };
+
+      if (this.isCardinal(dir)) {
+        const zone = this.createEdgeZone(dir).setDepth(4).setVisible(false);
+        const line = this.createEdgeLine(dir).setDepth(6).setVisible(false);
+        outer.setVisible(false);
+        inner.setVisible(false);
+        cp.edgeZone = zone;
+        cp.edgeLine = line;
+      }
+
+      this.checkpoints.push(cp);
     }
   }
 
   private setCheckpointsVisible(vis: boolean) {
     for (const cp of this.checkpoints) {
-      cp.outerCircle.setVisible(vis);
-      cp.innerCircle.setVisible(vis);
+      const circleVisible = vis && !this.isCardinal(cp.dir);
+      cp.outerCircle.setVisible(circleVisible);
+      cp.innerCircle.setVisible(circleVisible);
+      cp.edgeZone?.setVisible(vis);
+      cp.edgeLine?.setVisible(vis);
     }
   }
 
   private setInnerCheckpointsVisible(vis: boolean) {
     for (const cp of this.checkpoints) {
       cp.outerCircle.setVisible(false);
-      cp.innerCircle.setVisible(vis);
+      cp.innerCircle.setVisible(vis && !this.isCardinal(cp.dir));
+      cp.edgeZone?.setVisible(vis);
+      cp.edgeLine?.setVisible(false);
     }
   }
 
@@ -538,6 +568,48 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private checkDepth(): number {
+    return Phaser.Math.Clamp(this.settings.checkDepth ?? 50, 0, Math.min(GAME_WIDTH, GAME_HEIGHT) / 2);
+  }
+
+  private isCardinal(dir: Direction): boolean {
+    return dir === 'U' || dir === 'D' || dir === 'L' || dir === 'R';
+  }
+
+  private getTargetPos(dir: Direction): { x: number; y: number } {
+    const d = this.checkDepth();
+    const positions: Record<Direction, { x: number; y: number }> = {
+      U: { x: GAME_WIDTH / 2, y: d },
+      D: { x: GAME_WIDTH / 2, y: GAME_HEIGHT - d },
+      L: { x: d, y: GAME_HEIGHT / 2 },
+      R: { x: GAME_WIDTH - d, y: GAME_HEIGHT / 2 },
+      UL: { x: d, y: d },
+      UR: { x: GAME_WIDTH - d, y: d },
+      DL: { x: d, y: GAME_HEIGHT - d },
+      DR: { x: GAME_WIDTH - d, y: GAME_HEIGHT - d },
+    };
+    return positions[dir];
+  }
+
+  private createEdgeZone(dir: Direction): Phaser.GameObjects.Rectangle {
+    const d = this.checkDepth();
+    const color = 0xffffff;
+    const alpha = 0.16;
+    if (dir === 'U') return this.add.rectangle(GAME_WIDTH / 2, d / 2, GAME_WIDTH, d, color, alpha);
+    if (dir === 'D') return this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - d / 2, GAME_WIDTH, d, color, alpha);
+    if (dir === 'L') return this.add.rectangle(d / 2, GAME_HEIGHT / 2, d, GAME_HEIGHT, color, alpha);
+    return this.add.rectangle(GAME_WIDTH - d / 2, GAME_HEIGHT / 2, d, GAME_HEIGHT, color, alpha);
+  }
+
+  private createEdgeLine(dir: Direction): Phaser.GameObjects.Rectangle {
+    const d = this.checkDepth();
+    const thickness = 4;
+    if (dir === 'U') return this.add.rectangle(GAME_WIDTH / 2, d, GAME_WIDTH, thickness, 0xffffff, 0.95);
+    if (dir === 'D') return this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - d, GAME_WIDTH, thickness, 0xffffff, 0.95);
+    if (dir === 'L') return this.add.rectangle(d, GAME_HEIGHT / 2, thickness, GAME_HEIGHT, 0xffffff, 0.95);
+    return this.add.rectangle(GAME_WIDTH - d, GAME_HEIGHT / 2, thickness, GAME_HEIGHT, 0xffffff, 0.95);
+  }
+
   private triggerShrinkForBeat(beat: number) {
     const lead = this.settings.shrinkLeadMs;
     if (this.isRotation) {
@@ -560,6 +632,7 @@ export class GameScene extends Phaser.Scene {
     const cp = this.checkpoints.find(c => c.dir === dir)!;
     const outer = cp.outerCircle;
     outer.setRadius(60).setAlpha(1).setVisible(false);
+    cp.edgeLine?.setAlpha(1).setVisible(false);
 
     const existing = this.shrinkTweens.get(dir);
     if (existing) existing.stop();
@@ -570,16 +643,32 @@ export class GameScene extends Phaser.Scene {
       const active: ActiveShrink = { id, dir, hit: false };
       this.activeShrinks.set(id, active);
       this.activeShrinkIdsByDir.set(dir, id);
-      outer.setVisible(true);
-      const t = this.tweens.add({
-        targets: outer,
-        radius: CHECKPOINT_RADIUS,
-        duration: leadMs,
-        ease: 'Linear',
-        onComplete: () => this.finishShrink(id),
-      });
-      active.tween = t;
-      this.shrinkTweens.set(dir, t);
+
+      if (this.isCardinal(dir)) {
+        cp.edgeZone?.setVisible(true).setAlpha(0.24);
+        cp.edgeLine?.setVisible(true).setAlpha(1);
+        const t = this.tweens.add({
+          targets: [cp.edgeZone, cp.edgeLine].filter(Boolean),
+          alpha: 0.45,
+          duration: leadMs,
+          ease: 'Linear',
+          onComplete: () => this.finishShrink(id),
+        });
+        active.tween = t;
+        this.shrinkTweens.set(dir, t);
+      } else {
+        outer.setVisible(true);
+        const t = this.tweens.add({
+          targets: outer,
+          radius: CHECKPOINT_RADIUS,
+          duration: leadMs,
+          ease: 'Linear',
+          onComplete: () => this.finishShrink(id),
+        });
+        active.tween = t;
+        this.shrinkTweens.set(dir, t);
+      }
+
       this.checkActiveHits(this.cursorWorldX, this.cursorWorldY);
     });
     this.shrinkStartEvents.push(event);
@@ -597,6 +686,8 @@ export class GameScene extends Phaser.Scene {
       this.shrinkTweens.delete(active.dir);
       const cp = this.checkpoints.find(c => c.dir === active.dir)!;
       cp.outerCircle.setRadius(60).setAlpha(1).setVisible(false);
+      cp.edgeZone?.setAlpha(0.16);
+      cp.edgeLine?.setAlpha(1).setVisible(false);
     }
   }
 
@@ -611,6 +702,8 @@ export class GameScene extends Phaser.Scene {
     for (const cp of this.checkpoints) {
       if (!cp.outerCircle.active || !cp.outerCircle.geom) continue;
       cp.outerCircle.setRadius(60).setAlpha(1).setVisible(false);
+      cp.edgeZone?.setAlpha(0.16).setVisible(false);
+      cp.edgeLine?.setAlpha(1).setVisible(false);
     }
   }
 
@@ -642,6 +735,19 @@ export class GameScene extends Phaser.Scene {
       this.hitboxGraphics.lineStyle(2, 0xffffff, 1);
       this.hitboxGraphics.strokeRect(x - this.settings.hitboxWidth / 2, y - this.settings.hitboxHeight / 2, this.settings.hitboxWidth, this.settings.hitboxHeight);
     }
+  }
+
+  private getHitboxRect(mx: number, my: number): HitboxRect {
+    const hw = this.settings.hitboxWidth / 2;
+    const hh = this.settings.hitboxHeight / 2;
+    return {
+      left: mx - hw,
+      right: mx + hw,
+      top: my - hh,
+      bottom: my + hh,
+      centerX: mx,
+      centerY: my,
+    };
   }
 
   private checkActiveHits(x: number, y: number) {
@@ -705,12 +811,34 @@ export class GameScene extends Phaser.Scene {
   }
 
   private checkHit(mx: number, my: number, dir: Direction): boolean {
-    const pos = getCheckpointPos(dir);
-    const hw = this.settings.hitboxWidth / 2, hh = this.settings.hitboxHeight / 2;
-    const cx = Phaser.Math.Clamp(pos.x, mx - hw, mx + hw);
-    const cy = Phaser.Math.Clamp(pos.y, my - hh, my + hh);
+    const rect = this.getHitboxRect(mx, my);
+    const d = this.checkDepth();
+    if (dir === 'U') return rect.top <= d;
+    if (dir === 'D') return rect.bottom >= GAME_HEIGHT - d;
+    if (dir === 'L') return rect.left <= d;
+    if (dir === 'R') return rect.right >= GAME_WIDTH - d;
+    if (dir === 'UL') return rect.top <= d && rect.left <= d;
+    if (dir === 'UR') return rect.top <= d && rect.right >= GAME_WIDTH - d;
+    if (dir === 'DL') return rect.bottom >= GAME_HEIGHT - d && rect.left <= d;
+    if (dir === 'DR') return rect.bottom >= GAME_HEIGHT - d && rect.right >= GAME_WIDTH - d;
+    return false;
+  }
+
+  private getJudgementPos(dir: Direction): { x: number; y: number } {
+    const rect = this.getHitboxRect(this.cursorWorldX, this.cursorWorldY);
+    const d = this.checkDepth();
+
+    if (dir === 'U') return { x: Phaser.Math.Clamp(rect.centerX, 0, GAME_WIDTH), y: d };
+    if (dir === 'D') return { x: Phaser.Math.Clamp(rect.centerX, 0, GAME_WIDTH), y: GAME_HEIGHT - d };
+    if (dir === 'L') return { x: d, y: Phaser.Math.Clamp(rect.centerY, 0, GAME_HEIGHT) };
+    if (dir === 'R') return { x: GAME_WIDTH - d, y: Phaser.Math.Clamp(rect.centerY, 0, GAME_HEIGHT) };
+
+    const pos = this.getTargetPos(dir);
+    const cx = Phaser.Math.Clamp(pos.x, rect.left, rect.right);
+    const cy = Phaser.Math.Clamp(pos.y, rect.top, rect.bottom);
     const dx = pos.x - cx, dy = pos.y - cy;
-    return dx * dx + dy * dy <= HIT_RADIUS * HIT_RADIUS;
+    if (dx * dx + dy * dy <= HIT_RADIUS * HIT_RADIUS) return { x: pos.x, y: pos.y };
+    return { x: cx, y: cy };
   }
 
   private resolvePerfect(active: ActiveShrink) {
@@ -725,6 +853,8 @@ export class GameScene extends Phaser.Scene {
 
     const cp = this.checkpoints.find(c => c.dir === active.dir)!;
     cp.outerCircle.setRadius(60).setAlpha(1).setVisible(false);
+    cp.edgeZone?.setAlpha(0.16);
+    cp.edgeLine?.setAlpha(1).setVisible(false);
     this.onPerfect(active.dir);
   }
 
@@ -744,7 +874,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showJudgement(dir: Direction, label: 'perfect' | 'miss', color: string) {
-    const pos = getCheckpointPos(dir);
+    const pos = this.getJudgementPos(dir);
     const text = this.add.text(pos.x, pos.y - 48, label, {
       fontSize: label === 'perfect' ? '34px' : '30px',
       color,

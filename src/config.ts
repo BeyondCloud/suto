@@ -6,6 +6,7 @@ export interface GameSettings {
   shrinkLeadMs: number;
   hitboxWidth: number;
   hitboxHeight: number;
+  checkDepth: number;
   debugMode: boolean;
 }
 
@@ -14,6 +15,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   shrinkLeadMs: 500,
   hitboxWidth: 500,
   hitboxHeight: 300,
+  checkDepth: 50,
   debugMode: false,
 };
 

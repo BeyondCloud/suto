@@ -57,8 +57,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private buildSettingsPanel() {
-    const bg = this.add.rectangle(0, 0, 520, 340, 0x111122, 0.95);
-    const title = this.add.text(0, -140, 'Settings', { fontSize: '28px', color: '#fff' }).setOrigin(0.5);
+    const bg = this.add.rectangle(0, 0, 560, 400, 0x111122, 0.95);
+    const title = this.add.text(0, -170, 'Settings', { fontSize: '28px', color: '#fff' }).setOrigin(0.5);
 
     const makeRow = (label: string, yOff: number, getValue: () => string | number, onMinus: () => void, onPlus: () => void) => {
       const lbl = this.add.text(-180, yOff, label, { fontSize: '20px', color: '#ccc' }).setOrigin(0, 0.5);
@@ -71,48 +71,55 @@ export class MenuScene extends Phaser.Scene {
     };
 
     const bpmRow = makeRow('BPM',
-      -80,
+      -110,
       () => this.settings.bpm,
       () => { this.settings.bpm = Math.max(60, this.settings.bpm - 5); },
       () => { this.settings.bpm = Math.min(240, this.settings.bpm + 5); },
     );
 
     const shrinkRow = makeRow('Shrink Lead (ms)',
-      -30,
+      -65,
       () => this.settings.shrinkLeadMs,
       () => { this.settings.shrinkLeadMs = Math.max(200, this.settings.shrinkLeadMs - 100); },
       () => { this.settings.shrinkLeadMs = Math.min(3000, this.settings.shrinkLeadMs + 100); },
     );
 
     const hwRow = makeRow('Hitbox W',
-      20,
+      -20,
       () => this.settings.hitboxWidth,
       () => { this.settings.hitboxWidth = Math.max(100, this.settings.hitboxWidth - 20); },
       () => { this.settings.hitboxWidth = Math.min(800, this.settings.hitboxWidth + 20); },
     );
 
     const hhRow = makeRow('Hitbox H',
-      70,
+      25,
       () => this.settings.hitboxHeight,
       () => { this.settings.hitboxHeight = Math.max(60, this.settings.hitboxHeight - 20); },
       () => { this.settings.hitboxHeight = Math.min(480, this.settings.hitboxHeight + 20); },
     );
 
+    const depthRow = makeRow('Check Depth',
+      70,
+      () => this.settings.checkDepth,
+      () => { this.settings.checkDepth = Math.max(10, this.settings.checkDepth - 10); },
+      () => { this.settings.checkDepth = Math.min(200, this.settings.checkDepth + 10); },
+    );
+
     // Debug toggle
-    const debugLbl = this.add.text(-180, 120, 'Debug Mode', { fontSize: '20px', color: '#ccc' }).setOrigin(0, 0.5);
-    const debugVal = this.add.text(60, 120, this.settings.debugMode ? 'ON' : 'OFF', { fontSize: '20px', color: '#fff' }).setOrigin(0.5);
-    const debugBtn = this.add.text(0, 120, '◀  ▶', { fontSize: '20px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const debugLbl = this.add.text(-180, 115, 'Debug Mode', { fontSize: '20px', color: '#ccc' }).setOrigin(0, 0.5);
+    const debugVal = this.add.text(60, 115, this.settings.debugMode ? 'ON' : 'OFF', { fontSize: '20px', color: '#fff' }).setOrigin(0.5);
+    const debugBtn = this.add.text(0, 115, '◀  ▶', { fontSize: '20px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     debugBtn.on('pointerdown', () => {
       this.settings.debugMode = !this.settings.debugMode;
       debugVal.setText(this.settings.debugMode ? 'ON' : 'OFF');
     });
 
-    const closeBtn = this.add.text(0, 155, '[ CLOSE ]', { fontSize: '22px', color: '#ffaaaa' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const closeBtn = this.add.text(0, 160, '[ CLOSE ]', { fontSize: '22px', color: '#ffaaaa' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.toggleSettings());
 
     this.settingsContainer.add([
       bg, title,
-      ...bpmRow, ...shrinkRow, ...hwRow, ...hhRow,
+      ...bpmRow, ...shrinkRow, ...hwRow, ...hhRow, ...depthRow,
       debugLbl, debugVal, debugBtn, closeBtn,
     ]);
   }
