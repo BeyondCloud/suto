@@ -44,8 +44,11 @@ export class GameScene extends Phaser.Scene {
   private checkpoints: CheckpointUI[] = [];
   private hitboxGraphics!: Phaser.GameObjects.Graphics;
   private cursorStatic!: Phaser.GameObjects.Image;
+  private cursorGifFrame!: HTMLDivElement;
   private cursorGif!: HTMLImageElement;
   private cursorGifVisible = false;
+  private cursorGifAngle = { value: 180 };
+  private cursorGifAngleTween?: Phaser.Tweens.Tween;
   private lifeBar!: Phaser.GameObjects.Graphics;
   private lifeValue = 100;
   private stageText!: Phaser.GameObjects.Text;
@@ -182,17 +185,32 @@ export class GameScene extends Phaser.Scene {
     this.cursorStatic = this.add.image(cx, cy, 'suto400_static')
       .setDisplaySize(this.settings.hitboxWidth, this.settings.hitboxHeight)
       .setDepth(20).setVisible(false).setAlpha(0.85);
+
+    this.cursorGifFrame = document.createElement('div');
+    this.cursorGifFrame.style.position = 'fixed';
+    this.cursorGifFrame.style.pointerEvents = 'none';
+    this.cursorGifFrame.style.transform = 'translate(-50%, -50%)';
+    this.cursorGifFrame.style.zIndex = '10';
+    this.cursorGifFrame.style.display = 'none';
+    this.cursorGifFrame.style.overflow = 'hidden';
+    this.cursorGifFrame.style.background = '#000';
+    this.cursorGifFrame.style.border = '2px solid #fff';
+    this.cursorGifFrame.style.boxSizing = 'border-box';
+
     this.cursorGif = document.createElement('img');
     this.cursorGif.src = suto400GifUrl;
     this.cursorGif.alt = '';
     this.cursorGif.draggable = false;
-    this.cursorGif.style.position = 'fixed';
+    this.cursorGif.style.position = 'absolute';
+    this.cursorGif.style.left = '50%';
+    this.cursorGif.style.top = '50%';
     this.cursorGif.style.pointerEvents = 'none';
-    this.cursorGif.style.transform = 'translate(-50%, -50%)';
+    this.cursorGif.style.transformOrigin = 'center center';
+    this.cursorGif.style.userSelect = 'none';
     this.cursorGif.style.opacity = '0.85';
-    this.cursorGif.style.zIndex = '10';
-    this.cursorGif.style.display = 'none';
-    document.body.appendChild(this.cursorGif);
+    this.cursorGifFrame.appendChild(this.cursorGif);
+    document.body.appendChild(this.cursorGifFrame);
+    this.setGifCursorAngle(this.cursorGifAngle.value);
     this.updateGifCursorPosition(cx, cy);
     this.input.setDefaultCursor('none');
   }
@@ -200,7 +218,8 @@ export class GameScene extends Phaser.Scene {
   private cleanupScene() {
     this.input.setDefaultCursor('default');
     this.setGifCursorVisible(false);
-    this.cursorGif?.remove();
+    this.cursorGifAngleTween?.stop();
+    this.cursorGifFrame?.remove();
     this.beatTimer?.remove(false);
     for (const event of this.shrinkStartEvents) event.remove(false);
     this.shrinkStartEvents = [];
@@ -261,9 +280,11 @@ export class GameScene extends Phaser.Scene {
     this.clearPromptGrid();
     this.setInnerCheckpointsVisible(true);
     this.cursorStatic.setVisible(false);
-    this.setGifCursorVisible(true);
     this.beatCount = 0;
     this.buildBeatTargets();
+    const firstDir = this.isRotation ? this.beatTargetPairs[0]?.[0] : this.beatTargets[0];
+    if (firstDir) this.rotateGifCursorTo(firstDir, 0);
+    this.setGifCursorVisible(true);
 
     this.beatTimer?.remove();
     this.onBeat();
@@ -416,11 +437,17 @@ export class GameScene extends Phaser.Scene {
     const lead = this.settings.shrinkLeadMs;
     if (this.isRotation) {
       const [first, second] = this.beatTargetPairs[beat];
+      this.rotateGifCursorTo(first, this.beatMs / 2);
       this.startShrink(first, lead);
-      const secondShrinkEvent = this.time.delayedCall(this.beatMs / 2, () => this.startShrink(second, lead));
+      const secondShrinkEvent = this.time.delayedCall(this.beatMs / 2, () => {
+        this.rotateGifCursorTo(second, this.beatMs / 2);
+        this.startShrink(second, lead);
+      });
       this.shrinkStartEvents.push(secondShrinkEvent);
     } else {
-      this.startShrink(this.beatTargets[beat], lead);
+      const dir = this.beatTargets[beat];
+      this.rotateGifCursorTo(dir, 0);
+      this.startShrink(dir, lead);
     }
   }
 
@@ -475,6 +502,7 @@ export class GameScene extends Phaser.Scene {
     this.shrinkTweens.clear();
     this.activeShrinks.clear();
     this.activeShrinkIdsByDir.clear();
+    this.cursorGifAngleTween?.stop();
     for (const cp of this.checkpoints) {
       if (!cp.outerCircle.active || !cp.outerCircle.geom) continue;
       cp.outerCircle.setRadius(60).setAlpha(1).setVisible(false);
@@ -489,8 +517,8 @@ export class GameScene extends Phaser.Scene {
     this.updateGifCursorPosition(x, y);
 
     this.hitboxGraphics.clear();
-    if (this.settings.debugMode && this.gamePhase === 'check') {
-      this.hitboxGraphics.lineStyle(2, 0x00ff00, 1);
+    if (this.gamePhase === 'check' && !this.isPaused) {
+      this.hitboxGraphics.lineStyle(2, 0xffffff, 1);
       this.hitboxGraphics.strokeRect(x - this.settings.hitboxWidth / 2, y - this.settings.hitboxHeight / 2, this.settings.hitboxWidth, this.settings.hitboxHeight);
     }
 
@@ -508,9 +536,9 @@ export class GameScene extends Phaser.Scene {
 
   private setGifCursorVisible(visible: boolean) {
     this.cursorGifVisible = visible;
-    if (!this.cursorGif) return;
+    if (!this.cursorGifFrame) return;
 
-    this.cursorGif.style.display = visible ? 'block' : 'none';
+    this.cursorGifFrame.style.display = visible ? 'block' : 'none';
     if (visible) {
       const pointer = this.input.activePointer;
       this.updateGifCursorPosition(pointer.x, pointer.y);
@@ -518,15 +546,46 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateGifCursorPosition(x: number, y: number) {
-    if (!this.cursorGif) return;
+    if (!this.cursorGifFrame || !this.cursorGif) return;
 
     const rect = this.game.canvas.getBoundingClientRect();
     const scaleX = rect.width / GAME_WIDTH;
     const scaleY = rect.height / GAME_HEIGHT;
-    this.cursorGif.style.left = `${rect.left + x * scaleX}px`;
-    this.cursorGif.style.top = `${rect.top + y * scaleY}px`;
-    this.cursorGif.style.width = `${this.settings.hitboxWidth * scaleX}px`;
-    this.cursorGif.style.height = `${this.settings.hitboxHeight * scaleY}px`;
+    const width = this.settings.hitboxWidth * scaleX;
+    const height = this.settings.hitboxHeight * scaleY;
+    this.cursorGifFrame.style.left = `${rect.left + x * scaleX}px`;
+    this.cursorGifFrame.style.top = `${rect.top + y * scaleY}px`;
+    this.cursorGifFrame.style.width = `${width}px`;
+    this.cursorGifFrame.style.height = `${height}px`;
+    this.cursorGif.style.width = `${width}px`;
+    this.cursorGif.style.height = `${height}px`;
+    this.setGifCursorAngle(this.cursorGifAngle.value);
+  }
+
+  private rotateGifCursorTo(dir: Direction, duration: number) {
+    const targetAngle = DIR_ANGLE[dir];
+    this.cursorGifAngleTween?.stop();
+
+    if (duration <= 0) {
+      this.cursorGifAngle.value = this.shortestAngle(this.cursorGifAngle.value, targetAngle);
+      this.setGifCursorAngle(this.cursorGifAngle.value);
+      return;
+    }
+
+    this.cursorGifAngle.value = this.cursorGifAngle.value % 360;
+    this.cursorGifAngleTween = this.tweens.add({
+      targets: this.cursorGifAngle,
+      value: this.shortestAngle(this.cursorGifAngle.value, targetAngle),
+      duration,
+      ease: 'Linear',
+      onUpdate: () => this.setGifCursorAngle(this.cursorGifAngle.value),
+      onComplete: () => this.setGifCursorAngle(this.cursorGifAngle.value),
+    });
+  }
+
+  private setGifCursorAngle(angle: number) {
+    if (!this.cursorGif) return;
+    this.cursorGif.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
   }
 
   private checkHit(mx: number, my: number, dir: Direction): boolean {
@@ -621,6 +680,13 @@ export class GameScene extends Phaser.Scene {
         tween.pause();
       } else {
         tween.resume();
+      }
+    }
+    if (this.cursorGifAngleTween) {
+      if (paused) {
+        this.cursorGifAngleTween.pause();
+      } else {
+        this.cursorGifAngleTween.resume();
       }
     }
   }
