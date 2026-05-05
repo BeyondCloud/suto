@@ -19,6 +19,13 @@ interface CheckpointUI {
   innerCircle: Phaser.GameObjects.Arc;
 }
 
+interface ActiveShrink {
+  id: number;
+  dir: Direction;
+  hit: boolean;
+  tween?: Phaser.Tweens.Tween;
+}
+
 export class GameScene extends Phaser.Scene {
   private settings!: GameSettings;
   private stageIndex!: number;
@@ -51,10 +58,11 @@ export class GameScene extends Phaser.Scene {
   // Check phase
   private beatTargets: Direction[] = [];
   private beatTargetPairs: [Direction, Direction][] = [];
-  private currentBeatHit = false;
-  private firstHitDone = false;
   private shrinkTweens: Map<Direction, Phaser.Tweens.Tween> = new Map();
   private shrinkStartEvents: Phaser.Time.TimerEvent[] = [];
+  private activeShrinks: Map<number, ActiveShrink> = new Map();
+  private activeShrinkIdsByDir: Map<Direction, number> = new Map();
+  private nextShrinkId = 1;
 
   // Pause
   private isPaused = false;
@@ -160,6 +168,13 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private setInnerCheckpointsVisible(vis: boolean) {
+    for (const cp of this.checkpoints) {
+      cp.outerCircle.setVisible(false);
+      cp.innerCircle.setVisible(vis);
+    }
+  }
+
   private createCursors() {
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
     this.cursorStatic = this.add.image(cx, cy, 'suto400_static')
@@ -220,7 +235,7 @@ export class GameScene extends Phaser.Scene {
   private startCheckPhase() {
     this.gamePhase = 'check';
     this.clearPromptGrid();
-    this.setCheckpointsVisible(true);
+    this.setInnerCheckpointsVisible(true);
     this.cursorStatic.setVisible(false);
     this.cursorGif.setVisible(true);
     this.beatCount = 0;
@@ -240,19 +255,12 @@ export class GameScene extends Phaser.Scene {
         this.time.delayedCall(this.beatMs, () => this.startCheckPhase());
       }
     } else {
-      // Check miss from previous beat
-      if (this.beatCount > 0) {
-        const prevBeat = this.beatCount - 1;
-        if (!this.currentBeatHit && prevBeat < 8) this.onMiss();
-      }
       if (this.beatCount >= 8) {
         this.beatTimer?.remove();
-        this.onCheckPhaseEnd();
+        this.time.delayedCall(this.settings.shrinkLeadMs, () => this.onCheckPhaseEnd());
         return;
       }
       this.triggerShrinkForBeat(this.beatCount);
-      this.currentBeatHit = false;
-      this.firstHitDone = false;
       this.beatCount++;
     }
   }
@@ -391,17 +399,45 @@ export class GameScene extends Phaser.Scene {
   private startShrink(dir: Direction, leadMs: number) {
     const cp = this.checkpoints.find(c => c.dir === dir)!;
     const outer = cp.outerCircle;
-    outer.setRadius(60).setAlpha(1);
+    outer.setRadius(60).setAlpha(1).setVisible(false);
 
     const existing = this.shrinkTweens.get(dir);
     if (existing) existing.stop();
 
     const delay = Math.max(0, this.beatMs - leadMs);
     const event = this.time.delayedCall(delay, () => {
-      const t = this.tweens.add({ targets: outer, radius: CHECKPOINT_RADIUS, duration: leadMs, ease: 'Linear' });
+      const id = this.nextShrinkId++;
+      const active: ActiveShrink = { id, dir, hit: false };
+      this.activeShrinks.set(id, active);
+      this.activeShrinkIdsByDir.set(dir, id);
+      outer.setVisible(true);
+      const t = this.tweens.add({
+        targets: outer,
+        radius: CHECKPOINT_RADIUS,
+        duration: leadMs,
+        ease: 'Linear',
+        onComplete: () => this.finishShrink(id),
+      });
+      active.tween = t;
       this.shrinkTweens.set(dir, t);
+      this.checkActiveHits(this.input.activePointer.x, this.input.activePointer.y);
     });
     this.shrinkStartEvents.push(event);
+  }
+
+  private finishShrink(id: number) {
+    const active = this.activeShrinks.get(id);
+    if (!active) return;
+
+    if (!active.hit) this.onMiss();
+
+    this.activeShrinks.delete(id);
+    if (this.activeShrinkIdsByDir.get(active.dir) === id) {
+      this.activeShrinkIdsByDir.delete(active.dir);
+      this.shrinkTweens.delete(active.dir);
+      const cp = this.checkpoints.find(c => c.dir === active.dir)!;
+      cp.outerCircle.setRadius(60).setAlpha(1).setVisible(false);
+    }
   }
 
   private stopAllShrinks() {
@@ -409,8 +445,10 @@ export class GameScene extends Phaser.Scene {
     this.shrinkStartEvents = [];
     for (const t of this.shrinkTweens.values()) t.stop();
     this.shrinkTweens.clear();
+    this.activeShrinks.clear();
+    this.activeShrinkIdsByDir.clear();
     for (const cp of this.checkpoints) {
-      cp.outerCircle.setRadius(60).setAlpha(1);
+      cp.outerCircle.setRadius(60).setAlpha(1).setVisible(false);
     }
   }
 
@@ -428,22 +466,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.gamePhase !== 'check' || this.isPaused) return;
-    const beat = this.beatCount - 1;
-    if (beat < 0 || beat >= 8) return;
+    this.checkActiveHits(x, y);
+  }
 
-    if (this.isRotation) {
-      if (beat >= this.beatTargetPairs.length) return;
-      const [first, second] = this.beatTargetPairs[beat];
-      if (!this.firstHitDone && this.checkHit(x, y, first)) {
-        this.firstHitDone = true;
-      } else if (this.firstHitDone && !this.currentBeatHit && this.checkHit(x, y, second)) {
-        this.currentBeatHit = true;
-        this.onPerfect();
-      }
-    } else {
-      if (beat >= this.beatTargets.length) return;
-      if (!this.currentBeatHit && this.checkHit(x, y, this.beatTargets[beat])) {
-        this.currentBeatHit = true;
+  private checkActiveHits(x: number, y: number) {
+    for (const active of this.activeShrinks.values()) {
+      if (!active.hit && this.checkHit(x, y, active.dir)) {
+        active.hit = true;
         this.onPerfect();
       }
     }
@@ -473,6 +502,7 @@ export class GameScene extends Phaser.Scene {
 
   private triggerGameOver() {
     this.beatTimer?.remove();
+    this.stopAllShrinks();
     this.setCheckpointsVisible(false);
     this.cursorGif.setVisible(false);
     this.cursorStatic.setVisible(false);
