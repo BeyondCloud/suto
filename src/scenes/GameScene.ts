@@ -176,8 +176,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    this.beatMs = 60000 / this.settings.bpm;
-    this.currentStage = LEVEL_DATA.stages[this.stageIndex];
+    this.loadStage(this.stageIndex);
     this.sectionIndex = 0;
     this.lifeValue = 100;
     this.scoreValue = 0;
@@ -200,6 +199,11 @@ export class GameScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanupScene());
 
     this.startSection();
+  }
+
+  private loadStage(index: number) {
+    this.currentStage = LEVEL_DATA.stages[index];
+    this.beatMs = 60000 / this.currentStage.bpm;
   }
 
   private drawEllipse() {
@@ -450,7 +454,7 @@ export class GameScene extends Phaser.Scene {
       if (this.stageIndex >= LEVEL_DATA.stages.length) {
         this.time.delayedCall(500, () => this.scene.start('MenuScene'));
       } else {
-        this.currentStage = LEVEL_DATA.stages[this.stageIndex];
+        this.loadStage(this.stageIndex);
         this.sectionIndex = 0;
         this.startSection();
       }
@@ -813,13 +817,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   private checkActiveHits(x: number, y: number) {
-    this.checkFalseTouches(x, y);
+    const hits: ActiveShrink[] = [];
 
     for (const active of this.activeShrinks.values()) {
       if (!active.hit && this.checkHit(x, y, active.dir)) {
-        this.resolvePerfect(active);
+        hits.push(active);
       }
     }
+
+    if (hits.length > 0) {
+      for (const active of hits) {
+        this.resolvePerfect(active);
+      }
+      return;
+    }
+
+    this.checkFalseTouches(x, y);
   }
 
   private checkFalseTouches(x: number, y: number) {
@@ -996,7 +1009,7 @@ export class GameScene extends Phaser.Scene {
     this.falseTouchedLines.clear();
     this.scoreValue++;
     this.updateScoreText();
-    this.lifeValue = Math.min(100, this.lifeValue + 2);
+    this.lifeValue = Math.min(100, this.lifeValue + 4);
     this.drawLifeBar();
     this.playEdgeHitEffect(dir);
     this.showJudgement(dir, 'perfect', '#7cff8f');
