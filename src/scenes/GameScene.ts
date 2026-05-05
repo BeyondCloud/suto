@@ -429,7 +429,7 @@ export class GameScene extends Phaser.Scene {
     const active = this.activeShrinks.get(id);
     if (!active) return;
 
-    if (!active.hit) this.onMiss();
+    if (!active.hit) this.onMiss(active.dir);
 
     this.activeShrinks.delete(id);
     if (this.activeShrinkIdsByDir.get(active.dir) === id) {
@@ -472,8 +472,7 @@ export class GameScene extends Phaser.Scene {
   private checkActiveHits(x: number, y: number) {
     for (const active of this.activeShrinks.values()) {
       if (!active.hit && this.checkHit(x, y, active.dir)) {
-        active.hit = true;
-        this.onPerfect();
+        this.resolvePerfect(active);
       }
     }
   }
@@ -487,17 +486,64 @@ export class GameScene extends Phaser.Scene {
     return dx * dx + dy * dy <= HIT_RADIUS * HIT_RADIUS;
   }
 
-  private onPerfect() {
+  private resolvePerfect(active: ActiveShrink) {
+    active.hit = true;
+    active.tween?.stop();
+    this.activeShrinks.delete(active.id);
+
+    if (this.activeShrinkIdsByDir.get(active.dir) === active.id) {
+      this.activeShrinkIdsByDir.delete(active.dir);
+      this.shrinkTweens.delete(active.dir);
+    }
+
+    const cp = this.checkpoints.find(c => c.dir === active.dir)!;
+    cp.outerCircle.setRadius(60).setAlpha(1).setVisible(false);
+    this.onPerfect(active.dir);
+  }
+
+  private onPerfect(dir: Direction) {
     this.lifeValue = Math.min(100, this.lifeValue + 5);
     this.drawLifeBar();
+    this.showJudgement(dir, 'perfect', '#7cff8f');
     this.flashOverlay.setAlpha(0.35);
     this.tweens.add({ targets: this.flashOverlay, alpha: 0, duration: 180, ease: 'Linear' });
   }
 
-  private onMiss() {
+  private onMiss(dir: Direction) {
     this.lifeValue = Math.max(0, this.lifeValue - 20);
     this.drawLifeBar();
+    this.showJudgement(dir, 'miss', '#ff5a6b');
     if (this.lifeValue <= 0) this.triggerGameOver();
+  }
+
+  private showJudgement(dir: Direction, label: 'perfect' | 'miss', color: string) {
+    const pos = getCheckpointPos(dir);
+    const text = this.add.text(pos.x, pos.y - 48, label, {
+      fontSize: label === 'perfect' ? '34px' : '30px',
+      color,
+      fontStyle: 'bold',
+      stroke: '#111118',
+      strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(60).setAlpha(0);
+
+    this.tweens.add({
+      targets: text,
+      y: text.y - 28,
+      alpha: 1,
+      scale: label === 'perfect' ? 1.14 : 1,
+      duration: 120,
+      ease: 'Quad.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: text,
+          y: text.y - 18,
+          alpha: 0,
+          duration: 420,
+          ease: 'Quad.easeIn',
+          onComplete: () => text.destroy(),
+        });
+      },
+    });
   }
 
   private triggerGameOver() {
