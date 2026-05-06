@@ -6,6 +6,7 @@ import promptRUrl from '../assets/audio/R.wav';
 import promptUUrl from '../assets/audio/U.wav';
 import clapUrl from '../assets/audio/clap.wav';
 import missUrl from '../assets/audio/miss.wav';
+import stage120Url from '../assets/audio/120.wav';
 import {
   GAME_WIDTH, GAME_HEIGHT,
   DIR_ANGLE, ELLIPSE_CX, ELLIPSE_CY, ELLIPSE_RX, ELLIPSE_RY,
@@ -19,11 +20,19 @@ const ALL_DIRS: Direction[] = ['U', 'UR', 'R', 'DR', 'D', 'DL', 'L', 'UL'];
 const CARDINAL_DIRS: Direction[] = ['U', 'D', 'L', 'R'];
 const CHECKPOINT_RADIUS = 18;
 const FALSE_TOUCH_DAMAGE = 5;
+const DEFAULT_STAGE_AUDIO_CLIP = 'src/assets/audio/120.wav';
 const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   U: 'prompt_U',
   D: 'prompt_D',
   L: 'prompt_L',
   R: 'prompt_R',
+};
+
+const getStageAudioKey = (clipPath: string): string => `stage_audio_${clipPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+const resolveStageAudioClipUrl = (clipPath: string): string => {
+  if (clipPath === DEFAULT_STAGE_AUDIO_CLIP) return stage120Url;
+  return clipPath;
 };
 
 interface CheckpointUI {
@@ -56,6 +65,7 @@ export class GameScene extends Phaser.Scene {
   private settings!: GameSettings;
   private stageIndex!: number;
   private currentStage!: Stage;
+  private currentStageAudioKey: string | null = null;
   private sectionIndex = 0;
   private currentSection!: Section;
 
@@ -179,6 +189,11 @@ export class GameScene extends Phaser.Scene {
     this.load.audio('prompt_R', promptRUrl);
     this.load.audio('clap', clapUrl);
     this.load.audio('miss', missUrl);
+
+    const stageAudioClips = new Set(LEVEL_DATA.stages.map(stage => stage.audio_clip));
+    for (const clipPath of stageAudioClips) {
+      this.load.audio(getStageAudioKey(clipPath), resolveStageAudioClipUrl(clipPath));
+    }
   }
 
   create() {
@@ -212,6 +227,7 @@ export class GameScene extends Phaser.Scene {
   private loadStage(index: number) {
     this.currentStage = LEVEL_DATA.stages[index];
     this.beatMs = 60000 / this.currentStage.bpm;
+    this.currentStageAudioKey = getStageAudioKey(this.currentStage.audio_clip);
   }
 
   private drawEllipse() {
@@ -412,6 +428,7 @@ export class GameScene extends Phaser.Scene {
     this.buildPromptGrid();
     this.setGifCursorVisible(false);
     this.beatCount = 0;
+    this.playStagePhaseClip();
 
     // Fire first beat immediately, then repeat
     this.beatTimer?.remove();
@@ -577,6 +594,11 @@ export class GameScene extends Phaser.Scene {
     if (!key) return;
 
     this.sound.play(key);
+  }
+
+  private playStagePhaseClip() {
+    if (!this.currentStageAudioKey) return;
+    this.sound.play(this.currentStageAudioKey);
   }
 
   private getArrowAngle(dir: Direction): number {

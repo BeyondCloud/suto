@@ -16,6 +16,7 @@ export type Section = NormalSection | RotationSection;
 export interface Stage {
   stage_number: number;
   bpm: number;
+  audio_clip: string;
   sections: Section[];
 }
 
@@ -28,6 +29,7 @@ export const LEVEL_DATA: LevelData = {
     {
       stage_number: 1,
       bpm: 120,
+      audio_clip: 'src/assets/audio/120.wav',
       sections: [
         // {
         //   type: 'normal',
@@ -55,6 +57,7 @@ export const LEVEL_DATA: LevelData = {
     {
       stage_number: 2,
       bpm: 120,
+      audio_clip: 'src/assets/audio/120.wav',
       sections: [
         {
           type: 'normal',
@@ -65,6 +68,7 @@ export const LEVEL_DATA: LevelData = {
     {
       stage_number: 3,
       bpm: 120,
+      audio_clip: 'src/assets/audio/120.wav',
       sections: [
         {
           type: 'rotation',
