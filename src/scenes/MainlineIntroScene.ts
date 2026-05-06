@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import openingVideoUrl from '../assets/mp4/開頭影片.mp4';
+import tutorialLoopUrl from '../assets/audio/loop/tutorial.wav';
 import type { GameSettings } from '../config';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { MAIN_LEVEL_DATA } from '../levels';
@@ -8,6 +9,7 @@ export class MainlineIntroScene extends Phaser.Scene {
   private settings!: GameSettings;
   private openingRoot?: HTMLDivElement;
   private openingVideo?: HTMLVideoElement;
+  private tutorialLoopSound?: Phaser.Sound.BaseSound;
   private readonly openingLastFrameTextureKey = 'opening_last_frame';
 
   private readonly refreshOpeningVideoBounds = () => {
@@ -29,6 +31,7 @@ export class MainlineIntroScene extends Phaser.Scene {
 
   preload() {
     this.load.image('tutorial', 'src/assets/tutorial.png');
+    this.load.audio('tutorial_loop', tutorialLoopUrl);
   }
 
   create() {
@@ -38,6 +41,7 @@ export class MainlineIntroScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       window.removeEventListener('resize', this.refreshOpeningVideoBounds);
       this.removeOpeningVideo();
+      this.stopTutorialLoop();
       if (this.textures.exists(this.openingLastFrameTextureKey)) {
         this.textures.remove(this.openingLastFrameTextureKey);
       }
@@ -138,10 +142,13 @@ export class MainlineIntroScene extends Phaser.Scene {
       strokeThickness: 6,
     }).setOrigin(0.5).setDepth(6);
 
+    this.playTutorialLoop();
+
     let started = false;
     const startGame = () => {
       if (started) return;
       started = true;
+      this.stopTutorialLoop();
       this.scene.start('GameScene', {
         settings: this.settings,
         stageIndex: 0,
@@ -152,5 +159,20 @@ export class MainlineIntroScene extends Phaser.Scene {
 
     this.input.keyboard?.once('keydown', startGame);
     this.input.once('pointerdown', startGame);
+  }
+
+  private playTutorialLoop() {
+    this.stopTutorialLoop();
+    this.tutorialLoopSound = this.sound.add('tutorial_loop', { loop: true });
+    this.tutorialLoopSound.play();
+  }
+
+  private stopTutorialLoop() {
+    if (!this.tutorialLoopSound) {
+      return;
+    }
+    this.tutorialLoopSound.stop();
+    this.tutorialLoopSound.destroy();
+    this.tutorialLoopSound = undefined;
   }
 }
