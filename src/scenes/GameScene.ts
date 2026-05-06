@@ -18,7 +18,6 @@ import type { Stage, Section, NormalSection, RotationSection } from '../levels';
 const ALL_DIRS: Direction[] = ['U', 'UR', 'R', 'DR', 'D', 'DL', 'L', 'UL'];
 const CARDINAL_DIRS: Direction[] = ['U', 'D', 'L', 'R'];
 const CHECKPOINT_RADIUS = 18;
-const HIT_RADIUS = 30;
 const FALSE_TOUCH_DAMAGE = 5;
 const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   U: 'prompt_U',
@@ -1003,25 +1002,30 @@ export class GameScene extends Phaser.Scene {
     return false;
   }
 
+  private getInnerSquareDirectionPos(dir: Direction): { x: number; y: number } {
+    const maxInset = Math.min(GAME_WIDTH, GAME_HEIGHT) / 2 - 10;
+    const inset = Phaser.Math.Clamp(this.checkDepth() + 100, 0, maxInset);
+    const left = inset;
+    const right = GAME_WIDTH - inset;
+    const top = inset;
+    const bottom = GAME_HEIGHT - inset;
+
+    const positions: Record<Direction, { x: number; y: number }> = {
+      U: { x: GAME_WIDTH / 2, y: top },
+      UR: { x: right, y: top },
+      R: { x: right, y: GAME_HEIGHT / 2 },
+      DR: { x: right, y: bottom },
+      D: { x: GAME_WIDTH / 2, y: bottom },
+      DL: { x: left, y: bottom },
+      L: { x: left, y: GAME_HEIGHT / 2 },
+      UL: { x: left, y: top },
+    };
+
+    return positions[dir];
+  }
+
   private getJudgementPos(dir: Direction): { x: number; y: number } {
-    const rect = this.getHitboxRect(this.cursorWorldX, this.cursorWorldY);
-    const d = this.checkDepth();
-    const clampPos = (pos: { x: number; y: number }) => ({
-      x: Phaser.Math.Clamp(pos.x, 120, GAME_WIDTH - 120),
-      y: Phaser.Math.Clamp(pos.y, 146, GAME_HEIGHT - 50),
-    });
-
-    if (dir === 'U') return clampPos({ x: Phaser.Math.Clamp(rect.centerX, 0, GAME_WIDTH), y: d });
-    if (dir === 'D') return clampPos({ x: Phaser.Math.Clamp(rect.centerX, 0, GAME_WIDTH), y: GAME_HEIGHT - d });
-    if (dir === 'L') return clampPos({ x: d, y: Phaser.Math.Clamp(rect.centerY, 0, GAME_HEIGHT) });
-    if (dir === 'R') return clampPos({ x: GAME_WIDTH - d, y: Phaser.Math.Clamp(rect.centerY, 0, GAME_HEIGHT) });
-
-    const pos = this.getTargetPos(dir);
-    const cx = Phaser.Math.Clamp(pos.x, rect.left, rect.right);
-    const cy = Phaser.Math.Clamp(pos.y, rect.top, rect.bottom);
-    const dx = pos.x - cx, dy = pos.y - cy;
-    if (dx * dx + dy * dy <= HIT_RADIUS * HIT_RADIUS) return clampPos({ x: pos.x, y: pos.y });
-    return clampPos({ x: cx, y: cy });
+    return this.getInnerSquareDirectionPos(dir);
   }
 
   private resolvePerfect(active: ActiveShrink) {
