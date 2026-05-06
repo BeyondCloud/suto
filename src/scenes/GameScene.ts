@@ -1749,6 +1749,7 @@ export class GameScene extends Phaser.Scene {
     this.clearPromptGrid();
     this.stopStagePhaseClip();
     this.stopPromptAudioSequence();
+    this.removeStorySamVideo();
     this.sound.stopAll();
     this.sound.play('gameover_sfx');
     this.setCheckpointsVisible(false);
