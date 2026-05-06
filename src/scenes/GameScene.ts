@@ -76,6 +76,7 @@ export class GameScene extends Phaser.Scene {
   private stageIndex!: number;
   private currentStage!: Stage;
   private currentStageAudioKey: string | null = null;
+  private currentStageAudio?: Phaser.Sound.BaseSound;
   private sectionIndex = 0;
   private currentSection!: Section;
 
@@ -425,6 +426,7 @@ export class GameScene extends Phaser.Scene {
   private cleanupScene() {
     this.input.setDefaultCursor('default');
     this.setGifCursorVisible(false);
+    this.stopStagePhaseClip();
     this.cursorGifAngleTween?.stop();
     window.removeEventListener('resize', this.refreshGifCursorLayout);
     window.removeEventListener('pointermove', this.onWindowPointerMove);
@@ -761,7 +763,29 @@ export class GameScene extends Phaser.Scene {
 
   private playStagePhaseClip() {
     if (!this.currentStageAudioKey) return;
-    this.sound.play(this.currentStageAudioKey);
+    this.stopStagePhaseClip();
+    const stageAudio = this.sound.add(this.currentStageAudioKey);
+    this.currentStageAudio = stageAudio;
+    stageAudio.once(Phaser.Sound.Events.COMPLETE, () => {
+      if (this.currentStageAudio === stageAudio) this.currentStageAudio = undefined;
+      stageAudio.destroy();
+    });
+    stageAudio.play();
+  }
+
+  private pauseStagePhaseClip() {
+    if (this.currentStageAudio?.isPlaying) this.currentStageAudio.pause();
+  }
+
+  private resumeStagePhaseClip() {
+    if (this.currentStageAudio?.isPaused) this.currentStageAudio.resume();
+  }
+
+  private stopStagePhaseClip() {
+    if (!this.currentStageAudio) return;
+    this.currentStageAudio.stop();
+    this.currentStageAudio.destroy();
+    this.currentStageAudio = undefined;
   }
 
   private applyPromptRotationAngle() {
@@ -1403,6 +1427,7 @@ export class GameScene extends Phaser.Scene {
   private triggerGameOver() {
     this.beatTimer?.remove();
     this.stopAllShrinks();
+    this.stopStagePhaseClip();
     this.setCheckpointsVisible(false);
     this.setGifCursorVisible(false);
     this.hitboxGraphics.clear();
@@ -1417,6 +1442,11 @@ export class GameScene extends Phaser.Scene {
 
   private setGameplayTimersPaused(paused: boolean) {
     if (this.beatTimer) this.beatTimer.paused = paused;
+    if (paused) {
+      this.pauseStagePhaseClip();
+    } else {
+      this.resumeStagePhaseClip();
+    }
     for (const event of this.shrinkStartEvents) event.paused = paused;
     for (const tween of this.shrinkTweens.values()) {
       if (paused) {
@@ -1443,6 +1473,7 @@ export class GameScene extends Phaser.Scene {
 
   private returnToMenu() {
     this.isPaused = false;
+    this.stopStagePhaseClip();
     this.setGameplayTimersPaused(false);
     this.input.setDefaultCursor('default');
     this.setGifCursorVisible(false);
