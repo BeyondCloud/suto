@@ -1787,6 +1787,7 @@ export class GameScene extends Phaser.Scene {
     if (this.isGameOver) return;
 
     this.isGameOver = true;
+    this.input.setDefaultCursor('default');
     this.beatTimer?.remove();
     this.stopAllShrinks();
     this.clearPromptGrid();
