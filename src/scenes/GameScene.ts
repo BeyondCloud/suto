@@ -21,6 +21,14 @@ const CARDINAL_DIRS: Direction[] = ['U', 'D', 'L', 'R'];
 const CHECKPOINT_RADIUS = 18;
 const CURSOR_CHECK_POINT_DOT_SIZE = 10;
 const CURSOR_CHECK_POINT_EDGE_INSET_PX = 2;
+const GAME_FRAME_INSET_X = 96;
+const GAME_FRAME_INSET_Y = 54;
+const GAME_FRAME_LEFT = GAME_FRAME_INSET_X;
+const GAME_FRAME_RIGHT = GAME_WIDTH - GAME_FRAME_INSET_X;
+const GAME_FRAME_TOP = GAME_FRAME_INSET_Y;
+const GAME_FRAME_BOTTOM = GAME_HEIGHT - GAME_FRAME_INSET_Y;
+const GAME_FRAME_WIDTH = GAME_FRAME_RIGHT - GAME_FRAME_LEFT;
+const GAME_FRAME_HEIGHT = GAME_FRAME_BOTTOM - GAME_FRAME_TOP;
 const FALSE_TOUCH_DAMAGE = 5;
 const DEFAULT_STAGE_AUDIO_CLIP = 'src/assets/audio/120.wav';
 const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
@@ -85,6 +93,7 @@ export class GameScene extends Phaser.Scene {
   private cursorGif!: HTMLImageElement;
   private cursorGifBorder!: HTMLDivElement;
   private cursorCheckPointDot!: HTMLDivElement;
+  private gameFrameMask: HTMLDivElement[] = [];
   private cursorGifAngle = { value: 180 };
   private cursorGifAngleTween?: Phaser.Tweens.Tween;
   private cursorScaleX = 1;
@@ -117,6 +126,7 @@ export class GameScene extends Phaser.Scene {
     this.cursorClipFrame.style.top = `${rect.top}px`;
     this.cursorClipFrame.style.width = `${rect.width}px`;
     this.cursorClipFrame.style.height = `${rect.height}px`;
+    this.refreshGameFrameMask(rect);
 
     const width = this.settings.hitboxWidth * this.cursorScaleX;
     const height = this.settings.hitboxHeight * this.cursorScaleY;
@@ -253,9 +263,9 @@ export class GameScene extends Phaser.Scene {
 
   private createHUD() {
     const cx = GAME_WIDTH / 2;
-    this.stageText = this.add.text(cx, 24, '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(10);
-    this.roundText = this.add.text(cx, 58, '', { fontSize: '20px', color: '#cccccc' }).setOrigin(0.5, 0).setDepth(10);
-    this.judgementText = this.add.text(GAME_WIDTH - 24, 24, '', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold', align: 'right' }).setOrigin(1, 0).setDepth(10);
+    this.stageText = this.add.text(cx, GAME_FRAME_TOP + 18, '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(10);
+    this.roundText = this.add.text(cx, GAME_FRAME_TOP + 52, '', { fontSize: '20px', color: '#cccccc' }).setOrigin(0.5, 0).setDepth(10);
+    this.judgementText = this.add.text(GAME_FRAME_RIGHT - 24, GAME_FRAME_TOP + 18, '', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold', align: 'right' }).setOrigin(1, 0).setDepth(10);
     this.updateHUD();
     this.updateJudgementText();
   }
@@ -280,7 +290,7 @@ export class GameScene extends Phaser.Scene {
 
   private drawLifeBar() {
     this.lifeBar.clear();
-    const x = 24, barH = 300, barW = 18;
+    const x = GAME_FRAME_LEFT + 24, barH = 300, barW = 18;
     const y = GAME_HEIGHT / 2 - barH / 2;
     this.lifeBar.fillStyle(0x333333, 1);
     this.lifeBar.fillRect(x, y, barW, barH);
@@ -341,7 +351,7 @@ export class GameScene extends Phaser.Scene {
     this.cursorClipFrame.style.top = '0';
     this.cursorClipFrame.style.width = '0';
     this.cursorClipFrame.style.height = '0';
-    this.cursorClipFrame.style.overflow = 'visible';
+    this.cursorClipFrame.style.overflow = 'hidden';
     this.cursorClipFrame.style.zIndex = '10';
     this.cursorClipFrame.style.display = 'none';
 
@@ -401,6 +411,7 @@ export class GameScene extends Phaser.Scene {
 
     document.body.appendChild(this.cursorClipFrame);
     document.body.appendChild(this.cursorCheckPointDot);
+    this.createGameFrameMask();
     this.refreshGifCursorMetrics();
     this.setGifCursorAngle(this.cursorGifAngle.value);
     this.updateGifCursorPosition(cx, cy);
@@ -417,6 +428,8 @@ export class GameScene extends Phaser.Scene {
     window.removeEventListener('pointermove', this.onWindowPointerMove);
     this.cursorCheckPointDot?.remove();
     this.cursorClipFrame?.remove();
+    for (const panel of this.gameFrameMask) panel.remove();
+    this.gameFrameMask = [];
     this.resetGifCursorCache();
     this.beatTimer?.remove(false);
     for (const event of this.shrinkStartEvents) event.remove(false);
@@ -426,6 +439,52 @@ export class GameScene extends Phaser.Scene {
     this.activeShrinks.clear();
     this.falseTouchedLines.clear();
     this.penaltyCooldownUntil = 0;
+  }
+
+  private createGameFrameMask() {
+    this.gameFrameMask = Array.from({ length: 4 }, () => {
+      const panel = document.createElement('div');
+      panel.style.position = 'fixed';
+      panel.style.pointerEvents = 'none';
+      panel.style.background = '#ffffff';
+      panel.style.zIndex = '2147483647';
+      panel.style.display = 'none';
+      document.body.appendChild(panel);
+      return panel;
+    });
+  }
+
+  private refreshGameFrameMask(rect: DOMRect) {
+    if (this.gameFrameMask.length !== 4) return;
+
+    const insetX = GAME_FRAME_INSET_X * this.cursorScaleX;
+    const insetY = GAME_FRAME_INSET_Y * this.cursorScaleY;
+    const [top, bottom, left, right] = this.gameFrameMask;
+
+    top.style.left = `${rect.left}px`;
+    top.style.top = `${rect.top}px`;
+    top.style.width = `${rect.width}px`;
+    top.style.height = `${insetY}px`;
+
+    bottom.style.left = `${rect.left}px`;
+    bottom.style.top = `${rect.bottom - insetY}px`;
+    bottom.style.width = `${rect.width}px`;
+    bottom.style.height = `${insetY}px`;
+
+    left.style.left = `${rect.left}px`;
+    left.style.top = `${rect.top + insetY}px`;
+    left.style.width = `${insetX}px`;
+    left.style.height = `${Math.max(0, rect.height - insetY * 2)}px`;
+
+    right.style.left = `${rect.right - insetX}px`;
+    right.style.top = `${rect.top + insetY}px`;
+    right.style.width = `${insetX}px`;
+    right.style.height = `${Math.max(0, rect.height - insetY * 2)}px`;
+
+    for (const panel of this.gameFrameMask) {
+      panel.style.display = 'block';
+      document.body.appendChild(panel);
+    }
   }
 
   private createPauseMenu() {
@@ -740,7 +799,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private checkDepth(): number {
-    return Phaser.Math.Clamp(this.settings.checkDepth ?? 50, 0, Math.min(GAME_WIDTH, GAME_HEIGHT) / 2);
+    return Phaser.Math.Clamp(this.settings.checkDepth ?? 50, 0, Math.min(GAME_FRAME_WIDTH, GAME_FRAME_HEIGHT) / 2);
   }
 
   private isCardinal(dir: Direction): boolean {
@@ -751,14 +810,14 @@ export class GameScene extends Phaser.Scene {
     const d = this.checkDepth();
     const diagonalInset = 100;
     const positions: Record<Direction, { x: number; y: number }> = {
-      U: { x: GAME_WIDTH / 2, y: d },
-      D: { x: GAME_WIDTH / 2, y: GAME_HEIGHT - d },
-      L: { x: d, y: GAME_HEIGHT / 2 },
-      R: { x: GAME_WIDTH - d, y: GAME_HEIGHT / 2 },
-      UL: { x: d + diagonalInset, y: d + diagonalInset },
-      UR: { x: GAME_WIDTH - d - diagonalInset, y: d + diagonalInset },
-      DL: { x: d + diagonalInset, y: GAME_HEIGHT - d - diagonalInset },
-      DR: { x: GAME_WIDTH - d - diagonalInset, y: GAME_HEIGHT - d - diagonalInset },
+      U: { x: GAME_WIDTH / 2, y: GAME_FRAME_TOP + d },
+      D: { x: GAME_WIDTH / 2, y: GAME_FRAME_BOTTOM - d },
+      L: { x: GAME_FRAME_LEFT + d, y: GAME_HEIGHT / 2 },
+      R: { x: GAME_FRAME_RIGHT - d, y: GAME_HEIGHT / 2 },
+      UL: { x: GAME_FRAME_LEFT + d + diagonalInset, y: GAME_FRAME_TOP + d + diagonalInset },
+      UR: { x: GAME_FRAME_RIGHT - d - diagonalInset, y: GAME_FRAME_TOP + d + diagonalInset },
+      DL: { x: GAME_FRAME_LEFT + d + diagonalInset, y: GAME_FRAME_BOTTOM - d - diagonalInset },
+      DR: { x: GAME_FRAME_RIGHT - d - diagonalInset, y: GAME_FRAME_BOTTOM - d - diagonalInset },
     };
     return positions[dir];
   }
@@ -767,28 +826,28 @@ export class GameScene extends Phaser.Scene {
     const d = this.checkDepth();
     const color = 0xffffff;
     const alpha = 0.16;
-    if (dir === 'U') return this.add.rectangle(GAME_WIDTH / 2, d / 2, GAME_WIDTH, d, color, alpha);
-    if (dir === 'D') return this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - d / 2, GAME_WIDTH, d, color, alpha);
-    if (dir === 'L') return this.add.rectangle(d / 2, GAME_HEIGHT / 2, d, GAME_HEIGHT, color, alpha);
-    return this.add.rectangle(GAME_WIDTH - d / 2, GAME_HEIGHT / 2, d, GAME_HEIGHT, color, alpha);
+    if (dir === 'U') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_TOP + d / 2, GAME_FRAME_WIDTH, d, color, alpha);
+    if (dir === 'D') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_BOTTOM - d / 2, GAME_FRAME_WIDTH, d, color, alpha);
+    if (dir === 'L') return this.add.rectangle(GAME_FRAME_LEFT + d / 2, GAME_HEIGHT / 2, d, GAME_FRAME_HEIGHT, color, alpha);
+    return this.add.rectangle(GAME_FRAME_RIGHT - d / 2, GAME_HEIGHT / 2, d, GAME_FRAME_HEIGHT, color, alpha);
   }
 
   private createEdgeLine(dir: Direction): Phaser.GameObjects.Rectangle {
     const d = this.checkDepth();
     const thickness = 4;
-    if (dir === 'U') return this.add.rectangle(GAME_WIDTH / 2, d, GAME_WIDTH, thickness, 0xffffff, 0.95);
-    if (dir === 'D') return this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - d, GAME_WIDTH, thickness, 0xffffff, 0.95);
-    if (dir === 'L') return this.add.rectangle(d, GAME_HEIGHT / 2, thickness, GAME_HEIGHT, 0xffffff, 0.95);
-    return this.add.rectangle(GAME_WIDTH - d, GAME_HEIGHT / 2, thickness, GAME_HEIGHT, 0xffffff, 0.95);
+    if (dir === 'U') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_TOP + d, GAME_FRAME_WIDTH, thickness, 0xffffff, 0.95);
+    if (dir === 'D') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_BOTTOM - d, GAME_FRAME_WIDTH, thickness, 0xffffff, 0.95);
+    if (dir === 'L') return this.add.rectangle(GAME_FRAME_LEFT + d, GAME_HEIGHT / 2, thickness, GAME_FRAME_HEIGHT, 0xffffff, 0.95);
+    return this.add.rectangle(GAME_FRAME_RIGHT - d, GAME_HEIGHT / 2, thickness, GAME_FRAME_HEIGHT, 0xffffff, 0.95);
   }
 
   private createEdgeHitFlash(dir: Direction): Phaser.GameObjects.Rectangle {
     const d = this.checkDepth();
     const color = 0xffde4a;
-    if (dir === 'U') return this.add.rectangle(GAME_WIDTH / 2, d / 2, GAME_WIDTH, d, color, 0);
-    if (dir === 'D') return this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - d / 2, GAME_WIDTH, d, color, 0);
-    if (dir === 'L') return this.add.rectangle(d / 2, GAME_HEIGHT / 2, d, GAME_HEIGHT, color, 0);
-    return this.add.rectangle(GAME_WIDTH - d / 2, GAME_HEIGHT / 2, d, GAME_HEIGHT, color, 0);
+    if (dir === 'U') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_TOP + d / 2, GAME_FRAME_WIDTH, d, color, 0);
+    if (dir === 'D') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_BOTTOM - d / 2, GAME_FRAME_WIDTH, d, color, 0);
+    if (dir === 'L') return this.add.rectangle(GAME_FRAME_LEFT + d / 2, GAME_HEIGHT / 2, d, GAME_FRAME_HEIGHT, color, 0);
+    return this.add.rectangle(GAME_FRAME_RIGHT - d / 2, GAME_HEIGHT / 2, d, GAME_FRAME_HEIGHT, color, 0);
   }
 
   private playEdgeHitEffect(dir: Direction) {
@@ -805,14 +864,14 @@ export class GameScene extends Phaser.Scene {
 
     const target: { x?: number; y?: number } = {};
     if (dir === 'U' || dir === 'D') {
-      const startY = dir === 'U' ? d : GAME_HEIGHT - d;
+      const startY = dir === 'U' ? GAME_FRAME_TOP + d : GAME_FRAME_BOTTOM - d;
       target.y = Phaser.Math.Linear(startY, GAME_HEIGHT / 2, flyRatio);
-      line.setSize(GAME_WIDTH, thickness);
+      line.setSize(GAME_FRAME_WIDTH, thickness);
       line.setPosition(GAME_WIDTH / 2, startY);
     } else {
-      const startX = dir === 'L' ? d : GAME_WIDTH - d;
+      const startX = dir === 'L' ? GAME_FRAME_LEFT + d : GAME_FRAME_RIGHT - d;
       target.x = Phaser.Math.Linear(startX, GAME_WIDTH / 2, flyRatio);
-      line.setSize(thickness, GAME_HEIGHT);
+      line.setSize(thickness, GAME_FRAME_HEIGHT);
       line.setPosition(startX, GAME_HEIGHT / 2);
     }
 
@@ -1013,17 +1072,28 @@ export class GameScene extends Phaser.Scene {
   }
 
   private isOutsideGameBounds(x: number, y: number): boolean {
-    return x < 0 || x > GAME_WIDTH || y < 0 || y > GAME_HEIGHT;
+    return x < GAME_FRAME_LEFT || x > GAME_FRAME_RIGHT || y < GAME_FRAME_TOP || y > GAME_FRAME_BOTTOM;
   }
 
   private getClosestCardinalLine(x: number, y: number): Direction {
     const distances: Array<{ dir: Direction; distance: number }> = [
-      { dir: 'U', distance: Math.abs(y) },
-      { dir: 'D', distance: Math.abs(y - GAME_HEIGHT) },
-      { dir: 'L', distance: Math.abs(x) },
-      { dir: 'R', distance: Math.abs(x - GAME_WIDTH) },
+      { dir: 'U', distance: Math.abs(y - GAME_FRAME_TOP) },
+      { dir: 'D', distance: Math.abs(y - GAME_FRAME_BOTTOM) },
+      { dir: 'L', distance: Math.abs(x - GAME_FRAME_LEFT) },
+      { dir: 'R', distance: Math.abs(x - GAME_FRAME_RIGHT) },
     ];
     distances.sort((a, b) => a.distance - b.distance);
+    return distances[0].dir;
+  }
+
+  private getClosestCorner(x: number, y: number): Direction {
+    const distances: Array<{ dir: Direction; distanceSq: number }> = [
+      { dir: 'UL', distanceSq: Phaser.Math.Distance.Squared(x, y, GAME_FRAME_LEFT, GAME_FRAME_TOP) },
+      { dir: 'UR', distanceSq: Phaser.Math.Distance.Squared(x, y, GAME_FRAME_RIGHT, GAME_FRAME_TOP) },
+      { dir: 'DL', distanceSq: Phaser.Math.Distance.Squared(x, y, GAME_FRAME_LEFT, GAME_FRAME_BOTTOM) },
+      { dir: 'DR', distanceSq: Phaser.Math.Distance.Squared(x, y, GAME_FRAME_RIGHT, GAME_FRAME_BOTTOM) },
+    ];
+    distances.sort((a, b) => a.distanceSq - b.distanceSq);
     return distances[0].dir;
   }
 
@@ -1082,10 +1152,10 @@ export class GameScene extends Phaser.Scene {
   private getTouchedCardinalLines(rect: HitboxRect): Direction[] {
     const d = this.checkDepth();
     const touched: Direction[] = [];
-    if (rect.top <= d) touched.push('U');
-    if (rect.bottom >= GAME_HEIGHT - d) touched.push('D');
-    if (rect.left <= d) touched.push('L');
-    if (rect.right >= GAME_WIDTH - d) touched.push('R');
+    if (rect.top <= GAME_FRAME_TOP + d) touched.push('U');
+    if (rect.bottom >= GAME_FRAME_BOTTOM - d) touched.push('D');
+    if (rect.left <= GAME_FRAME_LEFT + d) touched.push('L');
+    if (rect.right >= GAME_FRAME_RIGHT - d) touched.push('R');
     return touched;
   }
 
@@ -1185,20 +1255,19 @@ export class GameScene extends Phaser.Scene {
     if (dir === 'U' || dir === 'D' || dir === 'L' || dir === 'R') {
       return this.getClosestCardinalLine(point.worldX, point.worldY) === dir;
     }
-    if (dir === 'UL') return point.worldY < 0 && point.worldX < 0;
-    if (dir === 'UR') return point.worldY < 0 && point.worldX > GAME_WIDTH;
-    if (dir === 'DL') return point.worldY > GAME_HEIGHT && point.worldX < 0;
-    if (dir === 'DR') return point.worldY > GAME_HEIGHT && point.worldX > GAME_WIDTH;
+    if (dir === 'UL' || dir === 'UR' || dir === 'DL' || dir === 'DR') {
+      return this.getClosestCorner(point.worldX, point.worldY) === dir;
+    }
     return false;
   }
 
   private getInnerSquareDirectionPos(dir: Direction): { x: number; y: number } {
-    const maxInset = Math.min(GAME_WIDTH, GAME_HEIGHT) / 2 - 10;
+    const maxInset = Math.min(GAME_FRAME_WIDTH, GAME_FRAME_HEIGHT) / 2 - 10;
     const inset = Phaser.Math.Clamp(this.checkDepth() + 100, 0, maxInset);
-    const left = inset;
-    const right = GAME_WIDTH - inset;
-    const top = inset;
-    const bottom = GAME_HEIGHT - inset;
+    const left = GAME_FRAME_LEFT + inset;
+    const right = GAME_FRAME_RIGHT - inset;
+    const top = GAME_FRAME_TOP + inset;
+    const bottom = GAME_FRAME_BOTTOM - inset;
 
     const positions: Record<Direction, { x: number; y: number }> = {
       U: { x: GAME_WIDTH / 2, y: top },
