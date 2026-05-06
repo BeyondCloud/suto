@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { DEFAULT_SETTINGS } from '../config';
 import type { GameSettings } from '../config';
 
+const SETTINGS_STORAGE_KEY = 'suto.gameSettings';
+
 export class MenuScene extends Phaser.Scene {
   private settings: GameSettings;
   private settingsVisible = false;
@@ -9,7 +11,7 @@ export class MenuScene extends Phaser.Scene {
 
   constructor() {
     super('MenuScene');
-    this.settings = { ...DEFAULT_SETTINGS };
+    this.settings = this.loadSettings();
   }
 
   preload() {
@@ -75,75 +77,37 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private buildSettingsPanel() {
-    const bg = this.add.rectangle(0, 0, 560, 500, 0x111122, 0.95);
-    const title = this.add.text(0, -170, 'Settings', { fontSize: '28px', color: '#fff' }).setOrigin(0.5);
+    const bg = this.add.rectangle(0, 0, 560, 230, 0x111122, 0.95);
+    const title = this.add.text(0, -70, 'Settings', { fontSize: '28px', color: '#fff' }).setOrigin(0.5);
 
     const makeRow = (label: string, yOff: number, getValue: () => string | number, onMinus: () => void, onPlus: () => void) => {
-      const lbl = this.add.text(-180, yOff, label, { fontSize: '20px', color: '#ccc' }).setOrigin(0, 0.5);
-      const valText = this.add.text(60, yOff, String(getValue()), { fontSize: '20px', color: '#fff' }).setOrigin(0.5);
-      const minus = this.add.text(-20, yOff, '◀', { fontSize: '20px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-      const plus = this.add.text(140, yOff, '▶', { fontSize: '20px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      const lbl = this.add.text(-230, yOff, label, { fontSize: '20px', color: '#ccc' }).setOrigin(0, 0.5);
+      const valText = this.add.text(95, yOff, String(getValue()), { fontSize: '20px', color: '#fff' }).setOrigin(0.5);
+      const minus = this.add.text(35, yOff, '◀', { fontSize: '20px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      const plus = this.add.text(155, yOff, '▶', { fontSize: '20px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       minus.on('pointerdown', () => { onMinus(); valText.setText(String(getValue())); });
       plus.on('pointerdown', () => { onPlus(); valText.setText(String(getValue())); });
       return [lbl, valText, minus, plus];
     };
 
-    const bpmRow = makeRow('BPM',
-      -110,
-      () => this.settings.bpm,
-      () => { this.settings.bpm = Math.max(60, this.settings.bpm - 5); },
-      () => { this.settings.bpm = Math.min(240, this.settings.bpm + 5); },
-    );
-
-    const shrinkRow = makeRow('Shrink Lead (ms)',
-      -65,
-      () => this.settings.shrinkLeadMs,
-      () => { this.settings.shrinkLeadMs = Math.max(200, this.settings.shrinkLeadMs - 100); },
-      () => { this.settings.shrinkLeadMs = Math.min(3000, this.settings.shrinkLeadMs + 100); },
-    );
-
-    const hwRow = makeRow('Hitbox W',
-      -20,
-      () => this.settings.hitboxWidth,
-      () => { this.settings.hitboxWidth = Math.max(100, this.settings.hitboxWidth - 20); },
-      () => { this.settings.hitboxWidth = Math.min(800, this.settings.hitboxWidth + 20); },
-    );
-
-    const hhRow = makeRow('Hitbox H',
-      25,
-      () => this.settings.hitboxHeight,
-      () => { this.settings.hitboxHeight = Math.max(60, this.settings.hitboxHeight - 20); },
-      () => { this.settings.hitboxHeight = Math.min(480, this.settings.hitboxHeight + 20); },
-    );
-
-    const depthRow = makeRow('Check Depth',
-      70,
-      () => this.settings.checkDepth,
-      () => { this.settings.checkDepth = Math.max(10, this.settings.checkDepth - 10); },
-      () => { this.settings.checkDepth = Math.min(200, this.settings.checkDepth + 10); },
-    );
-
-    const cornerDepthRow = makeRow('Corner Line Depth',
-      115,
-      () => this.settings.cornerLineDepth,
-      () => { this.settings.cornerLineDepth = Math.max(20, this.settings.cornerLineDepth - 10); },
-      () => { this.settings.cornerLineDepth = Math.min(260, this.settings.cornerLineDepth + 10); },
-    );
-
     const storyDelayRow = makeRow('主線開場 Delay (ms)',
-      160,
+      0,
       () => this.settings.storyStartDelayMs,
-      () => { this.settings.storyStartDelayMs = Math.max(0, this.settings.storyStartDelayMs - 50); },
-      () => { this.settings.storyStartDelayMs = Math.min(5000, this.settings.storyStartDelayMs + 50); },
+      () => {
+        this.settings.storyStartDelayMs = Math.max(0, this.settings.storyStartDelayMs - 10);
+        this.saveSettings();
+      },
+      () => {
+        this.settings.storyStartDelayMs = Math.min(5000, this.settings.storyStartDelayMs + 10);
+        this.saveSettings();
+      },
     );
 
-    const closeBtn = this.add.text(0, 225, '[ CLOSE ]', { fontSize: '22px', color: '#ffaaaa' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const closeBtn = this.add.text(0, 70, '[ CLOSE ]', { fontSize: '22px', color: '#ffaaaa' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.toggleSettings());
 
     this.settingsContainer.add([
       bg, title,
-      ...bpmRow, ...shrinkRow, ...hwRow, ...hhRow, ...depthRow,
-      ...cornerDepthRow,
       ...storyDelayRow,
       closeBtn,
     ]);
@@ -152,5 +116,30 @@ export class MenuScene extends Phaser.Scene {
   private toggleSettings() {
     this.settingsVisible = !this.settingsVisible;
     this.settingsContainer.setVisible(this.settingsVisible);
+  }
+
+  private loadSettings(): GameSettings {
+    try {
+      const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (!raw) {
+        return { ...DEFAULT_SETTINGS };
+      }
+
+      const parsed = JSON.parse(raw) as Partial<GameSettings>;
+      return {
+        ...DEFAULT_SETTINGS,
+        ...parsed,
+      };
+    } catch {
+      return { ...DEFAULT_SETTINGS };
+    }
+  }
+
+  private saveSettings() {
+    try {
+      window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(this.settings));
+    } catch {
+      // Ignore storage write failures.
+    }
   }
 }
