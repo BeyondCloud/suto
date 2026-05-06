@@ -20,8 +20,8 @@ import type { GameSettings, Direction } from '../config';
 import { LEVEL_DATA } from '../levels';
 import type { Stage, Section, NormalSection, RotationSection, LevelData } from '../levels';
 
-const ALL_DIRS: Direction[] = ['U', 'UR', 'R', 'DR', 'D', 'DL', 'L', 'UL'];
-const CARDINAL_DIRS: Direction[] = ['U', 'D', 'L', 'R'];
+const ALL_DIRS: Direction[] = ['w', 'e', 'd', 'c', 'x', 'z', 'a', 'q'];
+const CARDINAL_DIRS: Direction[] = ['w', 'x', 'a', 'd'];
 const CHECKPOINT_RADIUS = 18;
 const CURSOR_CHECK_POINT_DOT_SIZE = 10;
 const CURSOR_CHECK_POINT_EDGE_INSET_PX = 2;
@@ -38,10 +38,10 @@ const DEFAULT_STAGE_AUDIO_CLIP = 'src/assets/audio/120.wav';
 const HIT_SPARK_TEXTURE_KEY = 'hit_spark';
 const PROMPT_AUDIO_GAP_MS = 50;
 const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
-  U: 'prompt_U',
-  D: 'prompt_D',
-  L: 'prompt_L',
-  R: 'prompt_R',
+  w: 'prompt_U',
+  x: 'prompt_D',
+  a: 'prompt_L',
+  d: 'prompt_R',
 };
 
 type GameMode = 'challenge' | 'story';
@@ -187,7 +187,7 @@ export class GameScene extends Phaser.Scene {
 
   // Prompt phase
   private isRotation = false;
-  private rotCurrentDir: Direction = 'U';
+  private rotCurrentDir: Direction = 'w';
   private promptImages: Phaser.GameObjects.Image[] = [];
   private promptIndicator?: Phaser.GameObjects.Rectangle;
   private promptIndicatorTween?: Phaser.Tweens.Tween;
@@ -688,7 +688,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private addArrowImage(x: number, y: number, dir: Direction): Phaser.GameObjects.Image {
-    const isDiagonal = dir === 'UL' || dir === 'UR' || dir === 'DL' || dir === 'DR';
+    const isDiagonal = dir === 'q' || dir === 'e' || dir === 'z' || dir === 'c';
     const key = isDiagonal ? 'down_left' : 'down';
     const img = this.add.image(x, y, key).setDepth(15).setAlpha(0.9);
     img.setAngle(isDiagonal ? DIR_ANGLE[dir] - 45 : DIR_ANGLE[dir]);
@@ -995,21 +995,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   private isCardinal(dir: Direction): boolean {
-    return dir === 'U' || dir === 'D' || dir === 'L' || dir === 'R';
+    return dir === 'w' || dir === 'x' || dir === 'a' || dir === 'd';
   }
 
   private getTargetPos(dir: Direction): { x: number; y: number } {
     const d = this.checkDepth();
     const diagonalInset = 0;
     const positions: Record<Direction, { x: number; y: number }> = {
-      U: { x: GAME_WIDTH / 2, y: GAME_FRAME_TOP + d },
-      D: { x: GAME_WIDTH / 2, y: GAME_FRAME_BOTTOM - d },
-      L: { x: GAME_FRAME_LEFT + d, y: GAME_HEIGHT / 2 },
-      R: { x: GAME_FRAME_RIGHT - d, y: GAME_HEIGHT / 2 },
-      UL: { x: GAME_FRAME_LEFT + d + diagonalInset, y: GAME_FRAME_TOP + d + diagonalInset },
-      UR: { x: GAME_FRAME_RIGHT - d - diagonalInset, y: GAME_FRAME_TOP + d + diagonalInset },
-      DL: { x: GAME_FRAME_LEFT + d + diagonalInset, y: GAME_FRAME_BOTTOM - d - diagonalInset },
-      DR: { x: GAME_FRAME_RIGHT - d - diagonalInset, y: GAME_FRAME_BOTTOM - d - diagonalInset },
+      w: { x: GAME_WIDTH / 2, y: GAME_FRAME_TOP + d },
+      x: { x: GAME_WIDTH / 2, y: GAME_FRAME_BOTTOM - d },
+      a: { x: GAME_FRAME_LEFT + d, y: GAME_HEIGHT / 2 },
+      d: { x: GAME_FRAME_RIGHT - d, y: GAME_HEIGHT / 2 },
+      q: { x: GAME_FRAME_LEFT + d + diagonalInset, y: GAME_FRAME_TOP + d + diagonalInset },
+      e: { x: GAME_FRAME_RIGHT - d - diagonalInset, y: GAME_FRAME_TOP + d + diagonalInset },
+      z: { x: GAME_FRAME_LEFT + d + diagonalInset, y: GAME_FRAME_BOTTOM - d - diagonalInset },
+      c: { x: GAME_FRAME_RIGHT - d - diagonalInset, y: GAME_FRAME_BOTTOM - d - diagonalInset },
     };
     return positions[dir];
   }
@@ -1018,18 +1018,18 @@ export class GameScene extends Phaser.Scene {
     const d = this.checkDepth();
     const color = 0xffffff;
     const alpha = 0.16;
-    if (dir === 'U') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_TOP + d / 2, GAME_FRAME_WIDTH, d, color, alpha);
-    if (dir === 'D') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_BOTTOM - d / 2, GAME_FRAME_WIDTH, d, color, alpha);
-    if (dir === 'L') return this.add.rectangle(GAME_FRAME_LEFT + d / 2, GAME_HEIGHT / 2, d, GAME_FRAME_HEIGHT, color, alpha);
+    if (dir === 'w') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_TOP + d / 2, GAME_FRAME_WIDTH, d, color, alpha);
+    if (dir === 'x') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_BOTTOM - d / 2, GAME_FRAME_WIDTH, d, color, alpha);
+    if (dir === 'a') return this.add.rectangle(GAME_FRAME_LEFT + d / 2, GAME_HEIGHT / 2, d, GAME_FRAME_HEIGHT, color, alpha);
     return this.add.rectangle(GAME_FRAME_RIGHT - d / 2, GAME_HEIGHT / 2, d, GAME_FRAME_HEIGHT, color, alpha);
   }
 
   private createEdgeLine(dir: Direction): Phaser.GameObjects.Rectangle {
     const d = this.checkDepth();
     const thickness = 4;
-    if (dir === 'U') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_TOP + d, GAME_FRAME_WIDTH, thickness, 0xffffff, 0.95);
-    if (dir === 'D') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_BOTTOM - d, GAME_FRAME_WIDTH, thickness, 0xffffff, 0.95);
-    if (dir === 'L') return this.add.rectangle(GAME_FRAME_LEFT + d, GAME_HEIGHT / 2, thickness, GAME_FRAME_HEIGHT, 0xffffff, 0.95);
+    if (dir === 'w') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_TOP + d, GAME_FRAME_WIDTH, thickness, 0xffffff, 0.95);
+    if (dir === 'x') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_BOTTOM - d, GAME_FRAME_WIDTH, thickness, 0xffffff, 0.95);
+    if (dir === 'a') return this.add.rectangle(GAME_FRAME_LEFT + d, GAME_HEIGHT / 2, thickness, GAME_FRAME_HEIGHT, 0xffffff, 0.95);
     return this.add.rectangle(GAME_FRAME_RIGHT - d, GAME_HEIGHT / 2, thickness, GAME_FRAME_HEIGHT, 0xffffff, 0.95);
   }
 
@@ -1040,13 +1040,13 @@ export class GameScene extends Phaser.Scene {
     const top = GAME_FRAME_TOP;
     const bottom = GAME_FRAME_BOTTOM;
 
-    if (dir === 'UL') {
+    if (dir === 'q') {
       return this.add.line(0, 0, left + d, top, left, top + d, 0xffffff, 0.95).setOrigin(0, 0);
     }
-    if (dir === 'UR') {
+    if (dir === 'e') {
       return this.add.line(0, 0, right - d, top, right, top + d, 0xffffff, 0.95).setOrigin(0, 0);
     }
-    if (dir === 'DL') {
+    if (dir === 'z') {
       return this.add.line(0, 0, left, bottom - d, left + d, bottom, 0xffffff, 0.95).setOrigin(0, 0);
     }
     return this.add.line(0, 0, right, bottom - d, right - d, bottom, 0xffffff, 0.95).setOrigin(0, 0);
@@ -1055,25 +1055,25 @@ export class GameScene extends Phaser.Scene {
   private isDiagonalCornerLineHit(pointX: number, pointY: number, dir: Direction): boolean {
     const d = this.cornerLineDepth();
 
-    if (dir === 'UL') {
+    if (dir === 'q') {
       const x = (GAME_FRAME_LEFT + d) - pointX;
       const y = (GAME_FRAME_TOP + d) - pointY;
       return x >= 0 && y >= 0 && x + y >= d;
     }
 
-    if (dir === 'UR') {
+    if (dir === 'e') {
       const x = pointX - (GAME_FRAME_RIGHT - d);
       const y = (GAME_FRAME_TOP + d) - pointY;
       return x >= 0 && y >= 0 && x + y >= d;
     }
 
-    if (dir === 'DL') {
+    if (dir === 'z') {
       const x = (GAME_FRAME_LEFT + d) - pointX;
       const y = pointY - (GAME_FRAME_BOTTOM - d);
       return x >= 0 && y >= 0 && x + y >= d;
     }
 
-    if (dir === 'DR') {
+    if (dir === 'c') {
       const x = pointX - (GAME_FRAME_RIGHT - d);
       const y = pointY - (GAME_FRAME_BOTTOM - d);
       return x >= 0 && y >= 0 && x + y >= d;
@@ -1085,9 +1085,9 @@ export class GameScene extends Phaser.Scene {
   private createEdgeHitFlash(dir: Direction): Phaser.GameObjects.Rectangle {
     const d = this.checkDepth();
     const color = 0xffde4a;
-    if (dir === 'U') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_TOP + d / 2, GAME_FRAME_WIDTH, d, color, 0);
-    if (dir === 'D') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_BOTTOM - d / 2, GAME_FRAME_WIDTH, d, color, 0);
-    if (dir === 'L') return this.add.rectangle(GAME_FRAME_LEFT + d / 2, GAME_HEIGHT / 2, d, GAME_FRAME_HEIGHT, color, 0);
+    if (dir === 'w') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_TOP + d / 2, GAME_FRAME_WIDTH, d, color, 0);
+    if (dir === 'x') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_BOTTOM - d / 2, GAME_FRAME_WIDTH, d, color, 0);
+    if (dir === 'a') return this.add.rectangle(GAME_FRAME_LEFT + d / 2, GAME_HEIGHT / 2, d, GAME_FRAME_HEIGHT, color, 0);
     return this.add.rectangle(GAME_FRAME_RIGHT - d / 2, GAME_HEIGHT / 2, d, GAME_FRAME_HEIGHT, color, 0);
   }
 
@@ -1116,13 +1116,13 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(1);
 
     const target: { x?: number; y?: number } = {};
-    if (dir === 'U' || dir === 'D') {
-      const startY = dir === 'U' ? GAME_FRAME_TOP + d : GAME_FRAME_BOTTOM - d;
+    if (dir === 'w' || dir === 'x') {
+      const startY = dir === 'w' ? GAME_FRAME_TOP + d : GAME_FRAME_BOTTOM - d;
       target.y = Phaser.Math.Linear(startY, GAME_HEIGHT / 2, flyRatio);
       line.setSize(GAME_FRAME_WIDTH, thickness);
       line.setPosition(GAME_WIDTH / 2, startY);
     } else {
-      const startX = dir === 'L' ? GAME_FRAME_LEFT + d : GAME_FRAME_RIGHT - d;
+      const startX = dir === 'a' ? GAME_FRAME_LEFT + d : GAME_FRAME_RIGHT - d;
       target.x = Phaser.Math.Linear(startX, GAME_WIDTH / 2, flyRatio);
       line.setSize(thickness, GAME_FRAME_HEIGHT);
       line.setPosition(startX, GAME_HEIGHT / 2);
@@ -1156,7 +1156,7 @@ export class GameScene extends Phaser.Scene {
       lifespan: { min: 360, max: 680 },
       speedX: velocity.speedX,
       speedY: velocity.speedY,
-      accelerationY: dir === 'U' ? 260 : dir === 'D' ? -260 : 0,
+      accelerationY: dir === 'w' ? 260 : dir === 'x' ? -260 : 0,
       scale: { start: 0.72, end: 0 },
       alpha: { start: 1, end: 0 },
       rotate: { min: 0, max: 360 },
@@ -1172,8 +1172,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private getEdgeParticlePositions(dir: Direction, inset: number): Array<{ x: number; y: number }> {
-    if (dir === 'U' || dir === 'D') {
-      const y = dir === 'U' ? GAME_FRAME_TOP + inset : GAME_FRAME_BOTTOM - inset;
+    if (dir === 'w' || dir === 'x') {
+      const y = dir === 'w' ? GAME_FRAME_TOP + inset : GAME_FRAME_BOTTOM - inset;
       return [
         { x: GAME_WIDTH / 2 - GAME_FRAME_WIDTH * 0.34, y },
         { x: GAME_WIDTH / 2 - GAME_FRAME_WIDTH * 0.17, y },
@@ -1183,8 +1183,8 @@ export class GameScene extends Phaser.Scene {
       ];
     }
 
-    if (dir === 'L' || dir === 'R') {
-      const x = dir === 'L' ? GAME_FRAME_LEFT + inset : GAME_FRAME_RIGHT - inset;
+    if (dir === 'a' || dir === 'd') {
+      const x = dir === 'a' ? GAME_FRAME_LEFT + inset : GAME_FRAME_RIGHT - inset;
       return [
         { x, y: GAME_HEIGHT / 2 - GAME_FRAME_HEIGHT * 0.34 },
         { x, y: GAME_HEIGHT / 2 - GAME_FRAME_HEIGHT * 0.17 },
@@ -1199,14 +1199,14 @@ export class GameScene extends Phaser.Scene {
     const top = GAME_FRAME_TOP + inset;
     const bottom = GAME_FRAME_BOTTOM - inset;
     const positions: Record<Direction, { x: number; y: number }> = {
-      U: { x: GAME_WIDTH / 2, y: top },
-      D: { x: GAME_WIDTH / 2, y: bottom },
-      L: { x: left, y: GAME_HEIGHT / 2 },
-      R: { x: right, y: GAME_HEIGHT / 2 },
-      UL: { x: left, y: top },
-      UR: { x: right, y: top },
-      DL: { x: left, y: bottom },
-      DR: { x: right, y: bottom },
+      w: { x: GAME_WIDTH / 2, y: top },
+      x: { x: GAME_WIDTH / 2, y: bottom },
+      a: { x: left, y: GAME_HEIGHT / 2 },
+      d: { x: right, y: GAME_HEIGHT / 2 },
+      q: { x: left, y: top },
+      e: { x: right, y: top },
+      z: { x: left, y: bottom },
+      c: { x: right, y: bottom },
     };
     return [positions[dir]];
   }
@@ -1216,13 +1216,13 @@ export class GameScene extends Phaser.Scene {
     speedY: Phaser.Types.GameObjects.Particles.EmitterOpOnEmitType;
   } {
     const spread = { min: -180, max: 180 };
-    if (dir === 'U') return { speedX: spread, speedY: { min: 80, max: 320 } };
-    if (dir === 'D') return { speedX: spread, speedY: { min: -320, max: -80 } };
-    if (dir === 'L') return { speedX: { min: 80, max: 320 }, speedY: spread };
-    if (dir === 'R') return { speedX: { min: -320, max: -80 }, speedY: spread };
+    if (dir === 'w') return { speedX: spread, speedY: { min: 80, max: 320 } };
+    if (dir === 'x') return { speedX: spread, speedY: { min: -320, max: -80 } };
+    if (dir === 'a') return { speedX: { min: 80, max: 320 }, speedY: spread };
+    if (dir === 'd') return { speedX: { min: -320, max: -80 }, speedY: spread };
 
-    const xDir = dir === 'UL' || dir === 'DL' ? 1 : -1;
-    const yDir = dir === 'UL' || dir === 'UR' ? 1 : -1;
+    const xDir = dir === 'q' || dir === 'z' ? 1 : -1;
+    const yDir = dir === 'q' || dir === 'e' ? 1 : -1;
     const diagonalRange = (sign: number) => sign > 0 ? { min: 80, max: 320 } : { min: -320, max: -80 };
     return {
       speedX: diagonalRange(xDir),
@@ -1477,10 +1477,10 @@ export class GameScene extends Phaser.Scene {
   private getTouchedCardinalLines(rect: HitboxRect): Direction[] {
     const d = this.checkDepth();
     const touched: Direction[] = [];
-    if (rect.top <= GAME_FRAME_TOP + d) touched.push('U');
-    if (rect.bottom >= GAME_FRAME_BOTTOM - d) touched.push('D');
-    if (rect.left <= GAME_FRAME_LEFT + d) touched.push('L');
-    if (rect.right >= GAME_FRAME_RIGHT - d) touched.push('R');
+    if (rect.top <= GAME_FRAME_TOP + d) touched.push('w');
+    if (rect.bottom >= GAME_FRAME_BOTTOM - d) touched.push('x');
+    if (rect.left <= GAME_FRAME_LEFT + d) touched.push('a');
+    if (rect.right >= GAME_FRAME_RIGHT - d) touched.push('d');
     return touched;
   }
 
@@ -1500,10 +1500,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private getCardinalLinesForDir(dir: Direction): Direction[] {
-    if (dir === 'UL') return ['U', 'L'];
-    if (dir === 'UR') return ['U', 'R'];
-    if (dir === 'DL') return ['D', 'L'];
-    if (dir === 'DR') return ['D', 'R'];
+    if (dir === 'q') return ['w', 'a'];
+    if (dir === 'e') return ['w', 'd'];
+    if (dir === 'z') return ['x', 'a'];
+    if (dir === 'c') return ['x', 'd'];
     return CARDINAL_DIRS.includes(dir) ? [dir] : [];
   }
 
@@ -1577,21 +1577,21 @@ export class GameScene extends Phaser.Scene {
     const point = this.getCursorCheckPoint();
 
     switch (dir) {
-      case 'U':
+      case 'w':
         return point.worldY <= GAME_FRAME_TOP;
-      case 'D':
+      case 'x':
         return point.worldY >= GAME_FRAME_BOTTOM;
-      case 'L':
+      case 'a':
         return point.worldX <= GAME_FRAME_LEFT;
-      case 'R':
+      case 'd':
         return point.worldX >= GAME_FRAME_RIGHT;
-      case 'UL':
+      case 'q':
         return this.isDiagonalCornerLineHit(point.worldX, point.worldY, dir);
-      case 'UR':
+      case 'e':
         return this.isDiagonalCornerLineHit(point.worldX, point.worldY, dir);
-      case 'DL':
+      case 'z':
         return this.isDiagonalCornerLineHit(point.worldX, point.worldY, dir);
-      case 'DR':
+      case 'c':
         return this.isDiagonalCornerLineHit(point.worldX, point.worldY, dir);
       default:
         return false;
@@ -1607,14 +1607,14 @@ export class GameScene extends Phaser.Scene {
     const bottom = GAME_FRAME_BOTTOM - inset;
 
     const positions: Record<Direction, { x: number; y: number }> = {
-      U: { x: GAME_WIDTH / 2, y: top },
-      UR: { x: right, y: top },
-      R: { x: right, y: GAME_HEIGHT / 2 },
-      DR: { x: right, y: bottom },
-      D: { x: GAME_WIDTH / 2, y: bottom },
-      DL: { x: left, y: bottom },
-      L: { x: left, y: GAME_HEIGHT / 2 },
-      UL: { x: left, y: top },
+      w: { x: GAME_WIDTH / 2, y: top },
+      e: { x: right, y: top },
+      d: { x: right, y: GAME_HEIGHT / 2 },
+      c: { x: right, y: bottom },
+      x: { x: GAME_WIDTH / 2, y: bottom },
+      z: { x: left, y: bottom },
+      a: { x: left, y: GAME_HEIGHT / 2 },
+      q: { x: left, y: top },
     };
 
     return positions[dir];

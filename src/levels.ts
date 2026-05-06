@@ -35,22 +35,37 @@ export const LEVEL_DATA: LevelData = {
         //   type: 'normal',
         //   prompts: ['UL', 'UR', 'DL', 'DR', 'UL', 'UR', 'DL', 'DR'],
         // },
+        // {
+        //   type: 'rotation',
+        //   start: 'U',
+        //   rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
+        // },
+        // {
+        //   type: 'rotation',
+        //   start: 'U',
+        //   rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
+        // },
+        // {
+        //   type: 'rotation',
+        //   start: 'U',
+        //   rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
+        // },
         {
           type: 'normal',
-          prompts: ['U', 'R', 'R', 'L', 'D', 'L', 'R', 'U'],
+          prompts: ['w', 'd', 'd', 'a', 'x', 'a', 'd', 'w'],
         },
         {
           type: 'normal',
-          prompts: ['U', 'D', 'L', 'R', 'D', 'D', 'D', 'D'],
+          prompts: ['w', 'x', 'a', 'd', 'x', 'x', 'x', 'x'],
         },
         {
           type: 'rotation',
-          start: 'U',
+          start: 'w',
           rotate: ['R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'],
         },
         {
           type: 'rotation',
-          start: 'U',
+          start: 'w',
           rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
         },
         // {
@@ -66,12 +81,12 @@ export const LEVEL_DATA: LevelData = {
     },
     {
       stage_number: 2,
-      bpm: 120,
+      bpm: 183,
       audio_clip: 'src/assets/audio/120.wav',
       sections: [
         {
           type: 'normal',
-          prompts: ['UL', 'UR', 'DL', 'DR', 'UL', 'UR', 'DL', 'DR'],
+          prompts: ['q', 'e', 'z', 'c', 'q', 'e', 'z', 'c'],
         },
       ],
     },
@@ -82,7 +97,7 @@ export const LEVEL_DATA: LevelData = {
       sections: [
         {
           type: 'rotation',
-          start: 'U',
+          start: 'w',
           rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
         },
       ],
@@ -99,51 +114,62 @@ export const MAIN_LEVEL_DATA: LevelData = {
       sections: [
         {
           type: 'normal',
-          prompts: ['D', 'U', 'D', 'U','D', 'U','D', 'U'],
+          prompts: ['x', 'w', 'x', 'w','x', 'w','x', 'w'],
         },
         {
           type: 'normal',
-          prompts: ['D', 'U', 'D', 'U','D', 'U','D', 'U'],
+          prompts: ['x', 'w', 'x', 'w','x', 'w','x', 'w'],
         },
         {
           type: 'normal',
-          prompts: ['U', 'U', 'U', 'D', 'U', 'U', 'U', 'D'],
+          prompts: ['w', 'w', 'w', 'x', 'w', 'w', 'w', 'x'],
         },
         {
           type: 'normal',
-          prompts: ['D', 'R', 'U', 'L', 'D', 'R', 'U', 'L', ],
+          prompts: ['x', 'd', 'w', 'a', 'x', 'd', 'w', 'a', ],
         },
         {
           type: 'normal',
-          prompts: ['U', 'D', 'U', 'D', 'UR', 'DR', 'UL', 'DL'],
+          prompts: ['w', 'x', 'w', 'x', 'e', 'c', 'q', 'z'],
         },
         {
           type: 'rotation',
-          start: 'U',
+          start: 'w',
           rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
         }
       ],
     },
-    {
+   {
       stage_number: 2,
       bpm: 183,
       sections: [
         {
           type: 'normal',
-          prompts: ['UL', 'UR', 'DL', 'DR', 'UL', 'UR', 'DL', 'DR'],
+          prompts: ['x', 'w', 'x', 'w','w', 'w','w', 'w'],
         },
-      ],
-    },
-    {
-      stage_number: 3,
-      bpm: 183,
-      sections: [
+        {
+          type: 'normal',
+          prompts: ['e', 'd', 'e', 'd','a', 'q','a', 'q'],
+        },
+        {
+          type: 'normal',
+          prompts: ['x', 'w', 'a', 'w', 'a', 'e', 'a', 'x'],
+        },
+        {
+          type: 'normal',
+          prompts: ['x', 'd', 'w', 'a', 'x', 'd', 'w', 'a', ],
+        },
+        {
+          type: 'normal',
+          prompts: ['w', 'x', 'w', 'x', 'e', 'c', 'q', 'z'],
+        },
         {
           type: 'rotation',
-          start: 'U',
+          start: 'w',
           rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
-        },
+        }
       ],
-    },
+    }
+
   ],
 };

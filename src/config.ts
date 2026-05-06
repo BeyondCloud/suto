@@ -24,22 +24,22 @@ export const DEFAULT_SETTINGS: GameSettings = {
 };
 
 // Directions
-export type Direction = 'U' | 'D' | 'L' | 'R' | 'UL' | 'UR' | 'DL' | 'DR';
+export type Direction = 'w' | 'x' | 'a' | 'd' | 'q' | 'e' | 'z' | 'c';
 
 // Angle in degrees for each direction (rotation from down.png which points down = 0°)
 export const DIR_ANGLE: Record<Direction, number> = {
-  D: 0,
-  DL: 45,
-  L: 90,
-  UL: 135,
-  U: 180,
-  UR: 225,
-  R: 270,
-  DR: 315,
+  x: 0,
+  z: 45,
+  a: 90,
+  q: 135,
+  w: 180,
+  e: 225,
+  d: 270,
+  c: 315,
 };
 
 // Cardinal directions in clockwise order
-export const CLOCKWISE_ORDER: Direction[] = ['U', 'UR', 'R', 'DR', 'D', 'DL', 'L', 'UL'];
+export const CLOCKWISE_ORDER: Direction[] = ['w', 'e', 'd', 'c', 'x', 'z', 'a', 'q'];
 
 // For rotation section: given a cardinal start and rotation direction, get intermediate diagonal and next cardinal
 export function getRotationPoints(current: Direction, rotDir: 'L' | 'R'): [Direction, Direction] {
@@ -67,8 +67,8 @@ export const ELLIPSE_RY = (GAME_HEIGHT - 100) / 2; // Leave some margin on top/b
 export function getCheckpointPos(dir: Direction): { x: number; y: number } {
   // Angle: U=top=-90°, R=right=0°, D=bottom=90°, L=left=180°
   const angles: Record<Direction, number> = {
-    U: -90, UR: -45, R: 0, DR: 45,
-    D: 90, DL: 135, L: 180, UL: -135,
+    w: -90, e: -45, d: 0, c: 45,
+    x: 90, z: 135, a: 180, q: -135,
   };
   const rad = (angles[dir] * Math.PI) / 180;
   return {
