@@ -10,7 +10,7 @@ import missUrl from '../assets/audio/miss.wav';
 import stage120Url from '../assets/audio/120.wav';
 import {
   GAME_WIDTH, GAME_HEIGHT,
-  DIR_ANGLE, ELLIPSE_CX, ELLIPSE_CY, ELLIPSE_RX, ELLIPSE_RY,
+  DIR_ANGLE,
   getRotationPoints,
 } from '../config';
 import type { GameSettings, Direction } from '../config';
@@ -92,7 +92,6 @@ export class GameScene extends Phaser.Scene {
   private gamePhase: 'prompt' | 'check' = 'prompt';
 
   // UI
-  private ellipseGraphics!: Phaser.GameObjects.Graphics;
   private checkpoints: CheckpointUI[] = [];
   private hitboxGraphics!: Phaser.GameObjects.Graphics;
   private cursorClipFrame!: HTMLDivElement;
@@ -235,9 +234,7 @@ export class GameScene extends Phaser.Scene {
     this.falseTouchCount = 0;
     this.shrinkTweens.clear();
 
-    this.ellipseGraphics = this.add.graphics();
     this.hitboxGraphics = this.add.graphics().setDepth(25);
-    this.drawEllipse();
     this.createHUD();
     this.createLifeBar();
     this.createCheckpoints();
@@ -259,17 +256,6 @@ export class GameScene extends Phaser.Scene {
     this.currentStage = LEVEL_DATA.stages[index];
     this.beatMs = 60000 / this.currentStage.bpm;
     this.currentStageAudioKey = getStageAudioKey(this.currentStage.audio_clip);
-  }
-
-  private drawEllipse() {
-    this.ellipseGraphics.clear();
-    if (this.settings.debugMode) {
-      this.ellipseGraphics.lineStyle(2, 0xffffff, 1);
-      this.ellipseGraphics.strokeEllipse(ELLIPSE_CX, ELLIPSE_CY, ELLIPSE_RX * 2, ELLIPSE_RY * 2);
-      const d = this.checkDepth();
-      this.ellipseGraphics.lineStyle(1, 0x66d9ff, 0.6);
-      this.ellipseGraphics.strokeRect(d, d, GAME_WIDTH - d * 2, GAME_HEIGHT - d * 2);
-    }
   }
 
   private createHUD() {
@@ -1685,6 +1671,5 @@ export class GameScene extends Phaser.Scene {
     if (this.gamePhase === 'check' && !this.isPaused) {
       this.checkActiveHits(this.cursorWorldX, this.cursorWorldY);
     }
-    if (this.settings.debugMode) this.drawEllipse();
   }
 }

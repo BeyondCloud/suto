@@ -105,22 +105,13 @@ export class MenuScene extends Phaser.Scene {
       () => { this.settings.checkDepth = Math.min(200, this.settings.checkDepth + 10); },
     );
 
-    // Debug toggle
-    const debugLbl = this.add.text(-180, 115, 'Debug Mode', { fontSize: '20px', color: '#ccc' }).setOrigin(0, 0.5);
-    const debugVal = this.add.text(60, 115, this.settings.debugMode ? 'ON' : 'OFF', { fontSize: '20px', color: '#fff' }).setOrigin(0.5);
-    const debugBtn = this.add.text(0, 115, '◀  ▶', { fontSize: '20px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    debugBtn.on('pointerdown', () => {
-      this.settings.debugMode = !this.settings.debugMode;
-      debugVal.setText(this.settings.debugMode ? 'ON' : 'OFF');
-    });
-
     const closeBtn = this.add.text(0, 160, '[ CLOSE ]', { fontSize: '22px', color: '#ffaaaa' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.toggleSettings());
 
     this.settingsContainer.add([
       bg, title,
       ...bpmRow, ...shrinkRow, ...hwRow, ...hhRow, ...depthRow,
-      debugLbl, debugVal, debugBtn, closeBtn,
+      closeBtn,
     ]);
   }
 

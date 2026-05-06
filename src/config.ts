@@ -8,7 +8,6 @@ export interface GameSettings {
   hitboxWidth: number;
   hitboxHeight: number;
   checkDepth: number;
-  debugMode: boolean;
 }
 
 export const DEFAULT_SETTINGS: GameSettings = {
@@ -18,7 +17,6 @@ export const DEFAULT_SETTINGS: GameSettings = {
   hitboxWidth: 500,
   hitboxHeight: 300,
   checkDepth: 50,
-  debugMode: false,
 };
 
 // Directions
