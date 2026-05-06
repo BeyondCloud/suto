@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import welcomeAudioUrl from '../assets/audio/welcome.wav';
+import mainlineClickAudioUrl from '../assets/audio/short/來.wav';
 import { DEFAULT_SETTINGS } from '../config';
 import type { GameSettings } from '../config';
 
@@ -8,6 +10,7 @@ export class MenuScene extends Phaser.Scene {
   private settings: GameSettings;
   private settingsVisible = false;
   private settingsContainer!: Phaser.GameObjects.Container;
+  private welcomeSound?: Phaser.Sound.BaseSound;
 
   constructor() {
     super('MenuScene');
@@ -17,12 +20,24 @@ export class MenuScene extends Phaser.Scene {
   preload() {
     this.load.image('suto400', 'src/assets/suto400.png');
     this.load.image('opening_bg', 'src/assets/opening.png');
+    this.load.audio('welcome', welcomeAudioUrl);
+    this.load.audio('mainline-click', mainlineClickAudioUrl);
   }
 
   create() {
     const { width, height } = this.scale;
     const cx = width / 2;
     this.input.setDefaultCursor('default');
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.stopWelcomeAudio();
+    });
+
+    this.playWelcomeAudio();
+    if (this.sound.locked) {
+      this.input.once('pointerdown', () => this.playWelcomeAudio());
+      this.input.keyboard?.once('keydown', () => this.playWelcomeAudio());
+    }
 
     const background = this.add.image(cx, height / 2, 'opening_bg').setDepth(-10);
     const bgScale = Math.max(width / background.width, height / background.height);
@@ -35,6 +50,12 @@ export class MenuScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
+    // A full-width translucent stripe behind the currently hovered menu option.
+    const selectionStripe = this.add.rectangle(cx, 0, width, 62, 0x000000, 0.45)
+      .setOrigin(0.5)
+      .setDepth(-1)
+      .setVisible(false);
+
     // Mainline mode button
     const mainlineBtn = this.add.text(cx, height * 0.45, '[ 主線模式 ]', {
       fontSize: '44px',
@@ -42,9 +63,16 @@ export class MenuScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    mainlineBtn.on('pointerover', () => mainlineBtn.setColor('#ffffff'));
-    mainlineBtn.on('pointerout', () => mainlineBtn.setColor('#ffd58f'));
+    mainlineBtn.on('pointerover', () => {
+      selectionStripe.setY(mainlineBtn.y).setVisible(true);
+      mainlineBtn.setColor('#ffffff');
+    });
+    mainlineBtn.on('pointerout', () => {
+      mainlineBtn.setColor('#ffd58f');
+      selectionStripe.setVisible(false);
+    });
     mainlineBtn.on('pointerdown', () => {
+      this.sound.play('mainline-click');
       this.scene.start('MainlineIntroScene', { settings: this.settings });
     });
 
@@ -54,8 +82,14 @@ export class MenuScene extends Phaser.Scene {
       color: '#aaffaa',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    startBtn.on('pointerover', () => startBtn.setColor('#ffffff'));
-    startBtn.on('pointerout', () => startBtn.setColor('#aaffaa'));
+    startBtn.on('pointerover', () => {
+      selectionStripe.setY(startBtn.y).setVisible(true);
+      startBtn.setColor('#ffffff');
+    });
+    startBtn.on('pointerout', () => {
+      startBtn.setColor('#aaffaa');
+      selectionStripe.setVisible(false);
+    });
     startBtn.on('pointerdown', () => {
       this.scene.start('GameScene', { settings: this.settings, stageIndex: 0, mode: 'challenge' });
     });
@@ -66,8 +100,14 @@ export class MenuScene extends Phaser.Scene {
       color: '#aaaaff',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    settingsBtn.on('pointerover', () => settingsBtn.setColor('#ffffff'));
-    settingsBtn.on('pointerout', () => settingsBtn.setColor('#aaaaff'));
+    settingsBtn.on('pointerover', () => {
+      selectionStripe.setY(settingsBtn.y).setVisible(true);
+      settingsBtn.setColor('#ffffff');
+    });
+    settingsBtn.on('pointerout', () => {
+      settingsBtn.setColor('#aaaaff');
+      selectionStripe.setVisible(false);
+    });
     settingsBtn.on('pointerdown', () => this.toggleSettings());
 
     // Settings panel
@@ -133,6 +173,31 @@ export class MenuScene extends Phaser.Scene {
     } catch {
       return { ...DEFAULT_SETTINGS };
     }
+  }
+
+  private playWelcomeAudio() {
+    if (this.welcomeSound?.isPlaying) {
+      return;
+    }
+
+    const sound = this.sound.add('welcome');
+    const started = sound.play();
+    if (started) {
+      this.welcomeSound = sound;
+      return;
+    }
+
+    sound.destroy();
+  }
+
+  private stopWelcomeAudio() {
+    if (!this.welcomeSound) {
+      return;
+    }
+
+    this.welcomeSound.stop();
+    this.welcomeSound.destroy();
+    this.welcomeSound = undefined;
   }
 
   private saveSettings() {
