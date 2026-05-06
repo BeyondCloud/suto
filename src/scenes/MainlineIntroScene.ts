@@ -130,32 +130,27 @@ export class MainlineIntroScene extends Phaser.Scene {
     const ratio = Math.min((GAME_WIDTH * 0.92) / tutorial.width, (GAME_HEIGHT * 0.84) / tutorial.height);
     tutorial.setDisplaySize(tutorial.width * ratio, tutorial.height * ratio);
 
-    const btnY = GAME_HEIGHT - 68;
-    const confirmBg = this.add.rectangle(GAME_WIDTH / 2, btnY, 220, 64, 0x1c825f, 1)
-      .setStrokeStyle(3, 0xd8ffef, 0.95)
-      .setDepth(5)
-      .setInteractive({ useHandCursor: true });
-    const confirmText = this.add.text(GAME_WIDTH / 2, btnY, '確定', {
-      fontSize: '34px',
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 68, '按任意按鍵繼續', {
+      fontSize: '32px',
       color: '#ffffff',
       fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 6,
     }).setOrigin(0.5).setDepth(6);
 
-    confirmBg.on('pointerover', () => {
-      confirmBg.setFillStyle(0x24a175, 1);
-      confirmText.setScale(1.03);
-    });
-    confirmBg.on('pointerout', () => {
-      confirmBg.setFillStyle(0x1c825f, 1);
-      confirmText.setScale(1);
-    });
-    confirmBg.on('pointerdown', () => {
+    let started = false;
+    const startGame = () => {
+      if (started) return;
+      started = true;
       this.scene.start('GameScene', {
         settings: this.settings,
         stageIndex: 0,
         mode: 'story',
         levelData: MAIN_LEVEL_DATA,
       });
-    });
+    };
+
+    this.input.keyboard?.once('keydown', startGame);
+    this.input.once('pointerdown', startGame);
   }
 }
