@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import suto400GifUrl from '../assets/suto400_2x.gif';
+import gameoverBgUrl from '../assets/gameover.png';
 import promptDUrl from '../assets/audio/D.wav';
 import promptLUrl from '../assets/audio/L.wav';
 import promptRUrl from '../assets/audio/R.wav';
@@ -206,6 +207,7 @@ export class GameScene extends Phaser.Scene {
   preload() {
     this.load.image('down', 'src/assets/down.png');
     this.load.image('down_left', 'src/assets/down_left.png');
+    this.load.image('gameover_bg', gameoverBgUrl);
     this.load.audio('prompt_U', promptUUrl);
     this.load.audio('prompt_D', promptDUrl);
     this.load.audio('prompt_L', promptLUrl);
@@ -1432,6 +1434,9 @@ export class GameScene extends Phaser.Scene {
     this.setGifCursorVisible(false);
     this.hitboxGraphics.clear();
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
+    this.add.image(cx, cy, 'gameover_bg').setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(180);
+    this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.62).setDepth(181);
+    this.add.rectangle(cx, cy, 560, 180, 0x000000, 0.72).setDepth(199);
     this.add.text(cx, cy - 40, 'GAME OVER', { fontSize: '64px', color: '#ff4444' }).setOrigin(0.5).setDepth(200);
     this.add.text(cx, cy + 40, '按任意鍵繼續', { fontSize: '28px', color: '#ffffff' }).setOrigin(0.5).setDepth(200);
     this.input.keyboard!.once('keydown', () => this.scene.start('MenuScene'));
