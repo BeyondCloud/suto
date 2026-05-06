@@ -33,7 +33,7 @@ const GAME_FRAME_HEIGHT = GAME_FRAME_BOTTOM - GAME_FRAME_TOP;
 const FALSE_TOUCH_DAMAGE = 5;
 const DEFAULT_STAGE_AUDIO_CLIP = 'src/assets/audio/120.wav';
 const HIT_SPARK_TEXTURE_KEY = 'hit_spark';
-const PROMPT_AUDIO_GAP_MS = 10;
+const PROMPT_AUDIO_GAP_MS = 50;
 const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   U: 'prompt_U',
   D: 'prompt_D',
