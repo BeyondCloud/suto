@@ -4,6 +4,8 @@ import promptDUrl from '../assets/audio/D.wav';
 import promptLUrl from '../assets/audio/L.wav';
 import promptRUrl from '../assets/audio/R.wav';
 import promptUUrl from '../assets/audio/U.wav';
+import clapUrl from '../assets/audio/clap.wav';
+import missUrl from '../assets/audio/miss.wav';
 import {
   GAME_WIDTH, GAME_HEIGHT,
   DIR_ANGLE, ELLIPSE_CX, ELLIPSE_CY, ELLIPSE_RX, ELLIPSE_RY,
@@ -175,6 +177,8 @@ export class GameScene extends Phaser.Scene {
     this.load.audio('prompt_D', promptDUrl);
     this.load.audio('prompt_L', promptLUrl);
     this.load.audio('prompt_R', promptRUrl);
+    this.load.audio('clap', clapUrl);
+    this.load.audio('miss', missUrl);
   }
 
   create() {
@@ -1032,6 +1036,7 @@ export class GameScene extends Phaser.Scene {
     this.penaltyCooldownUntil = this.time.now + this.beatMs;
     this.falseTouchedLines.clear();
     this.perfectCount++;
+    this.sound.play('clap');
     this.updateJudgementText();
     this.lifeValue = Math.min(100, this.lifeValue + 4);
     this.drawLifeBar();
@@ -1043,6 +1048,7 @@ export class GameScene extends Phaser.Scene {
 
   private onMiss(dir: Direction) {
     this.missCount++;
+    this.sound.play('miss');
     this.updateJudgementText();
     this.lifeValue = Math.max(0, this.lifeValue - 20);
     this.drawLifeBar();
