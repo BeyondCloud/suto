@@ -57,7 +57,7 @@ export class MenuScene extends Phaser.Scene {
       .setVisible(false);
 
     // Mainline mode button
-    const mainlineBtn = this.add.text(cx, height * 0.45, '[ 主線模式 ]', {
+    const mainlineBtn = this.add.text(cx, height * 0.45, '[ 主播模式 ]', {
       fontSize: '44px',
       color: '#ffd58f',
       fontStyle: 'bold',
@@ -78,6 +78,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Challenge mode button
     const startBtn = this.add.text(cx, height * 0.56, '[ 挑戰模式 ]', {
+      fontStyle: 'bold',
       fontSize: '40px',
       color: '#aaffaa',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -120,19 +121,31 @@ export class MenuScene extends Phaser.Scene {
     const bg = this.add.rectangle(0, 0, 560, 230, 0x111122, 0.95);
     const title = this.add.text(0, -70, 'Settings', { fontSize: '28px', color: '#fff' }).setOrigin(0.5);
 
-    const makeRow = (label: string, yOff: number, getValue: () => string | number, onMinus: () => void, onPlus: () => void) => {
+    const makeRow = (label: string, yOff: number, getValue: () => string | number, onMinus: () => void, onPlus: () => void, onMinusTen?: () => void, onPlusTen?: () => void) => {
       const lbl = this.add.text(-230, yOff, label, { fontSize: '20px', color: '#ccc' }).setOrigin(0, 0.5);
       const valText = this.add.text(95, yOff, String(getValue()), { fontSize: '20px', color: '#fff' }).setOrigin(0.5);
-      const minus = this.add.text(35, yOff, '◀', { fontSize: '20px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-      const plus = this.add.text(155, yOff, '▶', { fontSize: '20px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      const minusTen = this.add.text(-5, yOff, '◀◀', { fontSize: '18px', color: '#aaa' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      const minus = this.add.text(45, yOff, '◀', { fontSize: '20px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      const plus = this.add.text(145, yOff, '▶', { fontSize: '20px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      const plusTen = this.add.text(195, yOff, '▶▶', { fontSize: '18px', color: '#aaa' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      minusTen.on('pointerdown', () => { (onMinusTen ?? onMinus)(); valText.setText(String(getValue())); });
       minus.on('pointerdown', () => { onMinus(); valText.setText(String(getValue())); });
       plus.on('pointerdown', () => { onPlus(); valText.setText(String(getValue())); });
-      return [lbl, valText, minus, plus];
+      plusTen.on('pointerdown', () => { (onPlusTen ?? onPlus)(); valText.setText(String(getValue())); });
+      return [lbl, valText, minusTen, minus, plus, plusTen];
     };
 
     const storyDelayRow = makeRow('主線開場 Delay (ms)',
       0,
       () => this.settings.storyStartDelayMs,
+      () => {
+        this.settings.storyStartDelayMs = Math.max(0, this.settings.storyStartDelayMs - 1);
+        this.saveSettings();
+      },
+      () => {
+        this.settings.storyStartDelayMs = Math.min(5000, this.settings.storyStartDelayMs + 1);
+        this.saveSettings();
+      },
       () => {
         this.settings.storyStartDelayMs = Math.max(0, this.settings.storyStartDelayMs - 10);
         this.saveSettings();

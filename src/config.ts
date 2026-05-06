@@ -20,7 +20,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   hitboxHeight: 300,
   checkDepth: 50,
   cornerLineDepth: 270,
-  storyStartDelayMs: 200, // 主線開場 Delay (ms)
+  storyStartDelayMs: 60, // 主線開場 Delay (ms)
 };
 
 // Directions

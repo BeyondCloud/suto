@@ -34,6 +34,7 @@ const GAME_FRAME_BOTTOM = GAME_HEIGHT - GAME_FRAME_INSET_Y;
 const GAME_FRAME_WIDTH = GAME_FRAME_RIGHT - GAME_FRAME_LEFT;
 const GAME_FRAME_HEIGHT = GAME_FRAME_BOTTOM - GAME_FRAME_TOP;
 const FALSE_TOUCH_DAMAGE = 5;
+const MISS_DAMAGE = 15;
 const DEFAULT_STAGE_AUDIO_CLIP = 'src/assets/audio/120.wav';
 const HIT_SPARK_TEXTURE_KEY = 'hit_spark';
 const PROMPT_AUDIO_GAP_MS = 50;
@@ -181,6 +182,7 @@ export class GameScene extends Phaser.Scene {
   private missCount = 0;
   private falseTouchCount = 0;
   private judgementText!: Phaser.GameObjects.Text;
+  private delayText!: Phaser.GameObjects.Text;
   private stageText!: Phaser.GameObjects.Text;
   private roundText!: Phaser.GameObjects.Text;
   private beatTimer!: Phaser.Time.TimerEvent;
@@ -295,9 +297,22 @@ export class GameScene extends Phaser.Scene {
     const cx = GAME_WIDTH / 2;
     this.stageText = this.add.text(cx, GAME_FRAME_TOP + 18, '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(10);
     this.roundText = this.add.text(cx, GAME_FRAME_TOP + 52, '', { fontSize: '20px', color: '#cccccc' }).setOrigin(0.5, 0).setDepth(10);
+    this.delayText = this.add.text(cx, GAME_HEIGHT / 4, '', {
+      fontSize: '80px',
+      color: '#37ff55',
+      fontStyle: 'bold',
+      align: 'center',
+      wordWrap: { width: 520 },
+    }).setOrigin(0.5, 0.5).setDepth(10).setVisible(false);
     this.judgementText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0.5).setDepth(10);
     this.updateHUD();
     this.updateJudgementText();
+  }
+
+  private setDelayText(text?: string) {
+    const content = text?.trim() ?? '';
+    this.delayText.setText(content);
+    this.delayText.setVisible(content.length > 0);
   }
 
   private updateHUD() {
@@ -388,7 +403,7 @@ export class GameScene extends Phaser.Scene {
       cp.outerCircle.setVisible(false);
       cp.innerCircle.setVisible(vis && !this.isCardinal(cp.dir));
       cp.edgeZone?.setVisible(vis);
-      cp.edgeLine?.setVisible(false);
+      cp.edgeLine?.setVisible(vis);
       cp.cornerLine?.setVisible(vis);
     }
   }
@@ -578,15 +593,18 @@ export class GameScene extends Phaser.Scene {
       this.beatTimer?.remove();
       this.beatCount = 0;
       this.updateHUD();
+      this.setDelayText(this.currentSection.text);
 
       const delayMs = Math.max(0, (this.currentSection as DelaySection).ms);
       this.time.delayedCall(delayMs, () => {
         if (this.isGameOver) return;
+        this.setDelayText();
         this.advanceToNextSection();
       });
       return;
     }
 
+    this.setDelayText();
     const sectionBpm = this.currentSection.bpm;
     this.beatMs = 60000 / (sectionBpm ?? this.currentStage.bpm);
     this.isRotation = this.currentSection.type === 'rotation';
@@ -618,7 +636,6 @@ export class GameScene extends Phaser.Scene {
   private startCheckPhase() {
     if (this.isGameOver) return;
     this.gamePhase = 'check';
-    if (this.mode === 'story') this.sound.play('story_check_start');
     this.stopPromptAudioSequence();
     this.clearPromptGrid();
     this.setInnerCheckpointsVisible(true);
@@ -1297,7 +1314,7 @@ export class GameScene extends Phaser.Scene {
     const cp = this.checkpoints.find(c => c.dir === dir)!;
     const outer = cp.outerCircle;
     outer.setRadius(60).setAlpha(1).setVisible(false);
-    cp.edgeLine?.setAlpha(1).setVisible(false);
+    cp.edgeLine?.setAlpha(1).setVisible(this.shouldShowCardinalGuideLine());
 
     const delay = Math.max(0, this.beatMs - leadMs);
     this.pendingShrinkStartCount++;
@@ -1359,7 +1376,7 @@ export class GameScene extends Phaser.Scene {
       const cp = this.checkpoints.find(c => c.dir === active.dir)!;
       cp.outerCircle.setRadius(60).setAlpha(1).setVisible(false);
       cp.edgeZone?.setAlpha(0.16);
-      cp.edgeLine?.setAlpha(1).setVisible(false);
+      cp.edgeLine?.setAlpha(1).setVisible(this.shouldShowCardinalGuideLine());
     }
   }
 
@@ -1554,6 +1571,10 @@ export class GameScene extends Phaser.Scene {
     return this.time.now < this.penaltyCooldownUntil;
   }
 
+  private shouldShowCardinalGuideLine(): boolean {
+    return this.gamePhase === 'check' && !this.isGameOver;
+  }
+
   private setGifCursorVisible(visible: boolean) {
     if (!this.cursorClipFrame || !this.cursorGifFrame) return;
 
@@ -1677,7 +1698,7 @@ export class GameScene extends Phaser.Scene {
       const cp = this.checkpoints.find(c => c.dir === active.dir)!;
       cp.outerCircle.setRadius(60).setAlpha(1).setVisible(false);
       cp.edgeZone?.setAlpha(0.16);
-      cp.edgeLine?.setAlpha(1).setVisible(false);
+      cp.edgeLine?.setAlpha(1).setVisible(this.shouldShowCardinalGuideLine());
     }
     this.onPerfect(active.dir);
   }
@@ -1707,7 +1728,7 @@ export class GameScene extends Phaser.Scene {
     this.missCount++;
     this.sound.play('miss');
     this.updateJudgementText();
-    this.lifeValue = Math.max(0, this.lifeValue - 20);
+    this.lifeValue = Math.max(0, this.lifeValue - MISS_DAMAGE);
     this.drawLifeBar();
     this.showJudgement(dir, 'miss', '#ff5a6b');
     if (this.lifeValue <= 0) this.triggerGameOver();

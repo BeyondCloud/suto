@@ -16,6 +16,7 @@ export interface RotationSection {
 export interface DelaySection {
   type: 'delay';
   ms: number;
+  text?: string;
 }
 
 export type Section = NormalSection | RotationSection | DelaySection;
@@ -35,8 +36,9 @@ export const LEVEL_DATA: LevelData = {
   stages: [
     {
       stage_number: 1,
-      bpm: 120,
-      audio_clip: 'src/assets/audio/120.wav',
+      bpm: 182,
+    //   audio_clip: 'src/assets/audio/120.wav',
+      audio_clip: 'src/assets/audio/loop/tutorial.wav',
       sections: [
         // {
         //   type: 'normal',
@@ -58,12 +60,37 @@ export const LEVEL_DATA: LevelData = {
         //   rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
         // },
         {
+          type: 'rotation',
+          start: 'w',
+          rotate: ['R', 'R', 'L', 'L',
+                   'R', 'R', 'L', 'L'],
+        },
+        {
+          type: 'rotation',
+          start: 'w',
+          rotate: ['R', 'R', 'L', 'L',
+                   'R', 'R', 'L', 'L'],
+        },
+        {
+          type: 'rotation',
+          start: 'w',
+          rotate: ['R', 'R', 'L', 'L',
+                   'R', 'R', 'L', 'L'],
+        },
+        {
+          type: 'rotation',
+          start: 'w',
+          rotate: ['R', 'R', 'L', 'L',
+                   'R', 'R', 'L', 'L'],
+        },
+        {
           type: 'normal',
           prompts: ['w', 'd', 'd', 'a', 'x', 'a', 'd', 'w'],
         },
         {
-            type: 'delay',
-            ms: 500,
+          type: 'delay',
+          ms: 1000,
+          text: '準備下一段',
         },
         {
           type: 'normal',
@@ -121,7 +148,7 @@ export const MAIN_LEVEL_DATA: LevelData = {
   stages: [
     {
       stage_number: 1,
-      bpm: 183,
+      bpm: 182,
       sections: [
         {
           type: 'normal',
@@ -153,13 +180,19 @@ export const MAIN_LEVEL_DATA: LevelData = {
           start: 'w',
           rotate: ['R', 'R', 'L', 'L',
                    'L', 'L', 'R', 'R'],
-        }
+        },
+        {
+          type: 'delay',
+          ms: 2637, // 60000 / 182 * 8 = 2637.36
+          text: 'Level - 2',
+        },
       ],
     },
    {
       stage_number: 2,
-      bpm: 183,
+      bpm: 182,
       sections: [
+
         {
           type: 'normal',
           prompts: ['x', 'w', 'x', 'w',
@@ -190,7 +223,12 @@ export const MAIN_LEVEL_DATA: LevelData = {
           type: 'normal',
           prompts: ['e', 'a', 'c', 'z',
                     'q', 'd', 'w', 'e'],
-        }
+        },
+        {
+          type: 'delay',
+          ms: 2637,
+          text: 'Level - 3',
+        },
       ],
     },
    {
