@@ -148,6 +148,7 @@ export class GameScene extends Phaser.Scene {
   private beatTargetPairs: [Direction, Direction][] = [];
   private shrinkTweens: Map<number, Phaser.Tweens.Tween> = new Map();
   private shrinkStartEvents: Phaser.Time.TimerEvent[] = [];
+  private pendingShrinkStartCount = 0;
   private activeShrinks: Map<number, ActiveShrink> = new Map();
   private nextShrinkId = 1;
   private falseTouchedLines: Set<Direction> = new Set();
@@ -451,12 +452,22 @@ export class GameScene extends Phaser.Scene {
       this.beatCount++;
       if (this.beatCount >= 8) {
         this.beatTimer?.remove();
-        this.time.delayedCall(this.settings.shrinkLeadMs, () => this.onCheckPhaseEnd());
+        const lead = Math.max(0, this.settings.shrinkLeadMs);
+        const settleAfterLastBeat = this.isRotation
+          ? (this.beatMs / 2) + Math.max(this.beatMs, lead)
+          : Math.max(this.beatMs, lead);
+        const completionSafetyBufferMs = 50;
+        this.time.delayedCall(settleAfterLastBeat + completionSafetyBufferMs, () => this.onCheckPhaseEnd());
       }
     }
   }
 
   private onCheckPhaseEnd() {
+    if (this.pendingShrinkStartCount > 0 || this.activeShrinks.size > 0) {
+      this.time.delayedCall(16, () => this.onCheckPhaseEnd());
+      return;
+    }
+
     this.stopAllShrinks();
     this.setCheckpointsVisible(false);
     this.setGifCursorVisible(false);
@@ -718,7 +729,9 @@ export class GameScene extends Phaser.Scene {
     cp.edgeLine?.setAlpha(1).setVisible(false);
 
     const delay = Math.max(0, this.beatMs - leadMs);
+    this.pendingShrinkStartCount++;
     const event = this.time.delayedCall(delay, () => {
+      this.pendingShrinkStartCount = Math.max(0, this.pendingShrinkStartCount - 1);
       const id = this.nextShrinkId++;
       const active: ActiveShrink = {
         id,
@@ -780,6 +793,7 @@ export class GameScene extends Phaser.Scene {
     for (const t of this.shrinkTweens.values()) t.stop();
     this.shrinkTweens.clear();
     this.activeShrinks.clear();
+    this.pendingShrinkStartCount = 0;
     this.falseTouchedLines.clear();
     this.penaltyCooldownUntil = 0;
     this.cursorGifAngleTween?.stop();
