@@ -167,6 +167,8 @@ export class GameScene extends Phaser.Scene {
   private promptImages: Phaser.GameObjects.Image[] = [];
   private promptIndicator?: Phaser.GameObjects.Rectangle;
   private promptIndicatorTween?: Phaser.Tweens.Tween;
+  private promptRotationAngle = { value: 180 };
+  private promptRotationTween?: Phaser.Tweens.Tween;
   private promptCellCenters: Array<{ x: number; y: number }> = [];
   private promptCellWidth = 0;
   private promptCellHeight = 0;
@@ -432,6 +434,7 @@ export class GameScene extends Phaser.Scene {
     this.gameFrameMask = [];
     this.resetGifCursorCache();
     this.beatTimer?.remove(false);
+    this.promptRotationTween?.stop();
     for (const event of this.shrinkStartEvents) event.remove(false);
     this.shrinkStartEvents = [];
     for (const t of this.shrinkTweens.values()) t.stop();
@@ -609,6 +612,7 @@ export class GameScene extends Phaser.Scene {
     this.promptCellHeight = 0;
     this.promptIndicatorSize = 0;
     this.promptIndicatorTween?.stop();
+    this.promptRotationTween?.stop();
     if (this.promptIndicator?.active) {
       this.promptIndicator.setVisible(false);
     } else {
@@ -622,9 +626,11 @@ export class GameScene extends Phaser.Scene {
     if (this.isRotation) {
       const sec = this.currentSection as RotationSection;
       this.rotCurrentDir = sec.start;
+      this.promptRotationAngle.value = DIR_ANGLE[sec.start];
       for (let i = 0; i < 8; i++) {
         this.promptImages.push(this.addArrowImage(0, 0, sec.start));
       }
+      this.applyPromptRotationAngle();
     } else {
       const sec = this.currentSection as NormalSection;
       for (let i = 0; i < 8; i++) {
@@ -728,28 +734,17 @@ export class GameScene extends Phaser.Scene {
     if (this.isRotation) {
       const sec = this.currentSection as RotationSection;
       const rotDir = sec.rotate[beat];
-      const [diag, next] = getRotationPoints(this.rotCurrentDir, rotDir);
-      const halfBeat = this.beatMs / 2;
-
-      for (const img of this.promptImages) {
-        img.setAlpha(1);
-        const targetDiagAngle = this.getArrowAngle(diag);
-        const targetNextAngle = this.getArrowAngle(next);
-        this.tweens.add({
-          targets: img,
-          angle: this.shortestAngle(img.angle, targetDiagAngle),
-          duration: halfBeat,
-          ease: 'Linear',
-          onComplete: () => {
-            this.tweens.add({
-              targets: img,
-              angle: this.shortestAngle(img.angle, targetNextAngle),
-              duration: halfBeat,
-              ease: 'Linear',
-            });
-          },
-        });
-      }
+      const [, next] = getRotationPoints(this.rotCurrentDir, rotDir);
+      this.promptRotationTween?.stop();
+      this.promptRotationAngle.value = this.shortestAngle(this.promptRotationAngle.value, DIR_ANGLE[this.rotCurrentDir]);
+      this.promptRotationTween = this.tweens.add({
+        targets: this.promptRotationAngle,
+        value: this.shortestAngle(this.promptRotationAngle.value, DIR_ANGLE[next]),
+        duration: this.beatMs,
+        ease: 'Linear',
+        onUpdate: () => this.applyPromptRotationAngle(),
+        onComplete: () => this.applyPromptRotationAngle(),
+      });
       this.rotCurrentDir = next;
     } else {
       const sec = this.currentSection as NormalSection;
@@ -769,9 +764,11 @@ export class GameScene extends Phaser.Scene {
     this.sound.play(this.currentStageAudioKey);
   }
 
-  private getArrowAngle(dir: Direction): number {
-    const isDiag = dir === 'UL' || dir === 'UR' || dir === 'DL' || dir === 'DR';
-    return isDiag ? DIR_ANGLE[dir] - 45 : DIR_ANGLE[dir];
+  private applyPromptRotationAngle() {
+    for (const img of this.promptImages) {
+      img.setAlpha(1);
+      img.setAngle(this.promptRotationAngle.value);
+    }
   }
 
   private shortestAngle(current: number, target: number): number {
@@ -1435,6 +1432,13 @@ export class GameScene extends Phaser.Scene {
         this.cursorGifAngleTween.resume();
       }
     }
+    if (this.promptRotationTween) {
+      if (paused) {
+        this.promptRotationTween.pause();
+      } else {
+        this.promptRotationTween.resume();
+      }
+    }
   }
 
   private returnToMenu() {
@@ -1445,6 +1449,7 @@ export class GameScene extends Phaser.Scene {
     this.pauseContainer.setVisible(false);
     this.countdownText.setVisible(false);
     this.beatTimer?.remove(false);
+    this.promptRotationTween?.stop();
     this.stopAllShrinks();
     this.time.delayedCall(0, () => this.scene.start('MenuScene'));
   }
