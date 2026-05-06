@@ -2,16 +2,23 @@ import type { Direction } from './config';
 
 export interface NormalSection {
   type: 'normal';
+  bpm?: number;
   prompts: Direction[];
 }
 
 export interface RotationSection {
   type: 'rotation';
+  bpm?: number;
   start: Direction;
   rotate: ('L' | 'R')[];
 }
 
-export type Section = NormalSection | RotationSection;
+export interface DelaySection {
+  type: 'delay';
+  ms: number;
+}
+
+export type Section = NormalSection | RotationSection | DelaySection;
 
 export interface Stage {
   stage_number: number;
@@ -53,6 +60,10 @@ export const LEVEL_DATA: LevelData = {
         {
           type: 'normal',
           prompts: ['w', 'd', 'd', 'a', 'x', 'a', 'd', 'w'],
+        },
+        {
+            type: 'delay',
+            ms: 500,
         },
         {
           type: 'normal',
@@ -114,28 +125,34 @@ export const MAIN_LEVEL_DATA: LevelData = {
       sections: [
         {
           type: 'normal',
-          prompts: ['x', 'w', 'x', 'w','x', 'w','x', 'w'],
+          prompts: ['x', 'w', 'x', 'w',
+                    'x', 'w', 'x', 'w'],
         },
         {
           type: 'normal',
-          prompts: ['x', 'w', 'x', 'w','x', 'w','x', 'w'],
+          prompts: ['x', 'w', 'x', 'w',
+                    'x', 'w', 'x', 'w'],
         },
         {
           type: 'normal',
-          prompts: ['w', 'w', 'w', 'x', 'w', 'w', 'w', 'x'],
+          prompts: ['w', 'w', 'w', 'x',
+                    'w', 'w', 'w', 'x'],
         },
         {
           type: 'normal',
-          prompts: ['x', 'd', 'w', 'a', 'x', 'd', 'w', 'a', ],
+          prompts: ['x', 'd', 'w', 'a',
+                    'x', 'd', 'w', 'a', ],
         },
         {
           type: 'normal',
-          prompts: ['w', 'x', 'w', 'x', 'e', 'c', 'q', 'z'],
+          prompts: ['w', 'x', 'w', 'x',
+                    'e', 'c', 'q', 'z'],
         },
         {
           type: 'rotation',
           start: 'w',
-          rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
+          rotate: ['R', 'R', 'L', 'L',
+                   'L', 'L', 'R', 'R'],
         }
       ],
     },
@@ -145,28 +162,70 @@ export const MAIN_LEVEL_DATA: LevelData = {
       sections: [
         {
           type: 'normal',
-          prompts: ['x', 'w', 'x', 'w','w', 'w','w', 'w'],
+          prompts: ['x', 'w', 'x', 'w',
+                    'w', 'w', 'w', 'w'],
         },
         {
           type: 'normal',
-          prompts: ['e', 'd', 'e', 'd','a', 'q','a', 'q'],
+          prompts: ['c', 'd', 'c', 'd',
+                    'a', 'z','a', 'z'],
         },
         {
           type: 'normal',
-          prompts: ['x', 'w', 'a', 'w', 'a', 'e', 'a', 'x'],
+          prompts: ['x', 'w', 'x', 'w',
+                    'c', 'e', 'q', 'z'],
         },
         {
           type: 'normal',
-          prompts: ['x', 'd', 'w', 'a', 'x', 'd', 'w', 'a', ],
-        },
-        {
-          type: 'normal',
-          prompts: ['w', 'x', 'w', 'x', 'e', 'c', 'q', 'z'],
+          prompts: ['x', 'w', 'x', 'w',
+                    'x', 'a', 'd', 'x'],
         },
         {
           type: 'rotation',
           start: 'w',
-          rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
+          rotate: ['R', 'R', 'L', 'L',
+                   'R', 'R', 'L', 'L'],
+        },
+        {
+          type: 'normal',
+          prompts: ['e', 'a', 'c', 'z',
+                    'q', 'd', 'w', 'e'],
+        }
+      ],
+    },
+   {
+      stage_number: 3,
+      bpm: 183,
+      sections: [
+        {
+          type: 'normal',
+          prompts: ['x', 'a', 'w', 'w',
+                    'x', 'd', 'x', 'x'],
+        },
+        {
+          type: 'normal',
+          prompts: ['x', 'c', 'w', 'c',
+                    'a', 'q', 'x', 'e'],
+        },
+        {
+          type: 'normal',
+          prompts: ['c', 'x', 'a', 'c',
+                    'w', 'q', 'c', 'e'],
+        },
+        {
+          type: 'normal',
+          prompts: ['x', 'w', 'c', 'w',
+                    'q', 'c', 'z', 'x'],
+        },
+        {
+          type: 'normal',
+          prompts: ['x', 'd', 'c', 'x',
+                    'w', 'x', 'a', 'x'],
+        },
+        {
+          type: 'normal',
+          prompts: ['x', 'x', 'x', 'x',
+                    'x', 'x', 'x', 'x'],
         }
       ],
     }

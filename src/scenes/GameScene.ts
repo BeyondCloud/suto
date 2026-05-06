@@ -18,7 +18,7 @@ import {
 } from '../config';
 import type { GameSettings, Direction } from '../config';
 import { LEVEL_DATA } from '../levels';
-import type { Stage, Section, NormalSection, RotationSection, LevelData } from '../levels';
+import type { Stage, Section, NormalSection, RotationSection, DelaySection, LevelData } from '../levels';
 
 const ALL_DIRS: Direction[] = ['w', 'e', 'd', 'c', 'x', 'z', 'a', 'q'];
 const CARDINAL_DIRS: Direction[] = ['w', 'x', 'a', 'd'];
@@ -302,7 +302,25 @@ export class GameScene extends Phaser.Scene {
 
   private updateHUD() {
     this.stageText.setText(`Stage ${this.currentStage.stage_number}`);
-    this.roundText.setText(`${this.sectionIndex + 1}/${this.currentStage.sections.length}`);
+    const { current, total } = this.getPhaseProgress();
+    this.roundText.setText(`${current}/${total}`);
+  }
+
+  private getPhaseProgress() {
+    const playableSections = this.currentStage.sections.filter((section) => section.type !== 'delay');
+    const total = playableSections.length;
+    if (total === 0) return { current: 0, total: 0 };
+
+    let current = 0;
+    for (let i = 0; i < this.currentStage.sections.length; i++) {
+      const section = this.currentStage.sections[i];
+      if (section.type !== 'delay' && i <= this.sectionIndex) {
+        current++;
+      }
+      if (i > this.sectionIndex) break;
+    }
+
+    return { current, total };
   }
 
   private updateJudgementText() {
@@ -551,6 +569,26 @@ export class GameScene extends Phaser.Scene {
   private startSection() {
     if (this.isGameOver) return;
     this.currentSection = this.currentStage.sections[this.sectionIndex];
+    if (this.currentSection.type === 'delay') {
+      this.stopPromptAudioSequence();
+      this.stopAllShrinks();
+      this.clearPromptGrid();
+      this.setCheckpointsVisible(false);
+      this.setGifCursorVisible(false);
+      this.beatTimer?.remove();
+      this.beatCount = 0;
+      this.updateHUD();
+
+      const delayMs = Math.max(0, (this.currentSection as DelaySection).ms);
+      this.time.delayedCall(delayMs, () => {
+        if (this.isGameOver) return;
+        this.advanceToNextSection();
+      });
+      return;
+    }
+
+    const sectionBpm = this.currentSection.bpm;
+    this.beatMs = 60000 / (sectionBpm ?? this.currentStage.bpm);
     this.isRotation = this.currentSection.type === 'rotation';
     this.beatCount = 0;
     this.updateHUD();
@@ -633,6 +671,11 @@ export class GameScene extends Phaser.Scene {
     this.stopAllShrinks();
     this.setCheckpointsVisible(false);
     this.setGifCursorVisible(false);
+    this.advanceToNextSection();
+  }
+
+  private advanceToNextSection() {
+    if (this.isGameOver) return;
     this.sectionIndex++;
     if (this.sectionIndex >= this.currentStage.sections.length) {
       this.stageIndex++;
