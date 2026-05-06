@@ -7,6 +7,7 @@ import promptRUrl from '../assets/audio/R.wav';
 import promptUUrl from '../assets/audio/U.wav';
 import clapUrl from '../assets/audio/clap.wav';
 import missUrl from '../assets/audio/miss.wav';
+import gameoverSfxUrl from '../assets/audio/long/這二十個影片有十九個影片長這樣到底要我怎麼開直播拉.wav';
 import stage120Url from '../assets/audio/120.wav';
 import {
   GAME_WIDTH, GAME_HEIGHT,
@@ -193,6 +194,7 @@ export class GameScene extends Phaser.Scene {
 
   // Pause
   private isPaused = false;
+  private isGameOver = false;
   private pauseContainer!: Phaser.GameObjects.Container;
   private countdownText!: Phaser.GameObjects.Text;
 
@@ -218,6 +220,7 @@ export class GameScene extends Phaser.Scene {
     this.load.audio('prompt_R', promptRUrl);
     this.load.audio('clap', clapUrl);
     this.load.audio('miss', missUrl);
+    this.load.audio('gameover_sfx', gameoverSfxUrl);
 
     const stageAudioClips = new Set(LEVEL_DATA.stages.map(stage => stage.audio_clip));
     for (const clipPath of stageAudioClips) {
@@ -226,6 +229,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.isGameOver = false;
     this.loadStage(this.stageIndex);
     this.sectionIndex = 0;
     this.lifeValue = 100;
@@ -511,6 +515,7 @@ export class GameScene extends Phaser.Scene {
   // ---------- Section flow ----------
 
   private startSection() {
+    if (this.isGameOver) return;
     this.currentSection = this.currentStage.sections[this.sectionIndex];
     this.isRotation = this.currentSection.type === 'rotation';
     this.beatCount = 0;
@@ -519,6 +524,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private startPromptPhase() {
+    if (this.isGameOver) return;
     this.gamePhase = 'prompt';
     this.setCheckpointsVisible(false);
     this.clearPromptGrid();
@@ -538,6 +544,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private startCheckPhase() {
+    if (this.isGameOver) return;
     this.gamePhase = 'check';
     this.stopPromptAudioSequence();
     this.clearPromptGrid();
@@ -554,6 +561,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onBeat() {
+    if (this.isGameOver) return;
     if (this.gamePhase === 'prompt') {
       this.highlightPromptBeat(this.beatCount);
       this.beatCount++;
@@ -581,6 +589,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onCheckPhaseEnd() {
+    if (this.isGameOver) return;
     if (this.pendingShrinkStartCount > 0 || this.activeShrinks.size > 0) {
       this.time.delayedCall(16, () => this.onCheckPhaseEnd());
       return;
@@ -1061,6 +1070,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private triggerShrinkForBeat(beat: number) {
+    if (this.isGameOver) return;
     const lead = this.settings.shrinkLeadMs;
     if (this.isRotation) {
       const [first, second] = this.beatTargetPairs[beat];
@@ -1079,6 +1089,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private startShrink(dir: Direction, leadMs: number) {
+    if (this.isGameOver) return;
     const cp = this.checkpoints.find(c => c.dir === dir)!;
     const outer = cp.outerCircle;
     outer.setRadius(60).setAlpha(1).setVisible(false);
@@ -1087,6 +1098,10 @@ export class GameScene extends Phaser.Scene {
     const delay = Math.max(0, this.beatMs - leadMs);
     this.pendingShrinkStartCount++;
     const event = this.time.delayedCall(delay, () => {
+      if (this.isGameOver) {
+        this.pendingShrinkStartCount = Math.max(0, this.pendingShrinkStartCount - 1);
+        return;
+      }
       this.pendingShrinkStartCount = Math.max(0, this.pendingShrinkStartCount - 1);
       const id = this.nextShrinkId++;
       const active: ActiveShrink = {
@@ -1128,6 +1143,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private finishShrink(id: number) {
+    if (this.isGameOver) return;
     const active = this.activeShrinks.get(id);
     if (!active) return;
 
@@ -1164,6 +1180,7 @@ export class GameScene extends Phaser.Scene {
   // ---------- Input ----------
 
   private onMouseMove(ptr: Phaser.Input.Pointer) {
+    if (this.isGameOver) return;
     this.updateCursorPosition(ptr.x, ptr.y);
   }
 
@@ -1175,6 +1192,8 @@ export class GameScene extends Phaser.Scene {
     this.cursorWorldX = x;
     this.cursorWorldY = y;
 
+    if (this.isGameOver) return;
+
     if (this.gamePhase === 'prompt') this.positionPromptGrid(x, y);
     this.updateGifCursorPosition(x, y);
     this.drawHitbox(x, y);
@@ -1185,7 +1204,7 @@ export class GameScene extends Phaser.Scene {
 
   private drawHitbox(x: number, y: number) {
     this.hitboxGraphics.clear();
-    if ((this.gamePhase === 'prompt' || this.gamePhase === 'check') && !this.isPaused) {
+    if (!this.isGameOver && (this.gamePhase === 'prompt' || this.gamePhase === 'check') && !this.isPaused) {
       this.hitboxGraphics.lineStyle(2, 0xffffff, 1);
       this.hitboxGraphics.strokeRect(x - this.settings.hitboxWidth / 2, y - this.settings.hitboxHeight / 2, this.settings.hitboxWidth, this.settings.hitboxHeight);
     }
@@ -1575,10 +1594,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   private triggerGameOver() {
+    if (this.isGameOver) return;
+
+    this.isGameOver = true;
     this.beatTimer?.remove();
     this.stopAllShrinks();
+    this.clearPromptGrid();
     this.stopStagePhaseClip();
     this.stopPromptAudioSequence();
+    this.sound.stopAll();
+    this.sound.play('gameover_sfx');
     this.setCheckpointsVisible(false);
     this.setGifCursorVisible(false);
     this.hitboxGraphics.clear();
