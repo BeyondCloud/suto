@@ -1611,16 +1611,28 @@ export class GameScene extends Phaser.Scene {
     const homeY = cy + 84;
     this.add.image(cx, cy, 'gameover_bg').setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(180);
     this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.62).setDepth(181);
-    const homeBtnBg = this.add.graphics().setDepth(199);
-    homeBtnBg.fillStyle(0x9147ff, 1);
-    homeBtnBg.fillRoundedRect(cx - 160, homeY - 46, 320, 92, 24);
-    const homeBtn = this.add.text(cx, homeY, '返回主頁', { fontSize: '42px', color: '#ffffff' })
-      .setOrigin(0.5)
-      .setDepth(200)
+    const homeBtn = this.add.rectangle(cx, homeY, 320, 92, 0x9147ff, 0.96)
+      .setStrokeStyle(3, 0xf3e8ff, 0.95)
+      .setDepth(199)
       .setInteractive({ useHandCursor: true });
-    homeBtn.on('pointerover', () => homeBtn.setColor('#ffffff'));
-    homeBtn.on('pointerout', () => homeBtn.setColor('#ffffff'));
-    homeBtn.on('pointerdown', () => this.scene.start('MenuScene'));
+    const homeBtnLabel = this.add.text(cx, homeY, '返回主頁', { fontSize: '42px', color: '#ffffff' })
+      .setOrigin(0.5)
+      .setDepth(200);
+    homeBtn.on('pointerover', () => {
+      homeBtn.setFillStyle(0xa45cff, 1);
+      homeBtn.setStrokeStyle(3, 0xffffff, 1);
+      homeBtnLabel.setScale(1.03);
+    });
+    homeBtn.on('pointerout', () => {
+      homeBtn.setFillStyle(0x9147ff, 0.96);
+      homeBtn.setStrokeStyle(3, 0xf3e8ff, 0.95);
+      homeBtnLabel.setScale(1);
+    });
+    homeBtn.on('pointerdown', () => {
+      homeBtn.setFillStyle(0x7b31ea, 1);
+      homeBtnLabel.setScale(0.98);
+      this.time.delayedCall(90, () => this.returnToMenu());
+    });
   }
 
   // ---------- Pause ----------
