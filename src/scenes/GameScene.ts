@@ -33,6 +33,7 @@ const GAME_FRAME_HEIGHT = GAME_FRAME_BOTTOM - GAME_FRAME_TOP;
 const FALSE_TOUCH_DAMAGE = 5;
 const DEFAULT_STAGE_AUDIO_CLIP = 'src/assets/audio/120.wav';
 const HIT_SPARK_TEXTURE_KEY = 'hit_spark';
+const PROMPT_AUDIO_GAP_MS = 10;
 const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   U: 'prompt_U',
   D: 'prompt_D',
@@ -79,6 +80,9 @@ export class GameScene extends Phaser.Scene {
   private currentStage!: Stage;
   private currentStageAudioKey: string | null = null;
   private currentStageAudio?: Phaser.Sound.BaseSound;
+  private promptAudioSound?: Phaser.Sound.BaseSound;
+  private promptAudioEvents: Phaser.Time.TimerEvent[] = [];
+  private promptAudioSequenceId = 0;
   private sectionIndex = 0;
   private currentSection!: Section;
 
@@ -431,6 +435,7 @@ export class GameScene extends Phaser.Scene {
     this.input.setDefaultCursor('default');
     this.setGifCursorVisible(false);
     this.stopStagePhaseClip();
+    this.stopPromptAudioSequence();
     this.cursorGifAngleTween?.stop();
     window.removeEventListener('resize', this.refreshGifCursorLayout);
     window.removeEventListener('pointermove', this.onWindowPointerMove);
@@ -540,10 +545,15 @@ export class GameScene extends Phaser.Scene {
     this.beatTimer?.remove();
     this.onBeat();
     this.beatTimer = this.time.addEvent({ delay: this.beatMs, repeat: 7, callback: this.onBeat, callbackScope: this });
+
+    if (!this.isRotation) {
+      this.startPromptAudioSequence((this.currentSection as NormalSection).prompts);
+    }
   }
 
   private startCheckPhase() {
     this.gamePhase = 'check';
+    this.stopPromptAudioSequence();
     this.clearPromptGrid();
     this.setInnerCheckpointsVisible(true);
     this.beatCount = 0;
@@ -752,17 +762,67 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => this.applyPromptRotationAngle(),
       });
       this.rotCurrentDir = next;
-    } else {
-      const sec = this.currentSection as NormalSection;
-      this.playPromptAudio(sec.prompts[beat]);
     }
   }
 
-  private playPromptAudio(dir: Direction) {
-    const key = PROMPT_AUDIO_KEYS[dir];
-    if (!key) return;
+  private startPromptAudioSequence(prompts: Direction[]) {
+    this.stopPromptAudioSequence();
 
-    this.sound.play(key);
+    const audioKeys = prompts.flatMap(dir => {
+      const key = PROMPT_AUDIO_KEYS[dir];
+      return key ? [key] : [];
+    });
+    if (audioKeys.length === 0) return;
+
+    const sequenceId = this.promptAudioSequenceId;
+    let index = 0;
+
+    const playNext = () => {
+      if (sequenceId !== this.promptAudioSequenceId || index >= audioKeys.length) return;
+
+      const promptSound = this.sound.add(audioKeys[index]);
+      index++;
+      this.promptAudioSound = promptSound;
+
+      promptSound.once(Phaser.Sound.Events.COMPLETE, () => {
+        if (this.promptAudioSound === promptSound) {
+          this.promptAudioSound = undefined;
+        }
+        promptSound.destroy();
+        if (sequenceId !== this.promptAudioSequenceId || index >= audioKeys.length) return;
+
+        const event = this.time.delayedCall(PROMPT_AUDIO_GAP_MS, () => {
+          this.promptAudioEvents = this.promptAudioEvents.filter(item => item !== event);
+          playNext();
+        });
+        event.paused = this.isPaused;
+        this.promptAudioEvents.push(event);
+      });
+
+      promptSound.play();
+    };
+
+    playNext();
+  }
+
+  private pausePromptAudioSequence() {
+    if (this.promptAudioSound?.isPlaying) this.promptAudioSound.pause();
+    for (const event of this.promptAudioEvents) event.paused = true;
+  }
+
+  private resumePromptAudioSequence() {
+    if (this.promptAudioSound?.isPaused) this.promptAudioSound.resume();
+    for (const event of this.promptAudioEvents) event.paused = false;
+  }
+
+  private stopPromptAudioSequence() {
+    this.promptAudioSequenceId++;
+    for (const event of this.promptAudioEvents) event.remove(false);
+    this.promptAudioEvents = [];
+    if (!this.promptAudioSound) return;
+    this.promptAudioSound.stop();
+    this.promptAudioSound.destroy();
+    this.promptAudioSound = undefined;
   }
 
   private playStagePhaseClip() {
@@ -1528,6 +1588,7 @@ export class GameScene extends Phaser.Scene {
     this.beatTimer?.remove();
     this.stopAllShrinks();
     this.stopStagePhaseClip();
+    this.stopPromptAudioSequence();
     this.setCheckpointsVisible(false);
     this.setGifCursorVisible(false);
     this.hitboxGraphics.clear();
@@ -1547,8 +1608,10 @@ export class GameScene extends Phaser.Scene {
     if (this.beatTimer) this.beatTimer.paused = paused;
     if (paused) {
       this.pauseStagePhaseClip();
+      this.pausePromptAudioSequence();
     } else {
       this.resumeStagePhaseClip();
+      this.resumePromptAudioSequence();
     }
     for (const event of this.shrinkStartEvents) event.paused = paused;
     for (const tween of this.shrinkTweens.values()) {
@@ -1577,6 +1640,7 @@ export class GameScene extends Phaser.Scene {
   private returnToMenu() {
     this.isPaused = false;
     this.stopStagePhaseClip();
+    this.stopPromptAudioSequence();
     this.setGameplayTimersPaused(false);
     this.input.setDefaultCursor('default');
     this.setGifCursorVisible(false);
