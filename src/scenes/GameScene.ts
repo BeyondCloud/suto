@@ -377,8 +377,24 @@ export class GameScene extends Phaser.Scene {
     this.cursorGif.style.userSelect = 'none';
     this.cursorGif.style.willChange = 'transform';
     this.cursorGif.style.opacity = '0.85';
-    this.cursorGif.style.zIndex = '1';
+    this.cursorGif.style.zIndex = '0';
     this.cursorGifFrame.appendChild(this.cursorGif);
+
+    this.cursorCheckPointDot = document.createElement('div');
+    this.cursorCheckPointDot.style.position = 'absolute';
+    this.cursorCheckPointDot.style.left = '50%';
+    this.cursorCheckPointDot.style.top = '50%';
+    this.cursorCheckPointDot.style.width = `${CURSOR_CHECK_POINT_DOT_SIZE}px`;
+    this.cursorCheckPointDot.style.height = `${CURSOR_CHECK_POINT_DOT_SIZE}px`;
+    this.cursorCheckPointDot.style.borderRadius = '50%';
+    this.cursorCheckPointDot.style.background = '#ff1d1d';
+    this.cursorCheckPointDot.style.border = '2px solid #ffffff';
+    this.cursorCheckPointDot.style.boxSizing = 'border-box';
+    this.cursorCheckPointDot.style.pointerEvents = 'none';
+    this.cursorCheckPointDot.style.zIndex = '1';
+    this.cursorCheckPointDot.style.display = 'none';
+    this.cursorCheckPointDot.style.transform = 'translate3d(-9999px, -9999px, 0) translate(-50%, -50%)';
+    this.cursorGifFrame.appendChild(this.cursorCheckPointDot);
 
     this.cursorGifBorder = document.createElement('div');
     this.cursorGifBorder.style.position = 'absolute';
@@ -391,23 +407,7 @@ export class GameScene extends Phaser.Scene {
 
     this.cursorClipFrame.appendChild(this.cursorGifFrame);
 
-    this.cursorCheckPointDot = document.createElement('div');
-    this.cursorCheckPointDot.style.position = 'fixed';
-    this.cursorCheckPointDot.style.left = '0';
-    this.cursorCheckPointDot.style.top = '0';
-    this.cursorCheckPointDot.style.width = `${CURSOR_CHECK_POINT_DOT_SIZE}px`;
-    this.cursorCheckPointDot.style.height = `${CURSOR_CHECK_POINT_DOT_SIZE}px`;
-    this.cursorCheckPointDot.style.borderRadius = '50%';
-    this.cursorCheckPointDot.style.background = '#ff1d1d';
-    this.cursorCheckPointDot.style.border = '2px solid #ffffff';
-    this.cursorCheckPointDot.style.boxSizing = 'border-box';
-    this.cursorCheckPointDot.style.pointerEvents = 'none';
-    this.cursorCheckPointDot.style.zIndex = '10000';
-    this.cursorCheckPointDot.style.display = 'none';
-    this.cursorCheckPointDot.style.transform = 'translate3d(-9999px, -9999px, 0) translate(-50%, -50%)';
-
     document.body.appendChild(this.cursorClipFrame);
-    document.body.appendChild(this.cursorCheckPointDot);
     this.createGameFrameMask();
     this.refreshGifCursorMetrics();
     this.setGifCursorAngle(this.cursorGifAngle.value);
@@ -1227,7 +1227,11 @@ export class GameScene extends Phaser.Scene {
   private updateCursorCheckPointDot() {
     if (!this.cursorCheckPointDot) return;
     const point = this.getCursorCheckPoint();
-    this.cursorCheckPointDot.style.transform = `translate3d(${point.clientX}px, ${point.clientY}px, 0) translate(-50%, -50%)`;
+    const centerScreenX = this.cursorWorldX * this.cursorScaleX;
+    const centerScreenY = this.cursorWorldY * this.cursorScaleY;
+    const localX = point.screenX - centerScreenX;
+    const localY = point.screenY - centerScreenY;
+    this.cursorCheckPointDot.style.transform = `translate3d(${localX}px, ${localY}px, 0) translate(-50%, -50%)`;
   }
 
   private isCursorDomBlockingCheckPoint(): boolean {
