@@ -1,0 +1,128 @@
+import Phaser from 'phaser';
+import openingVideoUrl from '../assets/mp4/開頭影片.mp4';
+import type { GameSettings } from '../config';
+import { GAME_HEIGHT, GAME_WIDTH } from '../config';
+import { MAIN_LEVEL_DATA } from '../levels';
+
+export class MainlineIntroScene extends Phaser.Scene {
+  private settings!: GameSettings;
+  private openingRoot?: HTMLDivElement;
+  private openingVideo?: HTMLVideoElement;
+
+  private readonly refreshOpeningVideoBounds = () => {
+    if (!this.openingRoot) return;
+    const rect = this.game.canvas.getBoundingClientRect();
+    this.openingRoot.style.left = `${rect.left}px`;
+    this.openingRoot.style.top = `${rect.top}px`;
+    this.openingRoot.style.width = `${rect.width}px`;
+    this.openingRoot.style.height = `${rect.height}px`;
+  };
+
+  constructor() {
+    super('MainlineIntroScene');
+  }
+
+  init(data: { settings: GameSettings }) {
+    this.settings = data.settings;
+  }
+
+  preload() {
+    this.load.image('tutorial', 'src/assets/tutorial.png');
+  }
+
+  create() {
+    this.input.setDefaultCursor('default');
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener('resize', this.refreshOpeningVideoBounds);
+      this.removeOpeningVideo();
+    });
+
+    this.playOpeningVideoThenShowTutorial();
+  }
+
+  private playOpeningVideoThenShowTutorial() {
+    const complete = () => {
+      this.removeOpeningVideo();
+      this.showTutorialScreen();
+    };
+
+    this.openingRoot = document.createElement('div');
+    this.openingRoot.style.position = 'fixed';
+    this.openingRoot.style.pointerEvents = 'none';
+    this.openingRoot.style.background = '#000000';
+    this.openingRoot.style.zIndex = '1000';
+    this.openingRoot.style.overflow = 'hidden';
+
+    this.openingVideo = document.createElement('video');
+    this.openingVideo.src = openingVideoUrl;
+    this.openingVideo.autoplay = true;
+    this.openingVideo.controls = false;
+    this.openingVideo.playsInline = true;
+    this.openingVideo.preload = 'auto';
+    this.openingVideo.style.width = '100%';
+    this.openingVideo.style.height = '100%';
+    this.openingVideo.style.objectFit = 'contain';
+    this.openingVideo.style.background = '#000000';
+
+    this.openingVideo.addEventListener('ended', complete, { once: true });
+    this.openingVideo.addEventListener('error', complete, { once: true });
+
+    this.openingRoot.appendChild(this.openingVideo);
+    document.body.appendChild(this.openingRoot);
+    this.refreshOpeningVideoBounds();
+    window.addEventListener('resize', this.refreshOpeningVideoBounds);
+
+    this.openingVideo.play().catch(() => {
+      complete();
+    });
+  }
+
+  private removeOpeningVideo() {
+    if (this.openingVideo) {
+      this.openingVideo.pause();
+      this.openingVideo.src = '';
+      this.openingVideo.load();
+      this.openingVideo.remove();
+      this.openingVideo = undefined;
+    }
+
+    this.openingRoot?.remove();
+    this.openingRoot = undefined;
+  }
+
+  private showTutorialScreen() {
+    const tutorial = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'tutorial').setDepth(1);
+    const ratio = Math.min((GAME_WIDTH * 0.92) / tutorial.width, (GAME_HEIGHT * 0.84) / tutorial.height);
+    tutorial.setDisplaySize(tutorial.width * ratio, tutorial.height * ratio);
+
+    const btnY = GAME_HEIGHT - 68;
+    const confirmBg = this.add.rectangle(GAME_WIDTH / 2, btnY, 220, 64, 0x1c825f, 1)
+      .setStrokeStyle(3, 0xd8ffef, 0.95)
+      .setDepth(5)
+      .setInteractive({ useHandCursor: true });
+    const confirmText = this.add.text(GAME_WIDTH / 2, btnY, '確定', {
+      fontSize: '34px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(6);
+
+    confirmBg.on('pointerover', () => {
+      confirmBg.setFillStyle(0x24a175, 1);
+      confirmText.setScale(1.03);
+    });
+    confirmBg.on('pointerout', () => {
+      confirmBg.setFillStyle(0x1c825f, 1);
+      confirmText.setScale(1);
+    });
+    confirmBg.on('pointerdown', () => {
+      this.scene.start('GameScene', {
+        settings: this.settings,
+        stageIndex: 0,
+        mode: 'story',
+        levelData: MAIN_LEVEL_DATA,
+      });
+    });
+  }
+}

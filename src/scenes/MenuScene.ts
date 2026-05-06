@@ -28,8 +28,21 @@ export class MenuScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    // Start button
-    const startBtn = this.add.text(cx, height * 0.52, '[ START ]', {
+    // Mainline mode button
+    const mainlineBtn = this.add.text(cx, height * 0.45, '[ 主線模式 ]', {
+      fontSize: '44px',
+      color: '#ffd58f',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    mainlineBtn.on('pointerover', () => mainlineBtn.setColor('#ffffff'));
+    mainlineBtn.on('pointerout', () => mainlineBtn.setColor('#ffd58f'));
+    mainlineBtn.on('pointerdown', () => {
+      this.scene.start('MainlineIntroScene', { settings: this.settings });
+    });
+
+    // Challenge mode button
+    const startBtn = this.add.text(cx, height * 0.56, '[ 挑戰模式 ]', {
       fontSize: '40px',
       color: '#aaffaa',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -37,11 +50,11 @@ export class MenuScene extends Phaser.Scene {
     startBtn.on('pointerover', () => startBtn.setColor('#ffffff'));
     startBtn.on('pointerout', () => startBtn.setColor('#aaffaa'));
     startBtn.on('pointerdown', () => {
-      this.scene.start('GameScene', { settings: this.settings, stageIndex: 0 });
+      this.scene.start('GameScene', { settings: this.settings, stageIndex: 0, mode: 'challenge' });
     });
 
     // Settings button
-    const settingsBtn = this.add.text(cx, height * 0.63, '[ SETTINGS ]', {
+    const settingsBtn = this.add.text(cx, height * 0.67, '[ SETTINGS ]', {
       fontSize: '28px',
       color: '#aaaaff',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });

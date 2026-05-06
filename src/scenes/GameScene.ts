@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import suto400GifUrl from '../assets/suto400_2x.gif';
 import gameoverBgUrl from '../assets/gameover.png';
+import samVideoUrl from '../assets/mp4/sam.mp4';
 import promptDUrl from '../assets/audio/D.wav';
 import promptLUrl from '../assets/audio/L.wav';
 import promptRUrl from '../assets/audio/R.wav';
@@ -16,7 +17,7 @@ import {
 } from '../config';
 import type { GameSettings, Direction } from '../config';
 import { LEVEL_DATA } from '../levels';
-import type { Stage, Section, NormalSection, RotationSection } from '../levels';
+import type { Stage, Section, NormalSection, RotationSection, LevelData } from '../levels';
 
 const ALL_DIRS: Direction[] = ['U', 'UR', 'R', 'DR', 'D', 'DL', 'L', 'UL'];
 const CARDINAL_DIRS: Direction[] = ['U', 'D', 'L', 'R'];
@@ -41,6 +42,8 @@ const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   L: 'prompt_L',
   R: 'prompt_R',
 };
+
+type GameMode = 'challenge' | 'story';
 
 const getStageAudioKey = (clipPath: string): string => `stage_audio_${clipPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
@@ -76,6 +79,8 @@ interface HitboxRect {
 }
 
 export class GameScene extends Phaser.Scene {
+  private mode: GameMode = 'challenge';
+  private levelData: LevelData = LEVEL_DATA;
   private settings!: GameSettings;
   private stageIndex!: number;
   private currentStage!: Stage;
@@ -86,6 +91,16 @@ export class GameScene extends Phaser.Scene {
   private promptAudioSequenceId = 0;
   private sectionIndex = 0;
   private currentSection!: Section;
+  private storySamVideoRoot?: HTMLDivElement;
+  private storySamVideo?: HTMLVideoElement;
+  private readonly refreshStorySamVideoBounds = () => {
+    if (!this.storySamVideoRoot) return;
+    const rect = this.game.canvas.getBoundingClientRect();
+    this.storySamVideoRoot.style.left = `${rect.left}px`;
+    this.storySamVideoRoot.style.top = `${rect.top}px`;
+    this.storySamVideoRoot.style.width = `${rect.width}px`;
+    this.storySamVideoRoot.style.height = `${rect.height}px`;
+  };
 
   // Timing
   private beatMs = 500;
@@ -205,9 +220,11 @@ export class GameScene extends Phaser.Scene {
     super('GameScene');
   }
 
-  init(data: { settings: GameSettings; stageIndex: number }) {
+  init(data: { settings: GameSettings; stageIndex: number; mode?: GameMode; levelData?: LevelData }) {
     this.settings = data.settings;
     this.stageIndex = data.stageIndex ?? 0;
+    this.mode = data.mode ?? 'challenge';
+    this.levelData = data.levelData ?? LEVEL_DATA;
   }
 
   preload() {
@@ -222,7 +239,11 @@ export class GameScene extends Phaser.Scene {
     this.load.audio('miss', missUrl);
     this.load.audio('gameover_sfx', gameoverSfxUrl);
 
-    const stageAudioClips = new Set(LEVEL_DATA.stages.map(stage => stage.audio_clip));
+    const stageAudioClips = new Set(
+      this.levelData.stages
+        .map(stage => stage.audio_clip)
+        .filter((clipPath): clipPath is string => Boolean(clipPath)),
+    );
     for (const clipPath of stageAudioClips) {
       this.load.audio(getStageAudioKey(clipPath), resolveStageAudioClipUrl(clipPath));
     }
@@ -245,6 +266,7 @@ export class GameScene extends Phaser.Scene {
     this.createHitSparkTexture();
     this.createCursors();
     this.createPauseMenu();
+    this.createStorySamVideo();
     this.flashOverlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xffffff, 0).setDepth(50);
 
     this.setCheckpointsVisible(false);
@@ -253,20 +275,24 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => this.onMouseMove(ptr));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanupScene());
 
-    this.startSection();
+    if (this.mode === 'story') {
+      this.time.delayedCall(200, () => this.startSection());
+    } else {
+      this.startSection();
+    }
   }
 
   private loadStage(index: number) {
-    this.currentStage = LEVEL_DATA.stages[index];
+    this.currentStage = this.levelData.stages[index];
     this.beatMs = 60000 / this.currentStage.bpm;
-    this.currentStageAudioKey = getStageAudioKey(this.currentStage.audio_clip);
+    this.currentStageAudioKey = this.currentStage.audio_clip ? getStageAudioKey(this.currentStage.audio_clip) : null;
   }
 
   private createHUD() {
     const cx = GAME_WIDTH / 2;
     this.stageText = this.add.text(cx, GAME_FRAME_TOP + 18, '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(10);
     this.roundText = this.add.text(cx, GAME_FRAME_TOP + 52, '', { fontSize: '20px', color: '#cccccc' }).setOrigin(0.5, 0).setDepth(10);
-    this.judgementText = this.add.text(GAME_FRAME_RIGHT - 24, GAME_FRAME_TOP + 18, '', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold', align: 'right' }).setOrigin(1, 0).setDepth(10);
+    this.judgementText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0.5).setDepth(10);
     this.updateHUD();
     this.updateJudgementText();
   }
@@ -424,6 +450,7 @@ export class GameScene extends Phaser.Scene {
   private cleanupScene() {
     this.input.setDefaultCursor('default');
     this.setGifCursorVisible(false);
+    this.removeStorySamVideo();
     this.stopStagePhaseClip();
     this.stopPromptAudioSequence();
     this.cursorGifAngleTween?.stop();
@@ -538,7 +565,7 @@ export class GameScene extends Phaser.Scene {
     this.onBeat();
     this.beatTimer = this.time.addEvent({ delay: this.beatMs, repeat: 7, callback: this.onBeat, callbackScope: this });
 
-    if (!this.isRotation) {
+    if (!this.isRotation && this.mode !== 'story') {
       this.startPromptAudioSequence((this.currentSection as NormalSection).prompts);
     }
   }
@@ -601,7 +628,7 @@ export class GameScene extends Phaser.Scene {
     this.sectionIndex++;
     if (this.sectionIndex >= this.currentStage.sections.length) {
       this.stageIndex++;
-      if (this.stageIndex >= LEVEL_DATA.stages.length) {
+      if (this.stageIndex >= this.levelData.stages.length) {
         this.time.delayedCall(500, () => this.scene.start('MenuScene'));
       } else {
         this.loadStage(this.stageIndex);
@@ -845,6 +872,79 @@ export class GameScene extends Phaser.Scene {
     this.currentStageAudio.stop();
     this.currentStageAudio.destroy();
     this.currentStageAudio = undefined;
+  }
+
+  private createStorySamVideo() {
+    if (this.mode !== 'story') return;
+
+    this.removeStorySamVideo();
+
+    this.storySamVideoRoot = document.createElement('div');
+    this.storySamVideoRoot.style.position = 'fixed';
+    this.storySamVideoRoot.style.pointerEvents = 'none';
+    this.storySamVideoRoot.style.zIndex = '40';
+
+    const shell = document.createElement('div');
+    shell.style.position = 'absolute';
+    shell.style.right = '20px';
+    shell.style.bottom = '20px';
+    shell.style.width = '22%';
+    shell.style.minWidth = '220px';
+    shell.style.maxWidth = '320px';
+    shell.style.aspectRatio = '16 / 9';
+    shell.style.border = '2px solid rgba(255, 255, 255, 0.82)';
+    shell.style.background = '#000000';
+    shell.style.boxShadow = '0 10px 24px rgba(0, 0, 0, 0.5)';
+    shell.style.overflow = 'hidden';
+
+    this.storySamVideo = document.createElement('video');
+    this.storySamVideo.src = samVideoUrl;
+    this.storySamVideo.autoplay = true;
+    this.storySamVideo.loop = true;
+    this.storySamVideo.controls = false;
+    this.storySamVideo.muted = false;
+    this.storySamVideo.playsInline = true;
+    this.storySamVideo.preload = 'auto';
+    this.storySamVideo.style.width = '100%';
+    this.storySamVideo.style.height = '100%';
+    this.storySamVideo.style.objectFit = 'cover';
+
+    shell.appendChild(this.storySamVideo);
+    this.storySamVideoRoot.appendChild(shell);
+    document.body.appendChild(this.storySamVideoRoot);
+
+    this.refreshStorySamVideoBounds();
+    window.addEventListener('resize', this.refreshStorySamVideoBounds);
+    this.storySamVideo.play().catch(() => {
+      // Browser autoplay policy may require user interaction.
+    });
+  }
+
+  private pauseStorySamVideo() {
+    if (!this.storySamVideo) return;
+    this.storySamVideo.pause();
+  }
+
+  private resumeStorySamVideo() {
+    if (!this.storySamVideo) return;
+    this.storySamVideo.play().catch(() => {
+      // Ignore autoplay resume rejection.
+    });
+  }
+
+  private removeStorySamVideo() {
+    window.removeEventListener('resize', this.refreshStorySamVideoBounds);
+
+    if (this.storySamVideo) {
+      this.storySamVideo.pause();
+      this.storySamVideo.src = '';
+      this.storySamVideo.load();
+      this.storySamVideo.remove();
+      this.storySamVideo = undefined;
+    }
+
+    this.storySamVideoRoot?.remove();
+    this.storySamVideoRoot = undefined;
   }
 
   private applyPromptRotationAngle() {
@@ -1642,9 +1742,11 @@ export class GameScene extends Phaser.Scene {
     if (paused) {
       this.pauseStagePhaseClip();
       this.pausePromptAudioSequence();
+      this.pauseStorySamVideo();
     } else {
       this.resumeStagePhaseClip();
       this.resumePromptAudioSequence();
+      this.resumeStorySamVideo();
     }
     for (const event of this.shrinkStartEvents) event.paused = paused;
     for (const tween of this.shrinkTweens.values()) {
@@ -1672,6 +1774,7 @@ export class GameScene extends Phaser.Scene {
 
   private returnToMenu() {
     this.isPaused = false;
+    this.removeStorySamVideo();
     this.stopStagePhaseClip();
     this.stopPromptAudioSequence();
     this.setGameplayTimersPaused(false);
