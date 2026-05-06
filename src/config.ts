@@ -14,7 +14,7 @@ export interface GameSettings {
 export const DEFAULT_SETTINGS: GameSettings = {
   bpm: 183,
   shrinkLeadMs: 500,
-  perfectJudgeWindowMs: 180,
+  perfectJudgeWindowMs: 220,
   hitboxWidth: 500,
   hitboxHeight: 300,
   checkDepth: 50,
