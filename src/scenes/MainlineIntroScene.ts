@@ -8,6 +8,7 @@ export class MainlineIntroScene extends Phaser.Scene {
   private settings!: GameSettings;
   private openingRoot?: HTMLDivElement;
   private openingVideo?: HTMLVideoElement;
+  private readonly openingLastFrameTextureKey = 'opening_last_frame';
 
   private readonly refreshOpeningVideoBounds = () => {
     if (!this.openingRoot) return;
@@ -37,6 +38,9 @@ export class MainlineIntroScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       window.removeEventListener('resize', this.refreshOpeningVideoBounds);
       this.removeOpeningVideo();
+      if (this.textures.exists(this.openingLastFrameTextureKey)) {
+        this.textures.remove(this.openingLastFrameTextureKey);
+      }
     });
 
     this.playOpeningVideoThenShowTutorial();
@@ -44,6 +48,7 @@ export class MainlineIntroScene extends Phaser.Scene {
 
   private playOpeningVideoThenShowTutorial() {
     const complete = () => {
+      this.captureOpeningLastFrameTexture();
       this.removeOpeningVideo();
       this.showTutorialScreen();
     };
@@ -92,7 +97,35 @@ export class MainlineIntroScene extends Phaser.Scene {
     this.openingRoot = undefined;
   }
 
+  private captureOpeningLastFrameTexture() {
+    const video = this.openingVideo;
+    if (!video || video.videoWidth <= 0 || video.videoHeight <= 0) {
+      return;
+    }
+
+    const frameCanvas = document.createElement('canvas');
+    frameCanvas.width = video.videoWidth;
+    frameCanvas.height = video.videoHeight;
+    const ctx = frameCanvas.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+
+    ctx.drawImage(video, 0, 0, frameCanvas.width, frameCanvas.height);
+
+    if (this.textures.exists(this.openingLastFrameTextureKey)) {
+      this.textures.remove(this.openingLastFrameTextureKey);
+    }
+    this.textures.addCanvas(this.openingLastFrameTextureKey, frameCanvas);
+  }
+
   private showTutorialScreen() {
+    if (this.textures.exists(this.openingLastFrameTextureKey)) {
+      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, this.openingLastFrameTextureKey).setDepth(0);
+      const scale = Math.min(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);
+      bg.setScale(scale);
+    }
+
     const tutorial = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'tutorial').setDepth(1);
     const ratio = Math.min((GAME_WIDTH * 0.92) / tutorial.width, (GAME_HEIGHT * 0.84) / tutorial.height);
     tutorial.setDisplaySize(tutorial.width * ratio, tutorial.height * ratio);

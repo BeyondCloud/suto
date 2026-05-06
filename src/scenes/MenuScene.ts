@@ -14,6 +14,7 @@ export class MenuScene extends Phaser.Scene {
 
   preload() {
     this.load.image('suto400', 'src/assets/suto400.png');
+    this.load.image('opening_bg', 'src/assets/opening.png');
   }
 
   create() {
@@ -21,8 +22,12 @@ export class MenuScene extends Phaser.Scene {
     const cx = width / 2;
     this.input.setDefaultCursor('default');
 
+    const background = this.add.image(cx, height / 2, 'opening_bg').setDepth(-10);
+    const bgScale = Math.max(width / background.width, height / background.height);
+    background.setScale(bgScale);
+
     // Title
-    this.add.text(cx, height * 0.28, 'SUTO', {
+    this.add.text(cx, height * 0.28, 'SUTO!', {
       fontSize: '96px',
       color: '#ffffff',
       fontStyle: 'bold',
