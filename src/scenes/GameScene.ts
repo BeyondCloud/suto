@@ -151,6 +151,12 @@ export class GameScene extends Phaser.Scene {
   private isRotation = false;
   private rotCurrentDir: Direction = 'U';
   private promptImages: Phaser.GameObjects.Image[] = [];
+  private promptIndicator?: Phaser.GameObjects.Rectangle;
+  private promptIndicatorTween?: Phaser.Tweens.Tween;
+  private promptCellCenters: Array<{ x: number; y: number }> = [];
+  private promptCellWidth = 0;
+  private promptCellHeight = 0;
+  private promptIndicatorSize = 0;
 
   // Check phase
   private beatTargets: Direction[] = [];
@@ -507,6 +513,16 @@ export class GameScene extends Phaser.Scene {
   private clearPromptGrid() {
     for (const img of this.promptImages) img.destroy();
     this.promptImages = [];
+    this.promptCellCenters = [];
+    this.promptCellWidth = 0;
+    this.promptCellHeight = 0;
+    this.promptIndicatorSize = 0;
+    this.promptIndicatorTween?.stop();
+    if (this.promptIndicator?.active) {
+      this.promptIndicator.setVisible(false);
+    } else {
+      this.promptIndicator = undefined;
+    }
   }
 
   private buildPromptGrid() {
@@ -531,7 +547,7 @@ export class GameScene extends Phaser.Scene {
   private addArrowImage(x: number, y: number, dir: Direction): Phaser.GameObjects.Image {
     const isDiagonal = dir === 'UL' || dir === 'UR' || dir === 'DL' || dir === 'DR';
     const key = isDiagonal ? 'down_left' : 'down';
-    const img = this.add.image(x, y, key).setDepth(15).setAlpha(0.4);
+    const img = this.add.image(x, y, key).setDepth(15).setAlpha(0.9);
     img.setAngle(isDiagonal ? DIR_ANGLE[dir] - 45 : DIR_ANGLE[dir]);
     return img;
   }
@@ -541,18 +557,83 @@ export class GameScene extends Phaser.Scene {
     const rows = 2;
     const cellW = this.settings.hitboxWidth / cols;
     const cellH = this.settings.hitboxHeight / rows;
-    const arrowSize = Math.max(24, Math.min(cellW, cellH) * 0.55);
+    const arrowSize = 120;
     const startX = x - this.settings.hitboxWidth / 2 + cellW / 2;
     const startY = y - this.settings.hitboxHeight / 2 + cellH / 2;
 
+    this.promptCellWidth = cellW;
+    this.promptCellHeight = cellH;
+    this.promptIndicatorSize = Math.min(Math.min(cellW, cellH) * 0.95, arrowSize * 1.15);
+
     for (let i = 0; i < this.promptImages.length; i++) {
+      const cellX = startX + (i % cols) * cellW;
+      const cellY = startY + Math.floor(i / cols) * cellH;
+      this.promptCellCenters[i] = { x: cellX, y: cellY };
       this.promptImages[i]
-        .setPosition(startX + (i % cols) * cellW, startY + Math.floor(i / cols) * cellH)
+        .setPosition(cellX, cellY)
         .setDisplaySize(arrowSize, arrowSize);
+    }
+
+    if (this.isRotation) {
+      this.promptIndicatorTween?.stop();
+      this.promptIndicator?.setVisible(false);
+    } else {
+      // Mouse move repositions the prompt grid; stop old tween so the indicator stays anchored to the cursor.
+      this.promptIndicatorTween?.stop();
+      this.syncPromptIndicatorWithCell();
     }
   }
 
+  private syncPromptIndicatorWithCell(index = this.beatCount) {
+    const cell = this.promptCellCenters[index];
+    if (!cell) return;
+    const indicatorSize = this.promptIndicatorSize || Math.min(this.promptCellWidth, this.promptCellHeight) * 0.86;
+    const indicatorGeom = this.promptIndicator ? ((this.promptIndicator as unknown as { geom?: unknown }).geom ?? null) : null;
+
+    if (!this.promptIndicator || !this.promptIndicator.active || !indicatorGeom) {
+      this.promptIndicator = this.add.rectangle(cell.x, cell.y, indicatorSize, indicatorSize)
+        .setDepth(16)
+        .setFillStyle(0xffffff, 0)
+        .setStrokeStyle(3, 0xfff17a, 1);
+    }
+
+    this.promptIndicator
+      .setVisible(true)
+      .setSize(indicatorSize, indicatorSize)
+      .setPosition(cell.x, cell.y);
+  }
+
+  private movePromptIndicatorToBeat(beat: number) {
+    const cell = this.promptCellCenters[beat];
+    if (!cell) return;
+
+    this.syncPromptIndicatorWithCell(beat);
+    if (!this.promptIndicator) return;
+
+    this.promptIndicatorTween?.stop();
+    const isFirstMove = beat === 0;
+    if (isFirstMove) {
+      this.promptIndicator.setPosition(cell.x, cell.y);
+      return;
+    }
+
+    this.promptIndicatorTween = this.tweens.add({
+      targets: this.promptIndicator,
+      x: cell.x,
+      y: cell.y,
+      duration: Math.min(220, this.beatMs * 0.45),
+      ease: 'Cubic.easeOut',
+    });
+  }
+
   private highlightPromptBeat(beat: number) {
+    if (this.isRotation) {
+      this.promptIndicatorTween?.stop();
+      this.promptIndicator?.setVisible(false);
+    } else {
+      this.movePromptIndicatorToBeat(beat);
+    }
+
     if (this.isRotation) {
       const sec = this.currentSection as RotationSection;
       const rotDir = sec.rotate[beat];
@@ -582,10 +663,6 @@ export class GameScene extends Phaser.Scene {
     } else {
       const sec = this.currentSection as NormalSection;
       this.playPromptAudio(sec.prompts[beat]);
-
-      for (let i = 0; i < this.promptImages.length; i++) {
-        this.promptImages[i].setAlpha(i === beat ? 1 : 0.35);
-      }
     }
   }
 
