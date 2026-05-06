@@ -32,6 +32,7 @@ const GAME_FRAME_WIDTH = GAME_FRAME_RIGHT - GAME_FRAME_LEFT;
 const GAME_FRAME_HEIGHT = GAME_FRAME_BOTTOM - GAME_FRAME_TOP;
 const FALSE_TOUCH_DAMAGE = 5;
 const DEFAULT_STAGE_AUDIO_CLIP = 'src/assets/audio/120.wav';
+const HIT_SPARK_TEXTURE_KEY = 'hit_spark';
 const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   U: 'prompt_U',
   D: 'prompt_D',
@@ -236,6 +237,7 @@ export class GameScene extends Phaser.Scene {
     this.createHUD();
     this.createLifeBar();
     this.createCheckpoints();
+    this.createHitSparkTexture();
     this.createCursors();
     this.createPauseMenu();
     this.flashOverlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xffffff, 0).setDepth(50);
@@ -873,7 +875,19 @@ export class GameScene extends Phaser.Scene {
     return this.add.rectangle(GAME_FRAME_RIGHT - d / 2, GAME_HEIGHT / 2, d, GAME_FRAME_HEIGHT, color, 0);
   }
 
+  private createHitSparkTexture() {
+    if (this.textures.exists(HIT_SPARK_TEXTURE_KEY)) return;
+
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(8, 8, 6);
+    g.generateTexture(HIT_SPARK_TEXTURE_KEY, 16, 16);
+    g.destroy();
+  }
+
   private playEdgeHitEffect(dir: Direction) {
+    this.playEdgeParticleBurst(dir);
+
     if (!this.isCardinal(dir)) return;
 
     const d = this.checkDepth();
@@ -914,6 +928,90 @@ export class GameScene extends Phaser.Scene {
       ease: 'Cubic.easeOut',
       onComplete: () => line.destroy(),
     });
+  }
+
+  private playEdgeParticleBurst(dir: Direction) {
+    const d = this.checkDepth();
+    const edgeInset = this.isCardinal(dir) ? d : d + 100;
+    const positions = this.getEdgeParticlePositions(dir, edgeInset);
+    const velocity = this.getEdgeParticleVelocity(dir);
+    const emitter = this.add.particles(0, 0, HIT_SPARK_TEXTURE_KEY, {
+      emitting: false,
+      lifespan: { min: 360, max: 680 },
+      speedX: velocity.speedX,
+      speedY: velocity.speedY,
+      accelerationY: dir === 'U' ? 260 : dir === 'D' ? -260 : 0,
+      scale: { start: 0.72, end: 0 },
+      alpha: { start: 1, end: 0 },
+      rotate: { min: 0, max: 360 },
+      tint: [0xfff1a8, 0x7cff8f, 0x8ff8ff, 0xffffff],
+      blendMode: Phaser.BlendModes.ADD,
+    }).setDepth(45);
+
+    for (const pos of positions) {
+      emitter.explode(this.isCardinal(dir) ? 9 : 34, pos.x, pos.y);
+    }
+
+    this.time.delayedCall(900, () => emitter.destroy());
+  }
+
+  private getEdgeParticlePositions(dir: Direction, inset: number): Array<{ x: number; y: number }> {
+    if (dir === 'U' || dir === 'D') {
+      const y = dir === 'U' ? GAME_FRAME_TOP + inset : GAME_FRAME_BOTTOM - inset;
+      return [
+        { x: GAME_WIDTH / 2 - GAME_FRAME_WIDTH * 0.34, y },
+        { x: GAME_WIDTH / 2 - GAME_FRAME_WIDTH * 0.17, y },
+        { x: GAME_WIDTH / 2, y },
+        { x: GAME_WIDTH / 2 + GAME_FRAME_WIDTH * 0.17, y },
+        { x: GAME_WIDTH / 2 + GAME_FRAME_WIDTH * 0.34, y },
+      ];
+    }
+
+    if (dir === 'L' || dir === 'R') {
+      const x = dir === 'L' ? GAME_FRAME_LEFT + inset : GAME_FRAME_RIGHT - inset;
+      return [
+        { x, y: GAME_HEIGHT / 2 - GAME_FRAME_HEIGHT * 0.34 },
+        { x, y: GAME_HEIGHT / 2 - GAME_FRAME_HEIGHT * 0.17 },
+        { x, y: GAME_HEIGHT / 2 },
+        { x, y: GAME_HEIGHT / 2 + GAME_FRAME_HEIGHT * 0.17 },
+        { x, y: GAME_HEIGHT / 2 + GAME_FRAME_HEIGHT * 0.34 },
+      ];
+    }
+
+    const left = GAME_FRAME_LEFT + inset;
+    const right = GAME_FRAME_RIGHT - inset;
+    const top = GAME_FRAME_TOP + inset;
+    const bottom = GAME_FRAME_BOTTOM - inset;
+    const positions: Record<Direction, { x: number; y: number }> = {
+      U: { x: GAME_WIDTH / 2, y: top },
+      D: { x: GAME_WIDTH / 2, y: bottom },
+      L: { x: left, y: GAME_HEIGHT / 2 },
+      R: { x: right, y: GAME_HEIGHT / 2 },
+      UL: { x: left, y: top },
+      UR: { x: right, y: top },
+      DL: { x: left, y: bottom },
+      DR: { x: right, y: bottom },
+    };
+    return [positions[dir]];
+  }
+
+  private getEdgeParticleVelocity(dir: Direction): {
+    speedX: Phaser.Types.GameObjects.Particles.EmitterOpOnEmitType;
+    speedY: Phaser.Types.GameObjects.Particles.EmitterOpOnEmitType;
+  } {
+    const spread = { min: -180, max: 180 };
+    if (dir === 'U') return { speedX: spread, speedY: { min: 80, max: 320 } };
+    if (dir === 'D') return { speedX: spread, speedY: { min: -320, max: -80 } };
+    if (dir === 'L') return { speedX: { min: 80, max: 320 }, speedY: spread };
+    if (dir === 'R') return { speedX: { min: -320, max: -80 }, speedY: spread };
+
+    const xDir = dir === 'UL' || dir === 'DL' ? 1 : -1;
+    const yDir = dir === 'UL' || dir === 'UR' ? 1 : -1;
+    const diagonalRange = (sign: number) => sign > 0 ? { min: 80, max: 320 } : { min: -320, max: -80 };
+    return {
+      speedX: diagonalRange(xDir),
+      speedY: diagonalRange(yDir),
+    };
   }
 
   private triggerShrinkForBeat(beat: number) {
