@@ -19,6 +19,8 @@ import type { Stage, Section, NormalSection, RotationSection } from '../levels';
 const ALL_DIRS: Direction[] = ['U', 'UR', 'R', 'DR', 'D', 'DL', 'L', 'UL'];
 const CARDINAL_DIRS: Direction[] = ['U', 'D', 'L', 'R'];
 const CHECKPOINT_RADIUS = 18;
+const CURSOR_CHECK_POINT_DOT_SIZE = 10;
+const CURSOR_CHECK_POINT_EDGE_INSET_PX = 2;
 const FALSE_TOUCH_DAMAGE = 5;
 const DEFAULT_STAGE_AUDIO_CLIP = 'src/assets/audio/120.wav';
 const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
@@ -81,6 +83,8 @@ export class GameScene extends Phaser.Scene {
   private cursorClipFrame!: HTMLDivElement;
   private cursorGifFrame!: HTMLDivElement;
   private cursorGif!: HTMLImageElement;
+  private cursorGifBorder!: HTMLDivElement;
+  private cursorCheckPointDot!: HTMLDivElement;
   private cursorGifAngle = { value: 180 };
   private cursorGifAngleTween?: Phaser.Tweens.Tween;
   private cursorScaleX = 1;
@@ -337,7 +341,7 @@ export class GameScene extends Phaser.Scene {
     this.cursorClipFrame.style.top = '0';
     this.cursorClipFrame.style.width = '0';
     this.cursorClipFrame.style.height = '0';
-    this.cursorClipFrame.style.overflow = 'hidden';
+    this.cursorClipFrame.style.overflow = 'visible';
     this.cursorClipFrame.style.zIndex = '10';
     this.cursorClipFrame.style.display = 'none';
 
@@ -352,7 +356,6 @@ export class GameScene extends Phaser.Scene {
     this.cursorGifFrame.style.display = 'none';
     this.cursorGifFrame.style.overflow = 'hidden';
     this.cursorGifFrame.style.background = '#000';
-    this.cursorGifFrame.style.border = '2px solid #fff';
     this.cursorGifFrame.style.boxSizing = 'border-box';
 
     this.cursorGif = document.createElement('img');
@@ -367,9 +370,37 @@ export class GameScene extends Phaser.Scene {
     this.cursorGif.style.userSelect = 'none';
     this.cursorGif.style.willChange = 'transform';
     this.cursorGif.style.opacity = '0.85';
+    this.cursorGif.style.zIndex = '1';
     this.cursorGifFrame.appendChild(this.cursorGif);
+
+    this.cursorGifBorder = document.createElement('div');
+    this.cursorGifBorder.style.position = 'absolute';
+    this.cursorGifBorder.style.inset = '0';
+    this.cursorGifBorder.style.pointerEvents = 'none';
+    this.cursorGifBorder.style.border = '2px solid #fff';
+    this.cursorGifBorder.style.boxSizing = 'border-box';
+    this.cursorGifBorder.style.zIndex = '2';
+    this.cursorGifFrame.appendChild(this.cursorGifBorder);
+
     this.cursorClipFrame.appendChild(this.cursorGifFrame);
+
+    this.cursorCheckPointDot = document.createElement('div');
+    this.cursorCheckPointDot.style.position = 'fixed';
+    this.cursorCheckPointDot.style.left = '0';
+    this.cursorCheckPointDot.style.top = '0';
+    this.cursorCheckPointDot.style.width = `${CURSOR_CHECK_POINT_DOT_SIZE}px`;
+    this.cursorCheckPointDot.style.height = `${CURSOR_CHECK_POINT_DOT_SIZE}px`;
+    this.cursorCheckPointDot.style.borderRadius = '50%';
+    this.cursorCheckPointDot.style.background = '#ff1d1d';
+    this.cursorCheckPointDot.style.border = '2px solid #ffffff';
+    this.cursorCheckPointDot.style.boxSizing = 'border-box';
+    this.cursorCheckPointDot.style.pointerEvents = 'none';
+    this.cursorCheckPointDot.style.zIndex = '10000';
+    this.cursorCheckPointDot.style.display = 'none';
+    this.cursorCheckPointDot.style.transform = 'translate3d(-9999px, -9999px, 0) translate(-50%, -50%)';
+
     document.body.appendChild(this.cursorClipFrame);
+    document.body.appendChild(this.cursorCheckPointDot);
     this.refreshGifCursorMetrics();
     this.setGifCursorAngle(this.cursorGifAngle.value);
     this.updateGifCursorPosition(cx, cy);
@@ -384,6 +415,7 @@ export class GameScene extends Phaser.Scene {
     this.cursorGifAngleTween?.stop();
     window.removeEventListener('resize', this.refreshGifCursorLayout);
     window.removeEventListener('pointermove', this.onWindowPointerMove);
+    this.cursorCheckPointDot?.remove();
     this.cursorClipFrame?.remove();
     this.resetGifCursorCache();
     this.beatTimer?.remove(false);
@@ -946,6 +978,55 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
+  private getCursorCheckPoint() {
+    this.refreshGifCursorMetrics();
+
+    const angleRad = (this.cursorGifAngle.value * Math.PI) / 180;
+    const localY = Math.max(0, this.cursorHeight / 2 - CURSOR_CHECK_POINT_EDGE_INSET_PX);
+    const offsetX = -Math.sin(angleRad) * localY;
+    const offsetY = Math.cos(angleRad) * localY;
+    const screenX = this.cursorWorldX * this.cursorScaleX + offsetX;
+    const screenY = this.cursorWorldY * this.cursorScaleY + offsetY;
+
+    return {
+      screenX,
+      screenY,
+      clientX: this.cursorCanvasLeft + screenX,
+      clientY: this.cursorCanvasTop + screenY,
+      worldX: screenX / this.cursorScaleX,
+      worldY: screenY / this.cursorScaleY,
+    };
+  }
+
+  private updateCursorCheckPointDot() {
+    if (!this.cursorCheckPointDot) return;
+    const point = this.getCursorCheckPoint();
+    this.cursorCheckPointDot.style.transform = `translate3d(${point.clientX}px, ${point.clientY}px, 0) translate(-50%, -50%)`;
+  }
+
+  private isCursorDomBlockingCheckPoint(): boolean {
+    if (!this.cursorClipFrame || !this.cursorGifFrame || !this.cursorGif) return false;
+    return this.cursorClipFrame.style.display !== 'none'
+      && this.cursorGifFrame.style.display !== 'none'
+      && this.cursorWidth > 0
+      && this.cursorHeight > 0;
+  }
+
+  private isOutsideGameBounds(x: number, y: number): boolean {
+    return x < 0 || x > GAME_WIDTH || y < 0 || y > GAME_HEIGHT;
+  }
+
+  private getClosestCardinalLine(x: number, y: number): Direction {
+    const distances: Array<{ dir: Direction; distance: number }> = [
+      { dir: 'U', distance: Math.abs(y) },
+      { dir: 'D', distance: Math.abs(y - GAME_HEIGHT) },
+      { dir: 'L', distance: Math.abs(x) },
+      { dir: 'R', distance: Math.abs(x - GAME_WIDTH) },
+    ];
+    distances.sort((a, b) => a.distance - b.distance);
+    return distances[0].dir;
+  }
+
   private checkActiveHits(x: number, y: number) {
     const hits: ActiveShrink[] = [];
 
@@ -1040,8 +1121,12 @@ export class GameScene extends Phaser.Scene {
 
     this.cursorClipFrame.style.display = visible ? 'block' : 'none';
     this.cursorGifFrame.style.display = visible ? 'block' : 'none';
+    if (this.cursorCheckPointDot) {
+      this.cursorCheckPointDot.style.display = visible ? 'block' : 'none';
+    }
     if (visible) {
       this.updateGifCursorPosition(this.cursorWorldX, this.cursorWorldY);
+      this.updateCursorCheckPointDot();
     }
   }
 
@@ -1057,6 +1142,7 @@ export class GameScene extends Phaser.Scene {
     const screenX = x * this.cursorScaleX;
     const screenY = y * this.cursorScaleY;
     this.cursorGifFrame.style.transform = `translate3d(${screenX}px, ${screenY}px, 0) translate(-50%, -50%)`;
+    this.updateCursorCheckPointDot();
   }
 
   private rotateGifCursorTo(dir: Direction, duration: number) {
@@ -1085,19 +1171,24 @@ export class GameScene extends Phaser.Scene {
     if (angle === this.lastCursorAngle) return;
     this.lastCursorAngle = angle;
     this.cursorGif.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+    this.updateCursorCheckPointDot();
   }
 
   private checkHit(mx: number, my: number, dir: Direction): boolean {
-    const rect = this.getHitboxRect(mx, my);
-    const d = this.checkDepth();
-    if (dir === 'U') return rect.top <= d;
-    if (dir === 'D') return rect.bottom >= GAME_HEIGHT - d;
-    if (dir === 'L') return rect.left <= d;
-    if (dir === 'R') return rect.right >= GAME_WIDTH - d;
-    if (dir === 'UL') return rect.top <= d && rect.left <= d;
-    if (dir === 'UR') return rect.top <= d && rect.right >= GAME_WIDTH - d;
-    if (dir === 'DL') return rect.bottom >= GAME_HEIGHT - d && rect.left <= d;
-    if (dir === 'DR') return rect.bottom >= GAME_HEIGHT - d && rect.right >= GAME_WIDTH - d;
+    void mx;
+    void my;
+    if (!this.isCursorDomBlockingCheckPoint()) return false;
+
+    const point = this.getCursorCheckPoint();
+    if (!this.isOutsideGameBounds(point.worldX, point.worldY)) return false;
+
+    if (dir === 'U' || dir === 'D' || dir === 'L' || dir === 'R') {
+      return this.getClosestCardinalLine(point.worldX, point.worldY) === dir;
+    }
+    if (dir === 'UL') return point.worldY < 0 && point.worldX < 0;
+    if (dir === 'UR') return point.worldY < 0 && point.worldX > GAME_WIDTH;
+    if (dir === 'DL') return point.worldY > GAME_HEIGHT && point.worldX < 0;
+    if (dir === 'DR') return point.worldY > GAME_HEIGHT && point.worldX > GAME_WIDTH;
     return false;
   }
 
