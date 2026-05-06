@@ -8,6 +8,7 @@ import promptRUrl from '../assets/audio/R.wav';
 import promptUUrl from '../assets/audio/U.wav';
 import clapUrl from '../assets/audio/clap.wav';
 import missUrl from '../assets/audio/miss.wav';
+import storyCheckStartUrl from '../assets/audio/short/suto.wav';
 import gameoverSfxUrl from '../assets/audio/long/這二十個影片有十九個影片長這樣到底要我怎麼開直播拉.wav';
 import stage120Url from '../assets/audio/120.wav';
 import {
@@ -59,6 +60,7 @@ interface CheckpointUI {
   innerCircle: Phaser.GameObjects.Arc;
   edgeZone?: Phaser.GameObjects.Rectangle;
   edgeLine?: Phaser.GameObjects.Rectangle;
+  cornerLine?: Phaser.GameObjects.Line;
 }
 
 interface ActiveShrink {
@@ -237,6 +239,7 @@ export class GameScene extends Phaser.Scene {
     this.load.audio('prompt_R', promptRUrl);
     this.load.audio('clap', clapUrl);
     this.load.audio('miss', missUrl);
+    this.load.audio('story_check_start', storyCheckStartUrl);
     this.load.audio('gameover_sfx', gameoverSfxUrl);
 
     const stageAudioClips = new Set(
@@ -276,7 +279,7 @@ export class GameScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanupScene());
 
     if (this.mode === 'story') {
-      this.time.delayedCall(200, () => this.startSection());
+      this.time.delayedCall(this.settings.storyStartDelayMs, () => this.startSection());
     } else {
       this.startSection();
     }
@@ -343,6 +346,8 @@ export class GameScene extends Phaser.Scene {
         inner.setVisible(false);
         cp.edgeZone = zone;
         cp.edgeLine = line;
+      } else {
+        cp.cornerLine = this.createCornerJudgeLine(dir).setDepth(6).setVisible(false);
       }
 
       this.checkpoints.push(cp);
@@ -356,6 +361,7 @@ export class GameScene extends Phaser.Scene {
       cp.innerCircle.setVisible(circleVisible);
       cp.edgeZone?.setVisible(vis);
       cp.edgeLine?.setVisible(vis);
+      cp.cornerLine?.setVisible(vis);
     }
   }
 
@@ -365,6 +371,7 @@ export class GameScene extends Phaser.Scene {
       cp.innerCircle.setVisible(vis && !this.isCardinal(cp.dir));
       cp.edgeZone?.setVisible(vis);
       cp.edgeLine?.setVisible(false);
+      cp.cornerLine?.setVisible(vis);
     }
   }
 
@@ -573,6 +580,7 @@ export class GameScene extends Phaser.Scene {
   private startCheckPhase() {
     if (this.isGameOver) return;
     this.gamePhase = 'check';
+    if (this.mode === 'story') this.sound.play('story_check_start');
     this.stopPromptAudioSequence();
     this.clearPromptGrid();
     this.setInnerCheckpointsVisible(true);
@@ -982,6 +990,10 @@ export class GameScene extends Phaser.Scene {
     return Phaser.Math.Clamp(this.settings.checkDepth ?? 50, 0, Math.min(GAME_FRAME_WIDTH, GAME_FRAME_HEIGHT) / 2);
   }
 
+  private cornerLineDepth(): number {
+    return Phaser.Math.Clamp(this.settings.cornerLineDepth ?? 130, 20, Math.min(GAME_FRAME_WIDTH, GAME_FRAME_HEIGHT) / 2);
+  }
+
   private isCardinal(dir: Direction): boolean {
     return dir === 'U' || dir === 'D' || dir === 'L' || dir === 'R';
   }
@@ -1019,6 +1031,55 @@ export class GameScene extends Phaser.Scene {
     if (dir === 'D') return this.add.rectangle(GAME_WIDTH / 2, GAME_FRAME_BOTTOM - d, GAME_FRAME_WIDTH, thickness, 0xffffff, 0.95);
     if (dir === 'L') return this.add.rectangle(GAME_FRAME_LEFT + d, GAME_HEIGHT / 2, thickness, GAME_FRAME_HEIGHT, 0xffffff, 0.95);
     return this.add.rectangle(GAME_FRAME_RIGHT - d, GAME_HEIGHT / 2, thickness, GAME_FRAME_HEIGHT, 0xffffff, 0.95);
+  }
+
+  private createCornerJudgeLine(dir: Direction): Phaser.GameObjects.Line {
+    const d = this.cornerLineDepth();
+    const left = GAME_FRAME_LEFT;
+    const right = GAME_FRAME_RIGHT;
+    const top = GAME_FRAME_TOP;
+    const bottom = GAME_FRAME_BOTTOM;
+
+    if (dir === 'UL') {
+      return this.add.line(0, 0, left + d, top, left, top + d, 0xffffff, 0.95).setOrigin(0, 0);
+    }
+    if (dir === 'UR') {
+      return this.add.line(0, 0, right - d, top, right, top + d, 0xffffff, 0.95).setOrigin(0, 0);
+    }
+    if (dir === 'DL') {
+      return this.add.line(0, 0, left, bottom - d, left + d, bottom, 0xffffff, 0.95).setOrigin(0, 0);
+    }
+    return this.add.line(0, 0, right, bottom - d, right - d, bottom, 0xffffff, 0.95).setOrigin(0, 0);
+  }
+
+  private isDiagonalCornerLineHit(pointX: number, pointY: number, dir: Direction): boolean {
+    const d = this.cornerLineDepth();
+
+    if (dir === 'UL') {
+      const x = (GAME_FRAME_LEFT + d) - pointX;
+      const y = (GAME_FRAME_TOP + d) - pointY;
+      return x >= 0 && y >= 0 && x + y >= d;
+    }
+
+    if (dir === 'UR') {
+      const x = pointX - (GAME_FRAME_RIGHT - d);
+      const y = (GAME_FRAME_TOP + d) - pointY;
+      return x >= 0 && y >= 0 && x + y >= d;
+    }
+
+    if (dir === 'DL') {
+      const x = (GAME_FRAME_LEFT + d) - pointX;
+      const y = pointY - (GAME_FRAME_BOTTOM - d);
+      return x >= 0 && y >= 0 && x + y >= d;
+    }
+
+    if (dir === 'DR') {
+      const x = pointX - (GAME_FRAME_RIGHT - d);
+      const y = pointY - (GAME_FRAME_BOTTOM - d);
+      return x >= 0 && y >= 0 && x + y >= d;
+    }
+
+    return false;
   }
 
   private createEdgeHitFlash(dir: Direction): Phaser.GameObjects.Rectangle {
@@ -1361,32 +1422,6 @@ export class GameScene extends Phaser.Scene {
       && this.cursorHeight > 0;
   }
 
-  private isOutsideGameBounds(x: number, y: number): boolean {
-    return x < GAME_FRAME_LEFT || x > GAME_FRAME_RIGHT || y < GAME_FRAME_TOP || y > GAME_FRAME_BOTTOM;
-  }
-
-  private getClosestCardinalLine(x: number, y: number): Direction {
-    const distances: Array<{ dir: Direction; distance: number }> = [
-      { dir: 'U', distance: Math.abs(y - GAME_FRAME_TOP) },
-      { dir: 'D', distance: Math.abs(y - GAME_FRAME_BOTTOM) },
-      { dir: 'L', distance: Math.abs(x - GAME_FRAME_LEFT) },
-      { dir: 'R', distance: Math.abs(x - GAME_FRAME_RIGHT) },
-    ];
-    distances.sort((a, b) => a.distance - b.distance);
-    return distances[0].dir;
-  }
-
-  private getClosestCorner(x: number, y: number): Direction {
-    const distances: Array<{ dir: Direction; distanceSq: number }> = [
-      { dir: 'UL', distanceSq: Phaser.Math.Distance.Squared(x, y, GAME_FRAME_LEFT, GAME_FRAME_TOP) },
-      { dir: 'UR', distanceSq: Phaser.Math.Distance.Squared(x, y, GAME_FRAME_RIGHT, GAME_FRAME_TOP) },
-      { dir: 'DL', distanceSq: Phaser.Math.Distance.Squared(x, y, GAME_FRAME_LEFT, GAME_FRAME_BOTTOM) },
-      { dir: 'DR', distanceSq: Phaser.Math.Distance.Squared(x, y, GAME_FRAME_RIGHT, GAME_FRAME_BOTTOM) },
-    ];
-    distances.sort((a, b) => a.distanceSq - b.distanceSq);
-    return distances[0].dir;
-  }
-
   private checkActiveHits(x: number, y: number) {
     const hits: ActiveShrink[] = [];
 
@@ -1540,15 +1575,27 @@ export class GameScene extends Phaser.Scene {
     if (!this.isCursorDomBlockingCheckPoint()) return false;
 
     const point = this.getCursorCheckPoint();
-    if (!this.isOutsideGameBounds(point.worldX, point.worldY)) return false;
 
-    if (dir === 'U' || dir === 'D' || dir === 'L' || dir === 'R') {
-      return this.getClosestCardinalLine(point.worldX, point.worldY) === dir;
+    switch (dir) {
+      case 'U':
+        return point.worldY <= GAME_FRAME_TOP;
+      case 'D':
+        return point.worldY >= GAME_FRAME_BOTTOM;
+      case 'L':
+        return point.worldX <= GAME_FRAME_LEFT;
+      case 'R':
+        return point.worldX >= GAME_FRAME_RIGHT;
+      case 'UL':
+        return this.isDiagonalCornerLineHit(point.worldX, point.worldY, dir);
+      case 'UR':
+        return this.isDiagonalCornerLineHit(point.worldX, point.worldY, dir);
+      case 'DL':
+        return this.isDiagonalCornerLineHit(point.worldX, point.worldY, dir);
+      case 'DR':
+        return this.isDiagonalCornerLineHit(point.worldX, point.worldY, dir);
+      default:
+        return false;
     }
-    if (dir === 'UL' || dir === 'UR' || dir === 'DL' || dir === 'DR') {
-      return this.getClosestCorner(point.worldX, point.worldY) === dir;
-    }
-    return false;
   }
 
   private getInnerSquareDirectionPos(dir: Direction): { x: number; y: number } {

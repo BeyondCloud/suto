@@ -70,7 +70,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private buildSettingsPanel() {
-    const bg = this.add.rectangle(0, 0, 560, 400, 0x111122, 0.95);
+    const bg = this.add.rectangle(0, 0, 560, 500, 0x111122, 0.95);
     const title = this.add.text(0, -170, 'Settings', { fontSize: '28px', color: '#fff' }).setOrigin(0.5);
 
     const makeRow = (label: string, yOff: number, getValue: () => string | number, onMinus: () => void, onPlus: () => void) => {
@@ -118,12 +118,28 @@ export class MenuScene extends Phaser.Scene {
       () => { this.settings.checkDepth = Math.min(200, this.settings.checkDepth + 10); },
     );
 
-    const closeBtn = this.add.text(0, 160, '[ CLOSE ]', { fontSize: '22px', color: '#ffaaaa' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const cornerDepthRow = makeRow('Corner Line Depth',
+      115,
+      () => this.settings.cornerLineDepth,
+      () => { this.settings.cornerLineDepth = Math.max(20, this.settings.cornerLineDepth - 10); },
+      () => { this.settings.cornerLineDepth = Math.min(260, this.settings.cornerLineDepth + 10); },
+    );
+
+    const storyDelayRow = makeRow('主線開場 Delay (ms)',
+      160,
+      () => this.settings.storyStartDelayMs,
+      () => { this.settings.storyStartDelayMs = Math.max(0, this.settings.storyStartDelayMs - 50); },
+      () => { this.settings.storyStartDelayMs = Math.min(5000, this.settings.storyStartDelayMs + 50); },
+    );
+
+    const closeBtn = this.add.text(0, 225, '[ CLOSE ]', { fontSize: '22px', color: '#ffaaaa' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.toggleSettings());
 
     this.settingsContainer.add([
       bg, title,
       ...bpmRow, ...shrinkRow, ...hwRow, ...hhRow, ...depthRow,
+      ...cornerDepthRow,
+      ...storyDelayRow,
       closeBtn,
     ]);
   }

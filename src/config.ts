@@ -8,6 +8,8 @@ export interface GameSettings {
   hitboxWidth: number;
   hitboxHeight: number;
   checkDepth: number;
+  cornerLineDepth: number;
+  storyStartDelayMs: number;
 }
 
 export const DEFAULT_SETTINGS: GameSettings = {
@@ -17,6 +19,8 @@ export const DEFAULT_SETTINGS: GameSettings = {
   hitboxWidth: 500,
   hitboxHeight: 300,
   checkDepth: 50,
+  cornerLineDepth: 270,
+  storyStartDelayMs: 200, // 主線開場 Delay (ms)
 };
 
 // Directions
