@@ -7,7 +7,7 @@ const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
-  backgroundColor: '#111118',
+  backgroundColor: '#000000',
   scene: [MenuScene, GameScene],
   parent: 'app',
   scale: {

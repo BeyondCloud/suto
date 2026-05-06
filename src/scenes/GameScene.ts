@@ -1579,13 +1579,19 @@ export class GameScene extends Phaser.Scene {
     this.setGifCursorVisible(false);
     this.hitboxGraphics.clear();
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
+    const homeY = cy + 84;
     this.add.image(cx, cy, 'gameover_bg').setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(180);
     this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.62).setDepth(181);
-    this.add.rectangle(cx, cy, 560, 180, 0x000000, 0.72).setDepth(199);
-    this.add.text(cx, cy - 40, 'GAME OVER', { fontSize: '64px', color: '#ff4444' }).setOrigin(0.5).setDepth(200);
-    this.add.text(cx, cy + 40, '按任意鍵繼續', { fontSize: '28px', color: '#ffffff' }).setOrigin(0.5).setDepth(200);
-    this.input.keyboard!.once('keydown', () => this.scene.start('MenuScene'));
-    this.input.once('pointerdown', () => this.scene.start('MenuScene'));
+    const homeBtnBg = this.add.graphics().setDepth(199);
+    homeBtnBg.fillStyle(0x9147ff, 1);
+    homeBtnBg.fillRoundedRect(cx - 160, homeY - 46, 320, 92, 24);
+    const homeBtn = this.add.text(cx, homeY, '返回主頁', { fontSize: '42px', color: '#ffffff' })
+      .setOrigin(0.5)
+      .setDepth(200)
+      .setInteractive({ useHandCursor: true });
+    homeBtn.on('pointerover', () => homeBtn.setColor('#ffffff'));
+    homeBtn.on('pointerout', () => homeBtn.setColor('#ffffff'));
+    homeBtn.on('pointerdown', () => this.scene.start('MenuScene'));
   }
 
   // ---------- Pause ----------
