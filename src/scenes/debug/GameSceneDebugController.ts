@@ -1,8 +1,18 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../../config';
 import { HTML_LAYER, SCENE_LAYER } from '../../layers';
+// Turn on debug mode by adding ?debug=1 to the URL, e.g., http://localhost:5173/?debug=1
+function parseDebugModeFromUrl(): boolean {
+  if (typeof window === 'undefined') return false;
 
-export const DEBUG_MODE = true;
+  const debugParam = new URLSearchParams(window.location.search).get('debug');
+  if (!debugParam) return false;
+
+  const normalized = debugParam.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'on';
+}
+
+export const DEBUG_MODE = parseDebugModeFromUrl();
 
 export interface DebugEndingPreset {
   rank: string;
