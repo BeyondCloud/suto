@@ -401,6 +401,14 @@ export class GameScene extends Phaser.Scene {
     this.debugText.setText(`BPM ${this.formatDebugNumber(bpm)}\nbeatMs ${this.formatDebugNumber(this.beatMs)}`);
   }
 
+  private getStageAudioPlaybackRate(): number {
+    if (this.mode !== 'challenge') return 1;
+    const baseBpm = this.currentStage?.bpm ?? 0;
+    const targetBpm = this.getCurrentBpm();
+    if (baseBpm <= 0 || targetBpm <= 0) return 1;
+    return Phaser.Math.Clamp(targetBpm / baseBpm, 0.25, 4);
+  }
+
   private setDelayText(text?: string) {
     const content = text?.trim() ?? '';
     this.delayText.setText(content);
@@ -706,6 +714,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.currentSection.type === 'delay') {
       this.stopPromptAudioSequence();
+      this.stopStagePhaseClip();
       this.stopAllShrinks();
       this.clearPromptGrid();
       this.setCheckpointsVisible(false);
@@ -1099,12 +1108,13 @@ export class GameScene extends Phaser.Scene {
     if (!this.currentStageAudioKey) return;
     this.stopStagePhaseClip();
     const stageAudio = this.sound.add(this.currentStageAudioKey);
+    const rate = this.getStageAudioPlaybackRate();
     this.currentStageAudio = stageAudio;
     stageAudio.once(Phaser.Sound.Events.COMPLETE, () => {
       if (this.currentStageAudio === stageAudio) this.currentStageAudio = undefined;
       stageAudio.destroy();
     });
-    stageAudio.play();
+    stageAudio.play({ rate });
   }
 
   private pauseStagePhaseClip() {

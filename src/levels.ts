@@ -42,25 +42,36 @@ export const LEVEL_DATA: LevelData = {
     //   audio_clip: 'src/assets/audio/120.wav',
       audio_clip: 'src/assets/audio/loop/tutorial.wav',
       sections: [
-        // {
-        //   type: 'normal',
-        //   prompts: ['UL', 'UR', 'DL', 'DR', 'UL', 'UR', 'DL', 'DR'],
-        // },
-        // {
-        //   type: 'rotation',
-        //   start: 'U',
-        //   rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
-        // },
-        // {
-        //   type: 'rotation',
-        //   start: 'U',
-        //   rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
-        // },
-        // {
-        //   type: 'rotation',
-        //   start: 'U',
-        //   rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
-        // },
+        {
+          bpm: 215.5,
+          type: 'normal',
+          prompts: ['x', 'a', 'w', 'w',
+                    'x', 'd', 'x', 'x'],
+        },
+        {
+          bpm: 243.5,
+          type: 'normal',
+          prompts: ['x', 'c', 'w', 'c',
+                    'a', 'q', 'x', 'e'],
+        },
+        {
+          bpm: 257,
+          type: 'normal',
+          prompts: ['c', 'x', 'a', 'c',
+                    'w', 'q', 'c', 'e'],
+        },
+        {
+          bpm: 275,
+          type: 'normal',
+          prompts: ['x', 'w', 'c', 'w',
+                    'q', 'c', 'z', 'x'],
+        },
+        {
+          bpm: 291,
+          type: 'normal',
+          prompts: ['x', 'd', 'c', 'x',
+                    'w', 'x', 'a', 'x'],
+        },
         {
           bpm: 183.5,
           type: 'normal',
