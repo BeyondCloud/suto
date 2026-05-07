@@ -45,17 +45,13 @@ export const LEVEL_DATA: LevelData = {
     //   audio_clip: 'src/assets/audio/120.wav',
       audio_clip: 'src/assets/audio/loop/challenge.wav',
       sections: [
-        // {
-        //   type: 'normal',
-        //   prompts: ['x', 'w', 'x', 'w',
-        //             'x', 'a', 'd', 'x'],
-        // },
+        // lv3
         // {
         //   bpm: 215.5,
         //   type: 'normal',
         //   prompts: ['x', 'a', 'w', 'w',
         //             'x', 'd', 'x', 'x'],
-        //   repeat: 5,
+        //   repeat: 10,
         // },
         // {
         //   bpm: 243.5,
@@ -64,6 +60,28 @@ export const LEVEL_DATA: LevelData = {
         //             'a', 'q', 'x', 'e'],
         //   repeat: 10,
         // },
+        // {
+        //   bpm: 257,
+        //   type: 'normal',
+        //   prompts: ['c', 'x', 'a', 'c',
+        //             'w', 'q', 'c', 'e'],
+        //     repeat: 10,
+        // },
+        // {
+        //   bpm: 275,
+        //   type: 'normal',
+        //   prompts: ['x', 'w', 'c', 'w',
+        //             'q', 'c', 'z', 'x'],
+        //     repeat: 10,
+        // },
+        {
+          bpm: 291,
+          type: 'normal',
+          prompts: ['x', 'd', 'c', 'x',
+                    'w', 'x', 'a', 'x'],
+            repeat: 10,
+        },
+        //=============================
         {
           bpm: 183.5,
           type: 'normal',

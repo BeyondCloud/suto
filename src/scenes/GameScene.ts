@@ -2649,7 +2649,7 @@ export class GameScene extends Phaser.Scene {
       `<div style=\"font-size:40px;font-weight:800;letter-spacing:1px;line-height:1.05;margin-bottom:10px;\">Accuracy ${accuracyPercent} %</div>`,
       `<div style=\"font-size:30px;font-weight:800;color:#ffe082;letter-spacing:1px;margin-bottom:12px;\">評價 ${rank}</div>`,
       scoreBar,
-      `<div style=\"font-size:26px;font-weight:700;line-height:1.3;margin-bottom:12px;\">${verdict}</div>`,
+      `<div style=\"font-size:26px;font-weight:700;line-height:1.3;margin-bottom:12px;color:#7a7a7a;\">${verdict}</div>`,
       `<div style=\"font-size:22px;line-height:1.55;color:#d9e3f0;\"><span style=\"color:#7cff8f;font-weight:700;\">Perfect ${this.perfectCount}</span> / <span style=\"color:#ff5a6b;font-weight:700;\">Miss ${this.missCount}</span> / <span style=\"color:#ffb14a;font-weight:700;\">X ${this.falseTouchCount}</span> / HP ${this.lifeValue}</div>`,
     ].join('');
     this.endingVideoRoot.appendChild(this.endingSummaryCard);
@@ -2788,10 +2788,10 @@ export class GameScene extends Phaser.Scene {
     const accuracyPercent = this.falseTouchCount > 0 ? Math.min(99, rawAccuracyPercent) : rawAccuracyPercent;
     const rank = this.computeRank(this.perfectCount, this.missCount, this.falseTouchCount);
     const verdicts: Record<string, string> = {
-      'S++': '完美無缺！等等...你花這麼多時間練這個做什麼?',
-      'S+':  '幾乎完美！你是控頭的神！<br>(沒有誤觸"X"判定才能S++喔)',
-      'S':   '你比超負荷還快！',
-      'A':   '欸欸欸不行太快了太快了',
+      'S++': '不是, 誰會沒事把這遊戲練到S++拉= =',
+      'S+':  '幾乎完美！你是控頭的神！<br>但不好意思喔, 沒誤觸"X"判定才有S++喔',
+      'S':   '你比超負荷還快！！！<br>但不好意思喔, 離S+還差一點點喔',
+      'A':   '恭喜通關...欸欸欸不行...太快了太快了',
       'B':   '還能再更快嗎?',
       'C':   '很快了, 再快一點',
       'D':   '太慢摟',
