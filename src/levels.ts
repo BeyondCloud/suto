@@ -63,7 +63,13 @@ export const LEVEL_DATA: LevelData = {
         //             'a', 'q', 'x', 'e'],
         //   repeat: 10,
         // },
-
+        {
+          bpm: 183.5,
+          type: 'normal',
+          prompts: ['q', 'q', 'q', 'q',
+                    'q', 'q', 'q', 'q'],
+            repeat: 10,
+        },
         {
           type: 'normal',
           prompts: ['x', 'd', 'w', 'a',

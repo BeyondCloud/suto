@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import welcomeAudioUrl from '../assets/audio/welcome.wav';
 import mainlineClickAudioUrl from '../assets/audio/short/來.wav';
+import tutorialLoopUrl from '../assets/audio/loop/tutorial.wav';
 import { DEFAULT_SETTINGS } from '../config';
 import type { GameSettings } from '../config';
 import { SCENE_LAYER } from '../layers';
@@ -15,6 +16,11 @@ export class MenuScene extends Phaser.Scene {
   private settings: GameSettings;
   private settingsVisible = false;
   private settingsContainer!: Phaser.GameObjects.Container;
+  private menuContainer!: Phaser.GameObjects.Container;
+  private judgementRulesContainer!: Phaser.GameObjects.Container;
+  private judgementRulesImage!: Phaser.GameObjects.Image;
+  private judgementRulesStep = 0;
+  private tutorialLoopSound?: Phaser.Sound.BaseSound;
   private welcomeSound?: Phaser.Sound.BaseSound;
   private lastVolumePreviewAt = 0;
 
@@ -26,18 +32,24 @@ export class MenuScene extends Phaser.Scene {
   preload() {
     this.load.image('suto400', 'src/assets/suto400.png');
     this.load.image('opening_bg', 'src/assets/opening.png');
+    this.load.image('judgement_rules_1', 'src/assets/判定規則.png');
+    this.load.image('judgement_rules_2', 'src/assets/判定規則2.png');
     this.load.audio('welcome', welcomeAudioUrl);
     this.load.audio('mainline-click', mainlineClickAudioUrl);
+    this.load.audio('tutorial_loop', tutorialLoopUrl);
   }
 
   create() {
     const { width, height } = this.scale;
     const cx = width / 2;
+    const menuBaseY = height * 0.42;
+    const menuGapY = height * 0.08;
     this.input.setDefaultCursor('default');
     this.applyMasterVolume();
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.stopWelcomeAudio();
+      this.stopTutorialLoop();
     });
 
     this.playWelcomeAudio();
@@ -50,8 +62,10 @@ export class MenuScene extends Phaser.Scene {
     const bgScale = Math.max(width / background.width, height / background.height);
     background.setScale(bgScale);
 
+    this.menuContainer = this.add.container(0, 0);
+
     // Title
-    this.add.text(cx, height * 0.28, 'SUTO!', {
+    const title = this.add.text(cx, height * 0.28, 'SUTO!', {
       fontSize: '96px',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -64,7 +78,7 @@ export class MenuScene extends Phaser.Scene {
       .setVisible(false);
 
     // Mainline mode button
-    const mainlineBtn = this.add.text(cx, height * 0.45, '[ 主播模式 ]', {
+    const mainlineBtn = this.add.text(cx, menuBaseY, '[ 主播模式 ]', {
       fontSize: '33px',
       color: '#ffd58f',
       fontStyle: 'bold',
@@ -84,7 +98,7 @@ export class MenuScene extends Phaser.Scene {
     });
 
     // Challenge mode button
-    const startBtn = this.add.text(cx, height * 0.56, '[ 挑戰模式 ]', {
+    const startBtn = this.add.text(cx, menuBaseY + menuGapY, '[ 挑戰模式 ]', {
       fontStyle: 'bold',
       fontSize: '33px',
       color: '#aaffaa',
@@ -102,8 +116,27 @@ export class MenuScene extends Phaser.Scene {
       this.scene.start('GameScene', { settings: this.settings, stageIndex: 0, mode: 'challenge' });
     });
 
+    const judgementRulesBtn = this.add.text(cx, menuBaseY + menuGapY * 2, '[ 判定規則 ]', {
+      fontSize: '33px',
+      fontStyle: 'bold',
+      color: '#ffb3dc',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    judgementRulesBtn.on('pointerover', () => {
+      selectionStripe.setY(judgementRulesBtn.y).setVisible(true);
+      judgementRulesBtn.setColor('#ffffff');
+    });
+    judgementRulesBtn.on('pointerout', () => {
+      judgementRulesBtn.setColor('#ffb3dc');
+      selectionStripe.setVisible(false);
+    });
+    judgementRulesBtn.on('pointerdown', () => {
+      this.sound.play('mainline-click');
+      this.openJudgementRules();
+    });
+
     // Settings button
-    const settingsBtn = this.add.text(cx, height * 0.67, '[ 設定 ]', {
+    const settingsBtn = this.add.text(cx, menuBaseY + menuGapY * 3, '[ 設定 ]', {
       fontSize: '33px',
       fontStyle: 'bold',
       color: '#aaaaff',
@@ -119,10 +152,49 @@ export class MenuScene extends Phaser.Scene {
     });
     settingsBtn.on('pointerdown', () => this.toggleSettings());
 
+    this.menuContainer.add([
+      title,
+      selectionStripe,
+      mainlineBtn,
+      startBtn,
+      judgementRulesBtn,
+      settingsBtn,
+    ]);
+
     // Settings panel
     this.settingsContainer = this.add.container(cx, height * 0.5);
     this.buildSettingsPanel();
     this.settingsContainer.setVisible(false);
+
+    this.buildJudgementRulesOverlay();
+  }
+
+  private buildJudgementRulesOverlay() {
+    const { width, height } = this.scale;
+    const background = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.92)
+      .setInteractive({ useHandCursor: true });
+    const image = this.add.image(width / 2, height / 2, 'judgement_rules_1');
+    const imageScale = Math.min((width * 0.94) / image.width, (height * 0.86) / image.height);
+    image.setScale(imageScale);
+
+    const prompt = this.add.text(width / 2, height - 42, '點一下繼續', {
+      fontSize: '26px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 5,
+    }).setOrigin(0.5);
+
+    this.judgementRulesContainer = this.add.container(0, 0, [background, image, prompt]);
+    this.judgementRulesContainer.setDepth(20);
+    this.judgementRulesContainer.setVisible(false);
+    this.judgementRulesImage = image;
+
+    background.on('pointerdown', () => this.advanceJudgementRules());
+    image.setInteractive({ useHandCursor: true });
+    image.on('pointerdown', () => this.advanceJudgementRules());
+    prompt.setInteractive({ useHandCursor: true });
+    prompt.on('pointerdown', () => this.advanceJudgementRules());
   }
 
   private buildSettingsPanel() {
@@ -230,6 +302,61 @@ export class MenuScene extends Phaser.Scene {
 
   private formatMasterVolume(): string {
     return `${Math.round(Phaser.Math.Clamp(this.settings.masterVolume, MASTER_VOLUME_MIN, MASTER_VOLUME_MAX) * 100)}%`;
+  }
+
+  private openJudgementRules() {
+    this.judgementRulesStep = 1;
+    this.judgementRulesImage.setTexture('judgement_rules_1');
+    this.menuContainer.setVisible(false);
+    this.settingsVisible = false;
+    this.settingsContainer.setVisible(false);
+    this.judgementRulesContainer.setVisible(true);
+    this.playTutorialLoop();
+  }
+
+  private advanceJudgementRules() {
+    if (!this.judgementRulesContainer.visible) {
+      return;
+    }
+
+    if (this.judgementRulesStep === 1) {
+      this.judgementRulesStep = 2;
+      this.judgementRulesImage.setTexture('judgement_rules_2');
+      return;
+    }
+
+    this.judgementRulesStep = 0;
+    this.stopTutorialLoop();
+    this.judgementRulesContainer.setVisible(false);
+    this.menuContainer.setVisible(true);
+    this.playWelcomeAudio();
+  }
+
+  private playTutorialLoop() {
+    if (this.tutorialLoopSound?.isPlaying) {
+      return;
+    }
+
+    this.applyMasterVolume();
+    this.tutorialLoopSound?.destroy();
+    this.tutorialLoopSound = this.sound.add('tutorial_loop', { loop: true });
+    const started = this.tutorialLoopSound.play();
+    if (started) {
+      return;
+    }
+
+    this.tutorialLoopSound.destroy();
+    this.tutorialLoopSound = undefined;
+  }
+
+  private stopTutorialLoop() {
+    if (!this.tutorialLoopSound) {
+      return;
+    }
+
+    this.tutorialLoopSound.stop();
+    this.tutorialLoopSound.destroy();
+    this.tutorialLoopSound = undefined;
   }
 
   private toggleSettings() {
