@@ -2533,7 +2533,7 @@ export class GameScene extends Phaser.Scene {
   private playEndingVideoWithSummaryAndReturn(videoUrl: string): Promise<void> {
     return new Promise((resolve) => {
       this.removeEndingVideoOverlay();
-      this.createEndingVideoRoot(videoUrl);
+      this.createEndingVideoRoot(videoUrl, this.shouldLoopEndingVideo(videoUrl));
       this.createEndingSummaryCard();
       this.createEndingPromptText();
       let finished = false;
@@ -2591,7 +2591,11 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private createEndingVideoRoot(videoUrl: string) {
+  private shouldLoopEndingVideo(videoUrl: string): boolean {
+    return videoUrl === endingBUrl || videoUrl === endingCUrl || videoUrl === endingDUrl;
+  }
+
+  private createEndingVideoRoot(videoUrl: string, loop = false) {
     this.endingVideoRoot = document.createElement('div');
     this.endingVideoRoot.setAttribute(this.endingRootAttr, '1');
     this.endingVideoRoot.style.position = 'fixed';
@@ -2603,7 +2607,7 @@ export class GameScene extends Phaser.Scene {
     this.endingVideo = document.createElement('video');
     this.endingVideo.src = videoUrl;
     this.endingVideo.autoplay = true;
-    this.endingVideo.loop = false;
+  this.endingVideo.loop = loop;
     this.endingVideo.controls = false;
     this.endingVideo.volume = this.getMasterVolume();
     this.endingVideo.playsInline = true;
