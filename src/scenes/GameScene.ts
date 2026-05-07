@@ -2793,8 +2793,8 @@ export class GameScene extends Phaser.Scene {
     const rank = this.computeRank(this.perfectCount, this.missCount, this.falseTouchCount);
     const verdicts: Record<string, string> = {
       'S++': '不是, 誰會沒事把這遊戲練到S++拉= =',
-      'S+':  '幾乎完美！你是控頭的神！<br>但不好意思喔, 沒誤觸"X"判定才有S++喔',
-      'S':   '你比超負荷還快！！！<br>但不好意思喔, 離S+還差一點點喔',
+      'S+':  '完美！你是控頭的神！<br>但不好意思喔, 沒誤觸"X"判定才有S++喔',
+      'S':   '真的假的 0..0 你比超負荷還快 !',
       'A':   '恭喜通關...欸欸欸不行...太快了太快了',
       'B':   '還能再更快嗎?',
       'C':   '很快了, 再快一點',
