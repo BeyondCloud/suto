@@ -65,7 +65,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Mainline mode button
     const mainlineBtn = this.add.text(cx, height * 0.45, '[ 主播模式 ]', {
-      fontSize: '44px',
+      fontSize: '33px',
       color: '#ffd58f',
       fontStyle: 'bold',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -86,7 +86,7 @@ export class MenuScene extends Phaser.Scene {
     // Challenge mode button
     const startBtn = this.add.text(cx, height * 0.56, '[ 挑戰模式 ]', {
       fontStyle: 'bold',
-      fontSize: '40px',
+      fontSize: '33px',
       color: '#aaffaa',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
@@ -103,8 +103,9 @@ export class MenuScene extends Phaser.Scene {
     });
 
     // Settings button
-    const settingsBtn = this.add.text(cx, height * 0.67, '[ SETTINGS ]', {
-      fontSize: '28px',
+    const settingsBtn = this.add.text(cx, height * 0.67, '[ 設定 ]', {
+      fontSize: '33px',
+      fontStyle: 'bold',
       color: '#aaaaff',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
