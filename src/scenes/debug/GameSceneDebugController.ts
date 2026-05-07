@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../../config';
 import { HTML_LAYER, SCENE_LAYER } from '../../layers';
 
-export const ENABLE_GAME_SCENE_DEBUG_OVERLAY = true;
+export const DEBUG_MODE = true;
 
 export interface DebugEndingPreset {
   rank: string;
@@ -40,7 +40,7 @@ export class GameSceneDebugController {
   }
 
   get enabled(): boolean {
-    return ENABLE_GAME_SCENE_DEBUG_OVERLAY;
+    return DEBUG_MODE;
   }
 
   createHud() {

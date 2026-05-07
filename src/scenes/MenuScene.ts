@@ -7,7 +7,7 @@ import type { GameSettings } from '../config';
 import { HTML_LAYER, SCENE_LAYER } from '../layers';
 import {
   DEBUG_ENDING_PRESETS,
-  ENABLE_GAME_SCENE_DEBUG_OVERLAY,
+  DEBUG_MODE,
 } from './debug/GameSceneDebugController';
 import type { DebugEndingPreset } from './debug/GameSceneDebugController';
 
@@ -176,7 +176,7 @@ export class MenuScene extends Phaser.Scene {
 
     this.buildJudgementRulesOverlay();
 
-    if (ENABLE_GAME_SCENE_DEBUG_OVERLAY) {
+    if (DEBUG_MODE) {
       this.createDebugEndingOverlay();
     }
   }
