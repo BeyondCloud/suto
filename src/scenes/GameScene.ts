@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import suto400GifUrl from '../assets/suto400_2x.gif';
 import gameoverBgUrl from '../assets/gameover.png';
+import loadingImageUrl from '../assets/loading.png';
 import samVideoUrl from '../assets/mp4/sam.mp4';
 import endingVideo1Url from '../assets/end1-1.mp4';
 import endingVideo2Url from '../assets/end1-2.mp4';
@@ -269,6 +270,11 @@ export class GameScene extends Phaser.Scene {
   // Flash
   private flashOverlay!: Phaser.GameObjects.Rectangle;
 
+  // Pre-stage loading overlay (covers screen during prewarmStageAudio so the
+  // ~800ms WebAudio cold-start consumption is hidden as a transition).
+  private loadingOverlayRect?: Phaser.GameObjects.Rectangle;
+  private loadingOverlayImage?: Phaser.GameObjects.Image;
+
   constructor() {
     super('GameScene');
   }
@@ -284,6 +290,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image('down', 'src/assets/down.png');
     this.load.image('down_left', 'src/assets/down_left.png');
     this.load.image('gameover_bg', gameoverBgUrl);
+    this.load.image('loading_overlay', loadingImageUrl);
     this.load.audio('prompt_U', promptUUrl);
     this.load.audio('prompt_D', promptDUrl);
     this.load.audio('prompt_L', promptLUrl);
@@ -347,8 +354,60 @@ export class GameScene extends Phaser.Scene {
     if (this.mode === 'story') {
       this.time.delayedCall(this.settings.storyStartDelayMs, () => this.startSection());
     } else {
-      this.startSection();
+      this.showLoadingOverlay();
+      this.prewarmStageAudio().then(() => {
+        this.hideLoadingOverlay();
+        if (this.isGameOver || !this.scene.isActive()) return;
+        this.startSection();
+      });
     }
+  }
+
+  // Phaser/WebAudio's first few plays of a buffer at a given playbackRate have
+  // a cold-start that halves each call (~233ms → ~117ms → ~58ms in challenge
+  // mode). With section duration sized exactly to 16 beats, that cold-start
+  // cuts up to 1 beat off rep 1 and 0.5 beat off rep 2 of each rate.
+  //
+  // The cold-start appears to be per-rate (rate=1 sections feel fine, rate≠1
+  // sections don't), so prewarm every unique rate the stage uses with silent
+  // plays. We have to actually wait long enough for those warmups to begin
+  // running through their cold-start before letting the real section start —
+  // an earlier fire-and-forget version of this didn't, and the cold-start was
+  // still hitting the first real play.
+  private prewarmStageAudio(): Promise<void> {
+    if (!this.currentStageAudioKey || this.mode !== 'challenge') return Promise.resolve();
+    const baseBpm = this.currentStage?.bpm ?? 0;
+    if (baseBpm <= 0) return Promise.resolve();
+
+    const rates = new Set<number>();
+    for (const section of this.currentStage.sections) {
+      if (section.type === 'delay') continue;
+      const sectionBpm = (section as NormalSection | RotationSection).bpm ?? baseBpm;
+      if (sectionBpm <= 0) continue;
+      rates.add(Phaser.Math.Clamp(sectionBpm / baseBpm, 0.25, 4));
+    }
+    rates.delete(1);
+    if (rates.size === 0) return Promise.resolve();
+
+    const warmups: Phaser.Sound.BaseSound[] = [];
+    for (const rate of rates) {
+      for (let i = 0; i < 3; i++) {
+        const warmup = this.sound.add(this.currentStageAudioKey);
+        warmup.play({ volume: 0, rate });
+        warmups.push(warmup);
+      }
+    }
+
+    // 800ms is enough to cover the 233+117+58ms halving sequence with margin.
+    return new Promise<void>(resolve => {
+      this.time.delayedCall(800, () => {
+        for (const w of warmups) {
+          if (w.isPlaying) w.stop();
+          w.destroy();
+        }
+        resolve();
+      });
+    });
   }
 
   private loadStage(index: number) {
@@ -622,6 +681,7 @@ export class GameScene extends Phaser.Scene {
     this.clearButtonEffectUI();
     this.removeStorySamVideo();
     this.removeEndingVideoOverlay();
+    this.hideLoadingOverlay();
     this.endingSequenceStarted = false;
     this.suppressGameFrameMask = false;
     this.stopStagePhaseClip();
@@ -787,9 +847,9 @@ export class GameScene extends Phaser.Scene {
     this.onBeat();
     this.beatTimer = this.time.addEvent({ delay: this.beatMs, repeat: 7, callback: this.onBeat, callbackScope: this });
 
-    if (!this.isRotation && this.mode !== 'story') {
-      this.startPromptAudioSequence((this.currentSection as NormalSection).prompts);
-    }
+    // if (!this.isRotation && this.mode !== 'story') {
+    //   this.startPromptAudioSequence((this.currentSection as NormalSection).prompts);
+    // }
   }
 
   private startCheckPhase() {
@@ -1146,6 +1206,13 @@ export class GameScene extends Phaser.Scene {
 
   private playStagePhaseClip() {
     if (!this.currentStageAudioKey) return;
+    // Restart audio per section/rep so each one is anchored to audio time 0.
+    // The audio file is ~5.197s but 16 beats at base BPM is ~5.232s, so the
+    // file is encoded at ~184.7 BPM rather than 183.5. Letting audio run
+    // continuously across reps would compound that ~25ms-per-rep mismatch
+    // into audible drift (≥1 beat after 10 reps). Per-rep restart resets
+    // the phase each time. The cold-start that used to bite rep 1 is now
+    // absorbed by prewarmStageAudio() before the first section runs.
     this.stopStagePhaseClip();
     const stageAudio = this.sound.add(this.currentStageAudioKey);
     const rate = this.getStageAudioPlaybackRate();
@@ -1170,6 +1237,34 @@ export class GameScene extends Phaser.Scene {
     this.currentStageAudio.stop();
     this.currentStageAudio.destroy();
     this.currentStageAudio = undefined;
+  }
+
+  private showLoadingOverlay() {
+    this.hideLoadingOverlay();
+    // The white frame bezel is HTML and sits above the canvas, so a Phaser
+    // overlay alone gets clipped at the edges. Hide the bezel for the duration
+    // of the loading transition.
+    this.suppressGameFrameMask = true;
+    this.setGameFrameMaskVisible(false);
+    this.loadingOverlayRect = this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1)
+      .setDepth(SCENE_LAYER.LOADING_OVERLAY);
+    const margin = 24;
+    this.loadingOverlayImage = this.add
+      .image(GAME_WIDTH - margin, GAME_HEIGHT - margin, 'loading_overlay')
+      .setOrigin(1, 1)
+      .setDepth(SCENE_LAYER.LOADING_IMAGE);
+  }
+
+  private hideLoadingOverlay() {
+    this.loadingOverlayRect?.destroy();
+    this.loadingOverlayRect = undefined;
+    this.loadingOverlayImage?.destroy();
+    this.loadingOverlayImage = undefined;
+    if (this.suppressGameFrameMask) {
+      this.suppressGameFrameMask = false;
+      this.setGameFrameMaskVisible(true);
+    }
   }
 
   private createStorySamVideo() {
@@ -1522,7 +1617,9 @@ export class GameScene extends Phaser.Scene {
 
   private triggerShrinkForBeat(beat: number) {
     if (this.isGameOver) return;
-    const lead = this.settings.shrinkLeadMs;
+    // Scale lead by audio playback rate so visual judgment stays aligned with the
+    // rate-shifted stage audio when section BPM differs from stage BPM.
+    const lead = this.settings.shrinkLeadMs / this.getStageAudioPlaybackRate();
     if (this.isRotation) {
       const [first, second] = this.beatTargetPairs[beat];
       this.rotateGifCursorTo(first, this.beatMs / 2);

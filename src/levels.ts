@@ -3,6 +3,7 @@ import type { Direction } from './config';
 export interface NormalSection {
   type: 'normal';
   bpm?: number;
+  repeat?: number;
   prompts: Direction[];
   image?: string;
   effect?: 'small' | 'fadein' | 'button';
@@ -11,6 +12,7 @@ export interface NormalSection {
 export interface RotationSection {
   type: 'rotation';
   bpm?: number;
+  repeat?: number;
   start: Direction;
   rotate: ('L' | 'R')[];
 }
@@ -40,25 +42,40 @@ export const LEVEL_DATA: LevelData = {
       stage_number: 1,
       bpm: 183.5,
     //   audio_clip: 'src/assets/audio/120.wav',
-      audio_clip: 'src/assets/audio/loop/tutorial.wav',
+      audio_clip: 'src/assets/audio/loop/challenge.wav',
       sections: [
+        // {
+        //   type: 'normal',
+        //   prompts: ['x', 'w', 'x', 'w',
+        //             'x', 'a', 'd', 'x'],
+        // },
+        // {
+        //   bpm: 215.5,
+        //   type: 'normal',
+        //   prompts: ['x', 'a', 'w', 'w',
+        //             'x', 'd', 'x', 'x'],
+        //   repeat: 5,
+        // },
+        // {
+        //   bpm: 243.5,
+        //   type: 'normal',
+        //   prompts: ['x', 'c', 'w', 'c',
+        //             'a', 'q', 'x', 'e'],
+        //   repeat: 10,
+        // },
         {
-          bpm: 215.5,
+          bpm: 257,
           type: 'normal',
-          prompts: ['x', 'a', 'w', 'w',
-                    'x', 'd', 'x', 'x'],
-        },
-        {
-          bpm: 243.5,
-          type: 'normal',
-          prompts: ['x', 'c', 'w', 'c',
-                    'a', 'q', 'x', 'e'],
+          prompts: ['w', 'w', 'w', 'w',
+                    'w', 'w', 'w', 'w'],
+          repeat: 10,
         },
         {
           bpm: 257,
           type: 'normal',
           prompts: ['c', 'x', 'a', 'c',
                     'w', 'q', 'c', 'e'],
+            repeat: 10,
         },
         {
           bpm: 275,

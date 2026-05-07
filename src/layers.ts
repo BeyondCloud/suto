@@ -113,4 +113,8 @@ export const SCENE_LAYER = {
   GAMEOVER_DIM: 181,
   GAMEOVER_BUTTON: 199,
   GAMEOVER_BUTTON_LABEL: 200,
+
+  // ---------- GameScene: pre-stage loading overlay ----------
+  LOADING_OVERLAY: 250,
+  LOADING_IMAGE: 251,
 } as const;
