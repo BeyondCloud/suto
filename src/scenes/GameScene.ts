@@ -2131,22 +2131,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   private checkHit(mx: number, my: number, dir: Direction): boolean {
+    void mx;
+    void my;
     if (!this.isCursorDomBlockingCheckPoint()) return false;
 
-    const d = this.checkDepth();
+    const point = this.getCursorCheckPoint();
     switch (dir) {
       case 'w':
-        return my <= GAME_FRAME_TOP + d;
+        return point.worldY <= GAME_FRAME_TOP;
       case 'x':
-        return my >= GAME_FRAME_BOTTOM - d;
+        return point.worldY >= GAME_FRAME_BOTTOM;
       case 'a':
-        return mx <= GAME_FRAME_LEFT + d;
+        return point.worldX <= GAME_FRAME_LEFT;
       case 'd':
-        return mx >= GAME_FRAME_RIGHT - d;
-      default: {
-        const point = this.getCursorCheckPoint();
+        return point.worldX >= GAME_FRAME_RIGHT;
+      default:
         return this.isDiagonalCornerLineHit(point.worldX, point.worldY, dir);
-      }
     }
   }
 
