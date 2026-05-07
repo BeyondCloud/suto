@@ -253,6 +253,7 @@ export class GameScene extends Phaser.Scene {
   private buttonEffectCountdownTween?: Phaser.Tweens.Tween;
   private buttonEffectCountdownDurationMs = 0;
   private readonly buttonEffectCountdownState = { value: 1 };
+  private buttonEffectCanReachA = false;
 
   // Check phase
   private beatTargets: Direction[] = [];
@@ -1783,6 +1784,15 @@ export class GameScene extends Phaser.Scene {
     this.buttonEffectClicks = 0;
     this.input.setDefaultCursor('default');
 
+    // Pre-check: can completing all 10 button clicks achieve A rating?
+    // Uses the same rank logic as buildEndingSummary via computeRank.
+    const projectedRank = this.computeRank(
+      this.perfectCount + BUTTON_EFFECT_REQUIRED_CLICKS,
+      this.missCount,
+      this.falseTouchCount,
+    );
+    this.buttonEffectCanReachA = ['S++', 'S+', 'S', 'A'].includes(projectedRank);
+
     const x = GAME_WIDTH / 2;
     const y = GAME_HEIGHT - 120;
     const container = this.add.container(x, y).setDepth(SCENE_LAYER.HUD + 6);
@@ -1862,7 +1872,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.buttonEffectRect) return;
     if (this.buttonEffectClicks >= BUTTON_EFFECT_REQUIRED_CLICKS) return;
 
-    const isLatePhase = this.buttonEffectClicks > 5;
+    const isLatePhase = this.buttonEffectCanReachA && this.buttonEffectClicks > 5;
     if (isLatePhase) {
       if (hovered) {
         this.buttonEffectRect.setFillStyle(0x8655e8, 1);
@@ -1907,7 +1917,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.buttonEffectProgress?.setText(`${this.buttonEffectClicks}/${BUTTON_EFFECT_REQUIRED_CLICKS}`);
-    this.buttonEffectLabel?.setText(this.buttonEffectClicks > 5 ? '憂鬱藍調' : '嚴厲斥責');
+    this.buttonEffectLabel?.setText(this.buttonEffectCanReachA && this.buttonEffectClicks > 5 ? '憂鬱藍調' : '嚴厲斥責');
     this.applyButtonEffectTheme(false);
 
     if (this.buttonEffectClicks >= BUTTON_EFFECT_REQUIRED_CLICKS) {
@@ -2747,30 +2757,35 @@ export class GameScene extends Phaser.Scene {
     return Phaser.Math.Clamp(this.settings?.masterVolume ?? DEFAULT_SETTINGS.masterVolume, 0, 1);
   }
 
+  private computeRank(perfect: number, miss: number, falseTouch: number): string {
+    const total = perfect + miss;
+    const accuracy = total > 0 ? perfect / total : 1;
+    const rawAccuracyPercent = Math.round(accuracy * 100);
+    const accuracyPercent = falseTouch > 0 ? Math.min(99, rawAccuracyPercent) : rawAccuracyPercent;
+    if (miss === 0) return falseTouch === 0 ? 'S++' : 'S+';
+    if (accuracyPercent >= 95) return 'S';
+    if (accuracyPercent >= 90) return 'A';
+    if (accuracyPercent >= 80) return 'B';
+    if (accuracyPercent >= 70) return 'C';
+    return 'D';
+  }
+
   private buildEndingSummary(): { accuracyPercent: number; rank: string; verdict: string } {
-    const totalJudgementCount = this.perfectCount + this.missCount;
-    const accuracy = totalJudgementCount > 0 ? this.perfectCount / totalJudgementCount : 1;
+    const total = this.perfectCount + this.missCount;
+    const accuracy = total > 0 ? this.perfectCount / total : 1;
     const rawAccuracyPercent = Math.round(accuracy * 100);
     const accuracyPercent = this.falseTouchCount > 0 ? Math.min(99, rawAccuracyPercent) : rawAccuracyPercent;
-    if (this.missCount ===0 )   {
-        if (this.falseTouchCount === 0) {
-            return { accuracyPercent, rank: 'S++', verdict: '完美無缺！等等...你花這麼多時間練這個做什麼?' };
-        }
-        return { accuracyPercent, rank: 'S+', verdict: '幾乎完美！你是控頭的神！<br>(沒有誤觸"X"判定才能S++喔)' };
-    }
-    if (accuracyPercent >= 95) {
-      return { accuracyPercent, rank: 'S', verdict: '你比超負荷還快！' };
-    }
-    if (accuracyPercent >= 90) {
-      return { accuracyPercent, rank: 'A', verdict: '欸欸欸不行太快了太快了' };
-    }
-    if (accuracyPercent >= 80) {
-      return { accuracyPercent, rank: 'B', verdict: '還能再更快嗎?' };
-    }
-    if (accuracyPercent >= 70) {
-      return { accuracyPercent, rank: 'C', verdict: '很快了, 再快一點' };
-    }
-    return { accuracyPercent, rank: 'D', verdict: '太慢摟' };
+    const rank = this.computeRank(this.perfectCount, this.missCount, this.falseTouchCount);
+    const verdicts: Record<string, string> = {
+      'S++': '完美無缺！等等...你花這麼多時間練這個做什麼?',
+      'S+':  '幾乎完美！你是控頭的神！<br>(沒有誤觸"X"判定才能S++喔)',
+      'S':   '你比超負荷還快！',
+      'A':   '欸欸欸不行太快了太快了',
+      'B':   '還能再更快嗎?',
+      'C':   '很快了, 再快一點',
+      'D':   '太慢摟',
+    };
+    return { accuracyPercent, rank, verdict: verdicts[rank] ?? '' };
   }
 
   private removeEndingVideoOverlay() {
