@@ -50,6 +50,7 @@ const ENABLE_DEBUG_OVERLAY = false;
 type GameMode = 'challenge' | 'story';
 
 const getStageAudioKey = (clipPath: string): string => `stage_audio_${clipPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
+const getCustomImageKey = (imgPath: string): string => `custom_img_${imgPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
 const resolveStageAudioClipUrl = (clipPath: string): string => {
   if (clipPath === DEFAULT_STAGE_AUDIO_CLIP) return stage120Url;
@@ -250,6 +251,17 @@ export class GameScene extends Phaser.Scene {
     this.load.audio('miss', missUrl);
     this.load.audio('story_check_start', storyCheckStartUrl);
     this.load.audio('gameover_sfx', gameoverSfxUrl);
+
+    const customSectionImages = new Set(
+      this.levelData.stages.flatMap(stage =>
+        stage.sections
+          .filter((sec): sec is NormalSection => sec.type === 'normal' && Boolean((sec as NormalSection).image))
+          .map(sec => sec.image as string),
+      ),
+    );
+    for (const imgPath of customSectionImages) {
+      this.load.image(getCustomImageKey(imgPath), imgPath);
+    }
 
     const stageAudioClips = new Set(
       this.levelData.stages
@@ -788,17 +800,18 @@ export class GameScene extends Phaser.Scene {
       this.applyPromptRotationAngle();
     } else {
       const sec = this.currentSection as NormalSection;
+      const customKey = sec.image ? getCustomImageKey(sec.image) : undefined;
       for (let i = 0; i < 8; i++) {
-        this.promptImages.push(this.addArrowImage(0, 0, sec.prompts[i]));
+        this.promptImages.push(this.addArrowImage(0, 0, sec.prompts[i], customKey));
       }
     }
     this.positionPromptGrid(x, y);
     this.drawHitbox(x, y);
   }
 
-  private addArrowImage(x: number, y: number, dir: Direction): Phaser.GameObjects.Image {
+  private addArrowImage(x: number, y: number, dir: Direction, overrideKey?: string): Phaser.GameObjects.Image {
     const isDiagonal = dir === 'q' || dir === 'e' || dir === 'z' || dir === 'c';
-    const key = isDiagonal ? 'down_left' : 'down';
+    const key = overrideKey ?? (isDiagonal ? 'down_left' : 'down');
     const img = this.add.image(x, y, key).setDepth(SCENE_LAYER.PROMPT_ARROW).setAlpha(0.9);
     img.setAngle(isDiagonal ? DIR_ANGLE[dir] - 45 : DIR_ANGLE[dir]);
     return img;

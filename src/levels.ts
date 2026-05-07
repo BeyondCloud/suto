@@ -4,6 +4,7 @@ export interface NormalSection {
   type: 'normal';
   bpm?: number;
   prompts: Direction[];
+  image?: string;
 }
 
 export interface RotationSection {
@@ -167,6 +168,7 @@ export const MAIN_LEVEL_DATA: LevelData = {
       sections: [
         {
           type: 'normal',
+          image: 'src/assets/cmonbruh.png',
           prompts: ['x', 'w', 'x', 'w',
                     'x', 'w', 'x', 'w'],
         },
@@ -241,7 +243,7 @@ export const MAIN_LEVEL_DATA: LevelData = {
         },
         {
           type: 'delay',
-          ms: 2320,
+          ms: 2220,
           text: 'Level - 3',
         },
       ],
@@ -286,10 +288,16 @@ export const MAIN_LEVEL_DATA: LevelData = {
             text: 'WARNING',
         },
         {
+            type: 'delay',
+            ms: 2515,
+            text: '',
+        },
+        {
           bpm: 183.5,
           type: 'normal',
-          prompts: ['w', 'w', 'w', 'w',
-                    'w', 'w', 'w', 'w'],
+          image: 'src/assets/cmonbruh.png',
+          prompts: ['x', 'x', 'x', 'x',
+                    'x', 'x', 'x', 'x'],
         }
       ],
     }
