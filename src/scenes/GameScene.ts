@@ -17,6 +17,7 @@ import {
   getRotationPoints,
 } from '../config';
 import type { GameSettings, Direction } from '../config';
+import { HTML_LAYER, CURSOR_SUBLAYER, SCENE_LAYER } from '../layers';
 import { LEVEL_DATA } from '../levels';
 import type { Stage, Section, NormalSection, RotationSection, DelaySection, LevelData } from '../levels';
 
@@ -271,7 +272,7 @@ export class GameScene extends Phaser.Scene {
     this.sectionTargetEndTimeMs = null;
     this.shrinkTweens.clear();
 
-    this.hitboxGraphics = this.add.graphics().setDepth(25);
+    this.hitboxGraphics = this.add.graphics().setDepth(SCENE_LAYER.HITBOX_DEBUG);
     this.createHUD();
     this.createLifeBar();
     this.createCheckpoints();
@@ -279,7 +280,7 @@ export class GameScene extends Phaser.Scene {
     this.createCursors();
     this.createPauseMenu();
     this.createStorySamVideo();
-    this.flashOverlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xffffff, 0).setDepth(50);
+    this.flashOverlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xffffff, 0).setDepth(SCENE_LAYER.FLASH_OVERLAY);
 
     this.setCheckpointsVisible(false);
 
@@ -303,16 +304,16 @@ export class GameScene extends Phaser.Scene {
 
   private createHUD() {
     const cx = GAME_WIDTH / 2;
-    this.stageText = this.add.text(cx, GAME_FRAME_TOP + 18, '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(10);
-    this.roundText = this.add.text(cx, GAME_FRAME_TOP + 52, '', { fontSize: '20px', color: '#cccccc' }).setOrigin(0.5, 0).setDepth(10);
+    this.stageText = this.add.text(cx, GAME_FRAME_TOP + 18, '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(SCENE_LAYER.HUD);
+    this.roundText = this.add.text(cx, GAME_FRAME_TOP + 52, '', { fontSize: '20px', color: '#cccccc' }).setOrigin(0.5, 0).setDepth(SCENE_LAYER.HUD);
     this.delayText = this.add.text(cx, GAME_HEIGHT / 4, '', {
       fontSize: '80px',
       color: '#37ff55',
       fontStyle: 'bold',
       align: 'center',
       wordWrap: { width: 520 },
-    }).setOrigin(0.5, 0.5).setDepth(10).setVisible(false);
-    this.judgementText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0.5).setDepth(10);
+    }).setOrigin(0.5, 0.5).setDepth(SCENE_LAYER.HUD).setVisible(false);
+    this.judgementText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0.5).setDepth(SCENE_LAYER.HUD);
     if (this.debugMode) {
       this.debugText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', {
         fontSize: '26px',
@@ -321,7 +322,7 @@ export class GameScene extends Phaser.Scene {
         align: 'center',
         stroke: '#000000',
         strokeThickness: 5,
-      }).setOrigin(0.5, 0.5).setDepth(120);
+      }).setOrigin(0.5, 0.5).setDepth(SCENE_LAYER.DEBUG_OVERLAY);
     }
     this.updateHUD();
     this.updateJudgementText();
@@ -384,7 +385,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createLifeBar() {
-    this.lifeBar = this.add.graphics().setDepth(10);
+    this.lifeBar = this.add.graphics().setDepth(SCENE_LAYER.HUD);
     this.drawLifeBar();
   }
 
@@ -405,19 +406,19 @@ export class GameScene extends Phaser.Scene {
     this.checkpoints = [];
     for (const dir of ALL_DIRS) {
       const pos = this.getTargetPos(dir);
-      const outer = this.add.arc(pos.x, pos.y, 60, 0, 360, false, 0xffffff, 0).setStrokeStyle(3, 0xffffff, 1).setDepth(5);
-      const inner = this.add.arc(pos.x, pos.y, CHECKPOINT_RADIUS, 0, 360, false, 0xffffff, 0.5).setDepth(5);
+      const outer = this.add.arc(pos.x, pos.y, 60, 0, 360, false, 0xffffff, 0).setStrokeStyle(3, 0xffffff, 1).setDepth(SCENE_LAYER.JUDGE_CIRCLE);
+      const inner = this.add.arc(pos.x, pos.y, CHECKPOINT_RADIUS, 0, 360, false, 0xffffff, 0.5).setDepth(SCENE_LAYER.JUDGE_CIRCLE);
       const cp: CheckpointUI = { dir, pos, outerCircle: outer, innerCircle: inner };
 
       if (this.isCardinal(dir)) {
-        const zone = this.createEdgeZone(dir).setDepth(4).setVisible(false);
-        const line = this.createEdgeLine(dir).setDepth(6).setVisible(false);
+        const zone = this.createEdgeZone(dir).setDepth(SCENE_LAYER.JUDGE_EDGE_ZONE).setVisible(false);
+        const line = this.createEdgeLine(dir).setDepth(SCENE_LAYER.JUDGE_LINE).setVisible(false);
         outer.setVisible(false);
         inner.setVisible(false);
         cp.edgeZone = zone;
         cp.edgeLine = line;
       } else {
-        cp.cornerLine = this.createCornerJudgeLine(dir).setDepth(6).setVisible(false);
+        cp.cornerLine = this.createCornerJudgeLine(dir).setDepth(SCENE_LAYER.JUDGE_LINE).setVisible(false);
       }
 
       this.checkpoints.push(cp);
@@ -456,7 +457,7 @@ export class GameScene extends Phaser.Scene {
     this.cursorClipFrame.style.width = '0';
     this.cursorClipFrame.style.height = '0';
     this.cursorClipFrame.style.overflow = 'hidden';
-    this.cursorClipFrame.style.zIndex = '10';
+    this.cursorClipFrame.style.zIndex = String(HTML_LAYER.CURSOR);
     this.cursorClipFrame.style.display = 'none';
 
     this.cursorGifFrame = document.createElement('div');
@@ -466,7 +467,7 @@ export class GameScene extends Phaser.Scene {
     this.cursorGifFrame.style.top = '0';
     this.cursorGifFrame.style.transform = 'translate3d(-9999px, -9999px, 0) translate(-50%, -50%)';
     this.cursorGifFrame.style.willChange = 'transform';
-    this.cursorGifFrame.style.zIndex = '10';
+    this.cursorGifFrame.style.zIndex = String(HTML_LAYER.CURSOR);
     this.cursorGifFrame.style.display = 'none';
     this.cursorGifFrame.style.overflow = 'hidden';
     this.cursorGifFrame.style.background = '#000';
@@ -484,7 +485,7 @@ export class GameScene extends Phaser.Scene {
     this.cursorGif.style.userSelect = 'none';
     this.cursorGif.style.willChange = 'transform';
     this.cursorGif.style.opacity = '0.85';
-    this.cursorGif.style.zIndex = '0';
+    this.cursorGif.style.zIndex = String(CURSOR_SUBLAYER.GIF);
     this.cursorGifFrame.appendChild(this.cursorGif);
 
     this.cursorCheckPointDot = document.createElement('div');
@@ -498,7 +499,7 @@ export class GameScene extends Phaser.Scene {
     this.cursorCheckPointDot.style.border = '2px solid #ffffff';
     this.cursorCheckPointDot.style.boxSizing = 'border-box';
     this.cursorCheckPointDot.style.pointerEvents = 'none';
-    this.cursorCheckPointDot.style.zIndex = '1';
+    this.cursorCheckPointDot.style.zIndex = String(CURSOR_SUBLAYER.CHECK_POINT_DOT);
     this.cursorCheckPointDot.style.display = 'none';
     this.cursorCheckPointDot.style.transform = 'translate3d(-9999px, -9999px, 0) translate(-50%, -50%)';
     this.cursorGifFrame.appendChild(this.cursorCheckPointDot);
@@ -509,7 +510,7 @@ export class GameScene extends Phaser.Scene {
     this.cursorGifBorder.style.pointerEvents = 'none';
     this.cursorGifBorder.style.border = '2px solid #fff';
     this.cursorGifBorder.style.boxSizing = 'border-box';
-    this.cursorGifBorder.style.zIndex = '2';
+    this.cursorGifBorder.style.zIndex = String(CURSOR_SUBLAYER.BORDER);
     this.cursorGifFrame.appendChild(this.cursorGifBorder);
 
     this.cursorClipFrame.appendChild(this.cursorGifFrame);
@@ -555,7 +556,7 @@ export class GameScene extends Phaser.Scene {
       panel.style.position = 'fixed';
       panel.style.pointerEvents = 'none';
       panel.style.background = '#ffffff';
-      panel.style.zIndex = '2147483647';
+      panel.style.zIndex = String(HTML_LAYER.GAME_FRAME_BEZEL);
       panel.style.display = 'none';
       document.body.appendChild(panel);
       return panel;
@@ -597,7 +598,7 @@ export class GameScene extends Phaser.Scene {
 
   private createPauseMenu() {
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
-    this.pauseContainer = this.add.container(cx, cy).setDepth(100).setVisible(false);
+    this.pauseContainer = this.add.container(cx, cy).setDepth(SCENE_LAYER.PAUSE_MENU).setVisible(false);
     const bg = this.add.rectangle(0, 0, 400, 280, 0x000000, 0.85);
     const title = this.add.text(0, -100, 'PAUSED', { fontSize: '36px', color: '#fff' }).setOrigin(0.5);
 
@@ -613,7 +614,7 @@ export class GameScene extends Phaser.Scene {
     const homeBtn = makeBtn('返回主頁', 30, () => this.returnToMenu());
 
     this.pauseContainer.add([bg, title, resumeBtn, homeBtn]);
-    this.countdownText = this.add.text(cx, cy, '', { fontSize: '80px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(110).setVisible(false);
+    this.countdownText = this.add.text(cx, cy, '', { fontSize: '80px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(SCENE_LAYER.COUNTDOWN).setVisible(false);
   }
 
   // ---------- Section flow ----------
@@ -798,7 +799,7 @@ export class GameScene extends Phaser.Scene {
   private addArrowImage(x: number, y: number, dir: Direction): Phaser.GameObjects.Image {
     const isDiagonal = dir === 'q' || dir === 'e' || dir === 'z' || dir === 'c';
     const key = isDiagonal ? 'down_left' : 'down';
-    const img = this.add.image(x, y, key).setDepth(15).setAlpha(0.9);
+    const img = this.add.image(x, y, key).setDepth(SCENE_LAYER.PROMPT_ARROW).setAlpha(0.9);
     img.setAngle(isDiagonal ? DIR_ANGLE[dir] - 45 : DIR_ANGLE[dir]);
     return img;
   }
@@ -843,7 +844,7 @@ export class GameScene extends Phaser.Scene {
 
     if (!this.promptIndicator || !this.promptIndicator.active || !indicatorGeom) {
       this.promptIndicator = this.add.rectangle(cell.x, cell.y, indicatorSize, indicatorSize)
-        .setDepth(16)
+        .setDepth(SCENE_LAYER.PROMPT_INDICATOR)
         .setFillStyle(0xffffff, 0)
         .setStrokeStyle(3, 0xfff17a, 1);
     }
@@ -998,7 +999,7 @@ export class GameScene extends Phaser.Scene {
     this.storySamVideoRoot = document.createElement('div');
     this.storySamVideoRoot.style.position = 'fixed';
     this.storySamVideoRoot.style.pointerEvents = 'none';
-    this.storySamVideoRoot.style.zIndex = '-1';
+    this.storySamVideoRoot.style.zIndex = String(HTML_LAYER.STORY_SAM_VIDEO);
 
     const shell = document.createElement('div');
     shell.style.position = 'absolute';
@@ -1217,9 +1218,9 @@ export class GameScene extends Phaser.Scene {
     const d = this.checkDepth();
     const thickness = 6;
     const flyRatio = 0.25;
-    const flash = this.createEdgeHitFlash(dir).setDepth(7);
+    const flash = this.createEdgeHitFlash(dir).setDepth(SCENE_LAYER.EDGE_HIT_FLASH);
     const line = this.createEdgeLine(dir)
-      .setDepth(8)
+      .setDepth(SCENE_LAYER.EDGE_HIT_LINE)
       .setFillStyle(0xfff1a8, 1)
       .setAlpha(1);
 
@@ -1270,7 +1271,7 @@ export class GameScene extends Phaser.Scene {
       rotate: { min: 0, max: 360 },
       tint: [0xfff1a8, 0x7cff8f, 0x8ff8ff, 0xffffff],
       blendMode: Phaser.BlendModes.ADD,
-    }).setDepth(45);
+    }).setDepth(SCENE_LAYER.EDGE_PARTICLE);
 
     for (const pos of positions) {
       emitter.explode(this.isCardinal(dir) ? 9 : 34, pos.x, pos.y);
@@ -1805,7 +1806,7 @@ export class GameScene extends Phaser.Scene {
     text.style.left = `${pos.x * this.cursorScaleX}px`;
     text.style.top = `${(pos.y - 48) * this.cursorScaleY}px`;
     text.style.pointerEvents = 'none';
-    text.style.zIndex = '30';
+    text.style.zIndex = String(HTML_LAYER.JUDGEMENT_LABEL);
     text.style.color = color;
     text.style.fontSize = `${baseFontSize * fontScale}px`;
     text.style.fontWeight = '700';
@@ -1870,15 +1871,15 @@ export class GameScene extends Phaser.Scene {
     this.hitboxGraphics.clear();
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
     const homeY = cy + 84;
-    this.add.image(cx, cy, 'gameover_bg').setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(180);
-    this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.62).setDepth(181);
+    this.add.image(cx, cy, 'gameover_bg').setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(SCENE_LAYER.GAMEOVER_BG);
+    this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.62).setDepth(SCENE_LAYER.GAMEOVER_DIM);
     const homeBtn = this.add.rectangle(cx, homeY, 320, 92, 0x9147ff, 0.96)
       .setStrokeStyle(3, 0xf3e8ff, 0.95)
-      .setDepth(199)
+      .setDepth(SCENE_LAYER.GAMEOVER_BUTTON)
       .setInteractive({ useHandCursor: true });
     const homeBtnLabel = this.add.text(cx, homeY, '返回主頁', { fontSize: '42px', color: '#ffffff' })
       .setOrigin(0.5)
-      .setDepth(200);
+      .setDepth(SCENE_LAYER.GAMEOVER_BUTTON_LABEL);
     homeBtn.on('pointerover', () => {
       homeBtn.setFillStyle(0xa45cff, 1);
       homeBtn.setStrokeStyle(3, 0xffffff, 1);

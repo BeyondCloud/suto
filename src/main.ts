@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from './config';
+import { HTML_LAYER } from './layers';
 import { MenuScene } from './scenes/MenuScene';
 import { GameScene } from './scenes/GameScene';
 import { MainlineIntroScene } from './scenes/MainlineIntroScene';
@@ -22,7 +23,7 @@ const game = new Phaser.Game(config);
 const gameAreaBg = document.createElement('div');
 gameAreaBg.style.position = 'fixed';
 gameAreaBg.style.background = '#000000';
-gameAreaBg.style.zIndex = '-2';
+gameAreaBg.style.zIndex = String(HTML_LAYER.GAME_AREA_BG);
 gameAreaBg.style.pointerEvents = 'none';
 document.body.appendChild(gameAreaBg);
 

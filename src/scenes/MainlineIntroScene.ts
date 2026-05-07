@@ -4,6 +4,7 @@ import tutorial2VideoUrl from '../assets/tutorial-2.mp4';
 import tutorialLoopUrl from '../assets/audio/loop/tutorial.wav';
 import type { GameSettings } from '../config';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
+import { HTML_LAYER, SCENE_LAYER } from '../layers';
 import { MAIN_LEVEL_DATA } from '../levels';
 
 export class MainlineIntroScene extends Phaser.Scene {
@@ -105,7 +106,7 @@ export class MainlineIntroScene extends Phaser.Scene {
     this.openingRoot.style.position = 'fixed';
     this.openingRoot.style.pointerEvents = 'none';
     this.openingRoot.style.background = '#000000';
-    this.openingRoot.style.zIndex = '1000';
+    this.openingRoot.style.zIndex = String(HTML_LAYER.FULLSCREEN_VIDEO);
     this.openingRoot.style.overflow = 'hidden';
 
     this.openingVideo = document.createElement('video');
@@ -169,12 +170,12 @@ export class MainlineIntroScene extends Phaser.Scene {
 
   private showTutorialScreen() {
     if (this.textures.exists(this.openingLastFrameTextureKey)) {
-      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, this.openingLastFrameTextureKey).setDepth(0);
+      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, this.openingLastFrameTextureKey).setDepth(SCENE_LAYER.INTRO_BACKGROUND);
       const scale = Math.min(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);
       bg.setScale(scale);
     }
 
-    const tutorial = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'tutorial').setDepth(1);
+    const tutorial = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'tutorial').setDepth(SCENE_LAYER.INTRO_TUTORIAL_IMAGE);
     const ratio = Math.min((GAME_WIDTH * 0.92) / tutorial.width, (GAME_HEIGHT * 0.84) / tutorial.height);
     tutorial.setDisplaySize(tutorial.width * ratio, tutorial.height * ratio);
     this.tutorialDisplayRect = {
@@ -191,7 +192,7 @@ export class MainlineIntroScene extends Phaser.Scene {
         fontStyle: 'bold',
         stroke: '#000000',
         strokeThickness: 6,
-      }).setOrigin(0.5).setDepth(6);
+      }).setOrigin(0.5).setDepth(SCENE_LAYER.INTRO_CONTINUE_PROMPT);
     } else {
       this.continuePromptText.setVisible(true);
     }
@@ -218,7 +219,7 @@ export class MainlineIntroScene extends Phaser.Scene {
     this.tutorial2Root.style.position = 'fixed';
     this.tutorial2Root.style.pointerEvents = 'auto';
     this.tutorial2Root.style.background = '#000000';
-    this.tutorial2Root.style.zIndex = '1000';
+    this.tutorial2Root.style.zIndex = String(HTML_LAYER.FULLSCREEN_VIDEO);
     this.tutorial2Root.style.overflow = 'hidden';
 
     this.tutorial2Video = document.createElement('video');
@@ -242,7 +243,7 @@ export class MainlineIntroScene extends Phaser.Scene {
     this.tutorial2PromptRoot.style.position = 'fixed';
     this.tutorial2PromptRoot.style.pointerEvents = 'auto';
     this.tutorial2PromptRoot.style.transform = 'translate(-50%, -50%)';
-    this.tutorial2PromptRoot.style.zIndex = '1001';
+    this.tutorial2PromptRoot.style.zIndex = String(HTML_LAYER.FULLSCREEN_VIDEO_PROMPT);
     this.tutorial2PromptRoot.style.color = '#ffffff';
     this.tutorial2PromptRoot.style.fontFamily = 'Courier';
     this.tutorial2PromptRoot.style.fontWeight = '700';

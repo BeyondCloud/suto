@@ -3,6 +3,7 @@ import welcomeAudioUrl from '../assets/audio/welcome.wav';
 import mainlineClickAudioUrl from '../assets/audio/short/來.wav';
 import { DEFAULT_SETTINGS } from '../config';
 import type { GameSettings } from '../config';
+import { SCENE_LAYER } from '../layers';
 
 const SETTINGS_STORAGE_KEY = 'suto.gameSettings';
 
@@ -39,7 +40,7 @@ export class MenuScene extends Phaser.Scene {
       this.input.keyboard?.once('keydown', () => this.playWelcomeAudio());
     }
 
-    const background = this.add.image(cx, height / 2, 'opening_bg').setDepth(-10);
+    const background = this.add.image(cx, height / 2, 'opening_bg').setDepth(SCENE_LAYER.MENU_BACKGROUND);
     const bgScale = Math.max(width / background.width, height / background.height);
     background.setScale(bgScale);
 
@@ -53,7 +54,7 @@ export class MenuScene extends Phaser.Scene {
     // A full-width translucent stripe behind the currently hovered menu option.
     const selectionStripe = this.add.rectangle(cx, 0, width, 62, 0x000000, 0.45)
       .setOrigin(0.5)
-      .setDepth(-1)
+      .setDepth(SCENE_LAYER.MENU_SELECTION_STRIPE)
       .setVisible(false);
 
     // Mainline mode button
