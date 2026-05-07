@@ -2557,6 +2557,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.endingVideoRoot) return;
 
     const { score, rank, verdict } = this.buildEndingSummary();
+    const scoreBar = this.buildEndingScoreBar(score, rank);
 
     this.endingSummaryCard = document.createElement('div');
     this.endingSummaryCard.style.position = 'absolute';
@@ -2576,10 +2577,50 @@ export class GameScene extends Phaser.Scene {
     this.endingSummaryCard.innerHTML = [
       `<div style=\"font-size:40px;font-weight:800;letter-spacing:1px;line-height:1.05;margin-bottom:10px;\">Score ${score}</div>`,
       `<div style=\"font-size:30px;font-weight:800;color:#ffe082;letter-spacing:1px;margin-bottom:12px;\">評價 ${rank}</div>`,
+      scoreBar,
       `<div style=\"font-size:26px;font-weight:700;line-height:1.3;margin-bottom:12px;\">${verdict}</div>`,
       `<div style=\"font-size:22px;line-height:1.55;color:#d9e3f0;\"><span style=\"color:#7cff8f;font-weight:700;\">Perfect ${this.perfectCount}</span> / <span style=\"color:#ff5a6b;font-weight:700;\">Miss ${this.missCount}</span> / <span style=\"color:#ffb14a;font-weight:700;\">X ${this.falseTouchCount}</span> / HP ${this.lifeValue}</div>`,
     ].join('');
     this.endingVideoRoot.appendChild(this.endingSummaryCard);
+  }
+
+  private buildEndingScoreBar(score: number, rank: string): string {
+    const clampedScore = Phaser.Math.Clamp(score, 0, 1000);
+    const scorePercent = (clampedScore / 1000) * 100;
+    const ranks = [
+      { label: 'D', min: 0, color: '#8ea0b8' },
+      { label: 'C', min: 500, color: '#7ad7ff' },
+      { label: 'B', min: 700, color: '#7cff8f' },
+      { label: 'A', min: 850, color: '#ffd86e' },
+      { label: 'S', min: 950, color: '#ff8c6b' },
+    ];
+
+    const markers = ranks.map(({ label, min, color }) => {
+      const left = (min / 1000) * 100;
+      const isCurrentRank = label === rank;
+      return `<div style=\"position:absolute;left:${left}%;top:0;transform:translateX(-50%);text-align:center;\">`
+        + `<div style=\"width:2px;height:16px;background:rgba(255,255,255,0.55);margin:0 auto 6px;\"></div>`
+        + `<div style=\"font-size:14px;font-weight:800;letter-spacing:0.08em;color:${isCurrentRank ? color : 'rgba(232, 239, 248, 0.88)'};\">${label}</div>`
+        + `<div style=\"margin-top:3px;font-size:11px;color:rgba(217, 227, 240, 0.72);\">${min}</div>`
+        + `</div>`;
+    }).join('');
+
+    return [
+      '<div style="margin:0 0 16px;">',
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:15px;font-weight:700;color:#d9e3f0;letter-spacing:0.04em;">',
+      '<span>Score Gauge</span>',
+      `<span style="color:#ffffff;">${clampedScore} / 1000</span>`,
+      '</div>',
+      '<div style="position:relative;padding-top:2px;padding-bottom:34px;">',
+      '<div style="position:relative;height:16px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,0.12);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.12);">',
+      '<div style="position:absolute;inset:0;background:linear-gradient(90deg, #60738b 0%, #60738b 50%, #4ec7ff 50%, #4ec7ff 70%, #68ec78 70%, #68ec78 85%, #ffd45f 85%, #ffd45f 95%, #ff8a64 95%, #ff8a64 100%);"></div>',
+      `<div style="position:absolute;left:${scorePercent}%;top:50%;width:20px;height:20px;border-radius:50%;background:#ffffff;border:3px solid rgba(17, 17, 24, 0.92);box-shadow:0 0 0 3px rgba(255,255,255,0.18), 0 6px 18px rgba(0,0,0,0.42);transform:translate(-50%, -50%);"></div>`,
+      '</div>',
+      `<div style="position:absolute;left:${scorePercent}%;top:24px;transform:translateX(-50%);font-size:13px;font-weight:800;color:#ffffff;white-space:nowrap;">${rank} · ${clampedScore}</div>`,
+      markers,
+      '</div>',
+      '</div>',
+    ].join('');
   }
 
   private createEndingPromptText() {
