@@ -5,6 +5,9 @@ import loadingImageUrl from '../assets/loading.png';
 import samVideoUrl from '../assets/mp4/sam.mp4';
 import endingVideo1Url from '../assets/end1-1.mp4';
 import endingVideo2Url from '../assets/end1-2.mp4';
+import endingDUrl from '../assets/D.mp4';
+import endingCUrl from '../assets/C.mp4';
+import endingBUrl from '../assets/B.mp4';
 import promptDUrl from '../assets/audio/D.wav';
 import promptLUrl from '../assets/audio/L.wav';
 import promptRUrl from '../assets/audio/R.wav';
@@ -497,7 +500,9 @@ export class GameScene extends Phaser.Scene {
     this.setGifCursorVisible(false);
     this.hitboxGraphics.clear();
 
-    this.playEndingVideoWithSummaryAndReturn(endingVideo2Url).catch(() => {
+    const { rank: _previewRank } = this.buildEndingSummary();
+    const _previewVideoUrl = _previewRank === 'D' ? endingDUrl : _previewRank === 'C' ? endingCUrl : _previewRank === 'B' ? endingBUrl : endingVideo2Url;
+    this.playEndingVideoWithSummaryAndReturn(_previewVideoUrl).catch(() => {
       this.removeEndingVideoOverlay();
       this.returnToMenu();
     });
@@ -2473,8 +2478,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private async playStoryEndingSequenceInternal() {
-    await this.playEndingVideo(endingVideo1Url);
-    await this.playEndingVideoWithSummaryAndReturn(endingVideo2Url);
+    const { rank } = this.buildEndingSummary();
+    if (rank === 'D') {
+      await this.playEndingVideoWithSummaryAndReturn(endingDUrl);
+    } else if (rank === 'C') {
+      await this.playEndingVideoWithSummaryAndReturn(endingCUrl);
+    } else if (rank === 'B') {
+      await this.playEndingVideoWithSummaryAndReturn(endingBUrl);
+    } else {
+      await this.playEndingVideo(endingVideo1Url);
+      await this.playEndingVideoWithSummaryAndReturn(endingVideo2Url);
+    }
   }
 
   private playEndingVideo(videoUrl: string): Promise<void> {
