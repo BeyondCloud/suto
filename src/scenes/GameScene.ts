@@ -2627,13 +2627,13 @@ export class GameScene extends Phaser.Scene {
   private buildEndingScoreBar(score: number, rank: string): string {
     const clampedScore = Phaser.Math.Clamp(score, 0, 100);
     const ranks = [
-      { label: 'D', min: 0, color: '#8ea0b8' },
-      { label: 'C', min: 70, color: '#7ad7ff' },
-      { label: 'B', min: 80, color: '#dd4d00' },
-      { label: 'A', min: 90, color: '#ff0000' },
-      { label: 'S', min: 95, color: '#00ffe5' },
-      { label: 'S+', min: 99, color: '#66ff00' },
-      { label: 'S++', min: 100, color: '#ffee00' },
+      { label: 'D', min: 0, color: '#355CFF' },
+      { label: 'C', min: 70, color: '#17B7FF' },
+      { label: 'B', min: 80, color: '#FF9F43' },
+      { label: 'A', min: 90, color: '#FFC857' },
+      { label: 'S', min: 95, color: '#FFE66D' },
+      { label: 'S+', min: 99, color: '#8CE99A' },
+      { label: 'S++', min: 100, color: '#52D681' },
     ];
 
     const markerNudgeX: Record<string, number> = {
