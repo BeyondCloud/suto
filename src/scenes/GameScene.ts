@@ -44,7 +44,7 @@ const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   a: 'prompt_L',
   d: 'prompt_R',
 };
-const ENABLE_DEBUG_OVERLAY = true;
+const ENABLE_DEBUG_OVERLAY = false;
 
 type GameMode = 'challenge' | 'story';
 
@@ -109,6 +109,9 @@ export class GameScene extends Phaser.Scene {
   // Timing
   private beatMs = 500;
   private beatCount = 0;
+  // Cumulative absolute time the current section should end at, so frame jitter
+  // from delayedCall doesn't compound across sections.
+  private sectionTargetEndTimeMs: number | null = null;
   private gamePhase: 'prompt' | 'check' = 'prompt';
   private readonly debugMode = ENABLE_DEBUG_OVERLAY;
   private debugText?: Phaser.GameObjects.Text;
@@ -265,6 +268,7 @@ export class GameScene extends Phaser.Scene {
     this.perfectCount = 0;
     this.missCount = 0;
     this.falseTouchCount = 0;
+    this.sectionTargetEndTimeMs = null;
     this.shrinkTweens.clear();
 
     this.hitboxGraphics = this.add.graphics().setDepth(25);
@@ -617,6 +621,18 @@ export class GameScene extends Phaser.Scene {
   private startSection() {
     if (this.isGameOver) return;
     this.currentSection = this.currentStage.sections[this.sectionIndex];
+
+    let sectionDurationMs: number;
+    if (this.currentSection.type === 'delay') {
+      sectionDurationMs = Math.max(0, (this.currentSection as DelaySection).ms);
+    } else {
+      const sectionBpm = (this.currentSection as NormalSection | RotationSection).bpm ?? this.currentStage.bpm;
+      sectionDurationMs = 16 * (60000 / sectionBpm);
+    }
+    this.sectionTargetEndTimeMs = this.sectionTargetEndTimeMs === null
+      ? this.time.now + sectionDurationMs
+      : this.sectionTargetEndTimeMs + sectionDurationMs;
+
     if (this.currentSection.type === 'delay') {
       this.stopPromptAudioSequence();
       this.stopAllShrinks();
@@ -628,8 +644,8 @@ export class GameScene extends Phaser.Scene {
       this.updateHUD();
       this.setDelayText(this.currentSection.text);
 
-      const delayMs = Math.max(0, (this.currentSection as DelaySection).ms);
-      this.time.delayedCall(delayMs, () => {
+      const remaining = Math.max(0, this.sectionTargetEndTimeMs - this.time.now);
+      this.time.delayedCall(remaining, () => {
         if (this.isGameOver) return;
         this.setDelayText();
         this.advanceToNextSection();
@@ -662,9 +678,9 @@ export class GameScene extends Phaser.Scene {
     this.onBeat();
     this.beatTimer = this.time.addEvent({ delay: this.beatMs, repeat: 7, callback: this.onBeat, callbackScope: this });
 
-    if (!this.isRotation && this.mode !== 'story') {
-      this.startPromptAudioSequence((this.currentSection as NormalSection).prompts);
-    }
+    // if (!this.isRotation && this.mode !== 'story') {
+    //   this.startPromptAudioSequence((this.currentSection as NormalSection).prompts);
+    // }
   }
 
   private startCheckPhase() {
@@ -702,12 +718,10 @@ export class GameScene extends Phaser.Scene {
       this.beatCount++;
       if (this.beatCount >= 8) {
         this.beatTimer?.remove();
-        const lead = Math.max(0, this.settings.shrinkLeadMs);
-        const settleAfterLastBeat = this.isRotation
-          ? (this.beatMs / 2) + Math.max(this.beatMs, lead)
-          : Math.max(this.beatMs, lead);
-        const completionSafetyBufferMs = 50;
-        this.time.delayedCall(settleAfterLastBeat + completionSafetyBufferMs, () => this.onCheckPhaseEnd());
+        // Anchor section end to its cumulative absolute target so per-frame jitter
+        // doesn't compound across sections.
+        const remaining = Math.max(0, (this.sectionTargetEndTimeMs ?? this.time.now) - this.time.now);
+        this.time.delayedCall(remaining, () => this.onCheckPhaseEnd());
       }
     }
   }

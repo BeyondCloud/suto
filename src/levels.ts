@@ -36,7 +36,7 @@ export const LEVEL_DATA: LevelData = {
   stages: [
     {
       stage_number: 1,
-      bpm: 182,
+      bpm: 183.5,
     //   audio_clip: 'src/assets/audio/120.wav',
       audio_clip: 'src/assets/audio/loop/tutorial.wav',
       sections: [
@@ -59,6 +59,21 @@ export const LEVEL_DATA: LevelData = {
         //   start: 'U',
         //   rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
         // },
+        {
+          type: 'normal',
+          prompts: ['x', 'w', 'x', 'w',
+                    'x', 'a', 'd', 'x'],
+        },
+        {
+          type: 'normal',
+          prompts: ['x', 'w', 'x', 'w',
+                    'x', 'a', 'd', 'x'],
+        },
+        {
+          type: 'normal',
+          prompts: ['x', 'w', 'x', 'w',
+                    'x', 'a', 'd', 'x'],
+        },
         {
           type: 'rotation',
           start: 'w',
@@ -148,7 +163,7 @@ export const MAIN_LEVEL_DATA: LevelData = {
   stages: [
     {
       stage_number: 1,
-      bpm: 182,
+      bpm: 183.5,
       sections: [
         {
           type: 'normal',
@@ -183,14 +198,14 @@ export const MAIN_LEVEL_DATA: LevelData = {
         },
         {
           type: 'delay',
-          ms: 2637, // 60000 / 182 * 8 = 2637.36
+          ms: 2615, // 60000 / 183.5 * 8 = 2615.80
           text: 'Level - 2',
         },
       ],
     },
    {
       stage_number: 2,
-      bpm: 182,
+      bpm: 183.5,
       sections: [
 
         {
@@ -226,7 +241,7 @@ export const MAIN_LEVEL_DATA: LevelData = {
         },
         {
           type: 'delay',
-          ms: 2637,
+          ms: 2320,
           text: 'Level - 3',
         },
       ],
@@ -236,37 +251,95 @@ export const MAIN_LEVEL_DATA: LevelData = {
       bpm: 183,
       sections: [
         {
+          bpm: 215.5,
           type: 'normal',
-          prompts: ['x', 'a', 'w', 'w',
-                    'x', 'd', 'x', 'x'],
+          prompts: ['w', 'w', 'w', 'w',
+                    'w', 'w', 'w', 'w'],
         },
         {
+          bpm: 243.5,
           type: 'normal',
-          prompts: ['x', 'c', 'w', 'c',
-                    'a', 'q', 'x', 'e'],
+          prompts: ['w', 'w', 'w', 'w',
+                    'w', 'w', 'w', 'w'],
         },
         {
+          bpm: 257,
           type: 'normal',
-          prompts: ['c', 'x', 'a', 'c',
-                    'w', 'q', 'c', 'e'],
+          prompts: ['w', 'w', 'w', 'w',
+                    'w', 'w', 'w', 'w'],
         },
         {
+          bpm: 275,
           type: 'normal',
-          prompts: ['x', 'w', 'c', 'w',
-                    'q', 'c', 'z', 'x'],
+          prompts: ['w', 'w', 'w', 'w',
+                    'w', 'w', 'w', 'w'],
         },
         {
+          bpm: 291,
           type: 'normal',
-          prompts: ['x', 'd', 'c', 'x',
-                    'w', 'x', 'a', 'x'],
+          prompts: ['w', 'w', 'w', 'w',
+                    'w', 'w', 'w', 'w'],
         },
         {
+            type: 'delay',
+            ms: 4112,
+            text: 'WARNING',
+        },
+        {
+          bpm: 183.5,
           type: 'normal',
-          prompts: ['x', 'x', 'x', 'x',
-                    'x', 'x', 'x', 'x'],
+          prompts: ['w', 'w', 'w', 'w',
+                    'w', 'w', 'w', 'w'],
         }
       ],
     }
+//    {
+//       stage_number: 3,
+//       bpm: 183,
+//       sections: [
+//         {
+//           bpm: 215.5,
+//           type: 'normal',
+//           prompts: ['x', 'a', 'w', 'w',
+//                     'x', 'd', 'x', 'x'],
+//         },
+//         {
+//           bpm: 243.5,
+//           type: 'normal',
+//           prompts: ['x', 'c', 'w', 'c',
+//                     'a', 'q', 'x', 'e'],
+//         },
+//         {
+//           bpm: 257,
+//           type: 'normal',
+//           prompts: ['c', 'x', 'a', 'c',
+//                     'w', 'q', 'c', 'e'],
+//         },
+//         {
+//           bpm: 275,
+//           type: 'normal',
+//           prompts: ['x', 'w', 'c', 'w',
+//                     'q', 'c', 'z', 'x'],
+//         },
+//         {
+//           bpm: 291,
+//           type: 'normal',
+//           prompts: ['x', 'd', 'c', 'x',
+//                     'w', 'x', 'a', 'x'],
+//         },
+//         {
+//             type: 'delay',
+//             ms: 4112,
+//             text: 'WARNING',
+//         },
+//         {
+//           bpm: 183.5,
+//           type: 'normal',
+//           prompts: ['x', 'x', 'x', 'x',
+//                     'x', 'x', 'x', 'x'],
+//         }
+//       ],
+//     }
 
   ],
 };
