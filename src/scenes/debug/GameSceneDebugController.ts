@@ -24,15 +24,11 @@ export const DEBUG_ENDING_PRESETS: DebugEndingPreset[] = [
 
 interface GameSceneDebugControllerOptions {
   scene: Phaser.Scene;
-  getCurrentBpm: () => number;
-  getBeatMs: () => number;
   onSelectEndingPreset: (preset: DebugEndingPreset) => void;
 }
 
 export class GameSceneDebugController {
   private readonly scene: Phaser.Scene;
-  private readonly getCurrentBpm: () => number;
-  private readonly getBeatMs: () => number;
   private readonly onSelectEndingPreset: (preset: DebugEndingPreset) => void;
   private debugText?: Phaser.GameObjects.Text;
   private overlayRoot?: HTMLDivElement;
@@ -40,8 +36,6 @@ export class GameSceneDebugController {
 
   constructor(options: GameSceneDebugControllerOptions) {
     this.scene = options.scene;
-    this.getCurrentBpm = options.getCurrentBpm;
-    this.getBeatMs = options.getBeatMs;
     this.onSelectEndingPreset = options.onSelectEndingPreset;
   }
 
@@ -67,9 +61,7 @@ export class GameSceneDebugController {
 
   updateMetrics() {
     if (!this.enabled || !this.debugText) return;
-    const bpm = this.getCurrentBpm();
-    const beatMs = this.getBeatMs();
-    this.debugText.setText(`BPM ${this.formatDebugNumber(bpm)}\nbeatMs ${this.formatDebugNumber(beatMs)}`);
+    this.debugText.setText('');
   }
 
   triggerEndingPreset(preset?: DebugEndingPreset): boolean {
@@ -166,8 +158,4 @@ export class GameSceneDebugController {
     window.addEventListener('keydown', this.hotkeyHandler);
   }
 
-  private formatDebugNumber(value: number): string {
-    if (!Number.isFinite(value)) return '-';
-    return value.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
-  }
 }

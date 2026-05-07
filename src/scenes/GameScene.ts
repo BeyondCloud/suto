@@ -340,8 +340,6 @@ export class GameScene extends Phaser.Scene {
     this.shrinkTweens.clear();
     this.debugController = new GameSceneDebugController({
       scene: this,
-      getCurrentBpm: () => this.getCurrentBpm(),
-      getBeatMs: () => this.beatMs,
       onSelectEndingPreset: (preset) => this.applyEndingPreviewPreset(preset),
     });
 
@@ -2639,7 +2637,7 @@ export class GameScene extends Phaser.Scene {
     ];
 
     const markerNudgeX: Record<string, number> = {
-      S: -14,
+      S: 0,
       'S+': 0,
       'S++': 14,
     };
@@ -2651,7 +2649,12 @@ export class GameScene extends Phaser.Scene {
       const curved = 1 - Math.log10(1 + 9 * (1 - t));
       return Phaser.Math.Clamp(curved * 100, 0, 100);
     };
-    const scoreDisplayPercent = toNonLinearPercent(clampedScore);
+    const rankIndex = ranks.findIndex(item => item.label === rank);
+    const rankUpperBound = rankIndex >= 0 && rankIndex < ranks.length - 1
+      ? ranks[rankIndex + 1].min
+      : 100;
+    const scoreForDisplay = Math.min(clampedScore, rankUpperBound - (rankUpperBound < 100 ? 0 : 0.01));
+    const scoreDisplayPercent = toNonLinearPercent(scoreForDisplay);
     const markerLefts = ranks.map(item => toNonLinearPercent(item.min));
 
     const markers = ranks.map(({ label, min, color }, index) => {
@@ -2733,12 +2736,13 @@ export class GameScene extends Phaser.Scene {
   private buildEndingSummary(): { accuracyPercent: number; rank: string; verdict: string } {
     const totalJudgementCount = this.perfectCount + this.missCount;
     const accuracy = totalJudgementCount > 0 ? this.perfectCount / totalJudgementCount : 1;
-    const accuracyPercent = Math.round(accuracy * 100);
+    const rawAccuracyPercent = Math.round(accuracy * 100);
+    const accuracyPercent = this.falseTouchCount > 0 ? Math.min(99, rawAccuracyPercent) : rawAccuracyPercent;
     if (this.missCount ===0 )   {
         if (this.falseTouchCount === 0) {
             return { accuracyPercent, rank: 'S++', verdict: '完美無缺！等等...你花這麼多時間練這個做什麼?' };
         }
-        return { accuracyPercent, rank: 'S+', verdict: '幾乎完美！你是控頭的神！' };
+        return { accuracyPercent, rank: 'S+', verdict: '幾乎完美！你是控頭的神！<br>(沒有誤觸"X"判定才能S++喔)' };
     }
     if (accuracyPercent >= 95) {
       return { accuracyPercent, rank: 'S', verdict: '你比超負荷還快！' };
