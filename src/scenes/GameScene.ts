@@ -2652,7 +2652,7 @@ export class GameScene extends Phaser.Scene {
     return [
       '<div style="margin:0 0 16px;">',
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:15px;font-weight:700;color:#d9e3f0;letter-spacing:0.04em;">',
-      '<span>Score Gauge</span>',
+      '<span>Score</span>',
       `<span style="color:#ffffff;">${clampedScore} / 100</span>`,
       '</div>',
       '<div style="position:relative;padding-top:2px;padding-bottom:34px;">',
