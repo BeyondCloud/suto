@@ -101,6 +101,7 @@ export class GameScene extends Phaser.Scene {
   private promptAudioEvents: Phaser.Time.TimerEvent[] = [];
   private promptAudioSequenceId = 0;
   private sectionIndex = 0;
+  private sectionRepeatIteration = 1;
   private currentSection!: Section;
   private storySamVideoRoot?: HTMLDivElement;
   private storySamVideo?: HTMLVideoElement;
@@ -319,6 +320,7 @@ export class GameScene extends Phaser.Scene {
     this.suppressGameFrameMask = false;
     this.loadStage(this.stageIndex);
     this.sectionIndex = 0;
+    this.sectionRepeatIteration = 1;
     this.lifeValue = 100;
     this.perfectCount = 0;
     this.missCount = 0;
@@ -351,9 +353,17 @@ export class GameScene extends Phaser.Scene {
 
   private loadStage(index: number) {
     this.currentStage = this.levelData.stages[index];
+    this.sectionRepeatIteration = 1;
     this.beatMs = 60000 / this.currentStage.bpm;
     this.currentStageAudioKey = this.currentStage.audio_clip ? getStageAudioKey(this.currentStage.audio_clip) : null;
     this.updateDebugText();
+  }
+
+  private getSectionRepeat(section: Section): number {
+    if (section.type === 'delay') return 1;
+    const rawRepeat = section.repeat ?? 1;
+    if (!Number.isFinite(rawRepeat)) return 1;
+    return Math.max(1, Math.floor(rawRepeat));
   }
 
   private createHUD() {
@@ -422,18 +432,32 @@ export class GameScene extends Phaser.Scene {
   }
 
   private getPhaseProgress() {
-    const playableSections = this.currentStage.sections.filter((section) => section.type !== 'delay');
-    const total = playableSections.length;
-    if (total === 0) return { current: 0, total: 0 };
-
+    let total = 0;
     let current = 0;
+
     for (let i = 0; i < this.currentStage.sections.length; i++) {
       const section = this.currentStage.sections[i];
-      if (section.type !== 'delay' && i <= this.sectionIndex) {
-        current++;
+      if (section.type === 'delay') {
+        if (i > this.sectionIndex) break;
+        continue;
       }
-      if (i > this.sectionIndex) break;
+
+      const repeat = this.getSectionRepeat(section);
+      total += repeat;
+
+      if (i < this.sectionIndex) {
+        current += repeat;
+        continue;
+      }
+
+      if (i === this.sectionIndex) {
+        current += Math.min(this.sectionRepeatIteration, repeat);
+      }
+
+      if (i >= this.sectionIndex) break;
     }
+
+    if (total === 0) return { current: 0, total: 0 };
 
     return { current, total };
   }
@@ -862,6 +886,17 @@ export class GameScene extends Phaser.Scene {
   private advanceToNextSection() {
     if (this.isGameOver) return;
     this.clearButtonEffectUI();
+
+    if (this.currentSection.type !== 'delay') {
+      const repeat = this.getSectionRepeat(this.currentSection);
+      if (this.sectionRepeatIteration < repeat) {
+        this.sectionRepeatIteration++;
+        this.startSection();
+        return;
+      }
+    }
+
+    this.sectionRepeatIteration = 1;
     this.sectionIndex++;
     if (this.sectionIndex >= this.currentStage.sections.length) {
       this.stageIndex++;
