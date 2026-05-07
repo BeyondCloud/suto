@@ -21,6 +21,7 @@ export interface DelaySection {
   type: 'delay';
   ms: number;
   text?: string;
+  color?: string;
 }
 
 export type Section = NormalSection | RotationSection | DelaySection;
@@ -391,6 +392,7 @@ export const MAIN_LEVEL_DATA: LevelData = {
             type: 'delay',
             ms: 4112,
             text: 'WARNING',
+          color: '#ff3b30',
         },
         {
             type: 'delay',

@@ -57,6 +57,7 @@ const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
 const BUTTON_EFFECT_REQUIRED_CLICKS = 10;
 const BUTTON_EFFECT_SCALE_STEP = 0.04;
 const ENDING_RETURN_COOLDOWN_MS = 1000;
+const DEFAULT_DELAY_TEXT_COLOR = '#37ff55';
 
 type GameMode = 'challenge' | 'story';
 
@@ -452,7 +453,7 @@ export class GameScene extends Phaser.Scene {
     this.roundText = this.add.text(cx, GAME_FRAME_TOP + 52, '', { fontSize: '20px', color: '#cccccc' }).setOrigin(0.5, 0).setDepth(SCENE_LAYER.HUD);
     this.delayText = this.add.text(cx, GAME_HEIGHT / 4, '', {
       fontSize: '80px',
-      color: '#37ff55',
+      color: DEFAULT_DELAY_TEXT_COLOR,
       fontStyle: 'bold',
       align: 'center',
       wordWrap: { width: 520 },
@@ -524,9 +525,11 @@ export class GameScene extends Phaser.Scene {
     return Phaser.Math.Clamp(targetBpm / baseBpm, 0.25, 4);
   }
 
-  private setDelayText(text?: string) {
+  private setDelayText(text?: string, color?: string) {
     const content = text?.trim() ?? '';
+    const resolvedColor = color?.trim() || DEFAULT_DELAY_TEXT_COLOR;
     this.delayText.setText(content);
+    this.delayText.setColor(resolvedColor);
     this.delayText.setVisible(content.length > 0);
   }
 
@@ -859,7 +862,7 @@ export class GameScene extends Phaser.Scene {
       this.beatTimer?.remove();
       this.beatCount = 0;
       this.updateHUD();
-      this.setDelayText(this.currentSection.text);
+      this.setDelayText(this.currentSection.text, this.currentSection.color);
 
       const remaining = Math.max(0, this.sectionTargetEndTimeMs - this.time.now);
       this.time.delayedCall(remaining, () => {
