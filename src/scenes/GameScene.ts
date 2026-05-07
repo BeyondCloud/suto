@@ -2681,6 +2681,8 @@ export class GameScene extends Phaser.Scene {
       return Phaser.Math.Clamp(curved * 100, 0, 100);
     };
     const rankIndex = ranks.findIndex(item => item.label === rank);
+    const aRankIndex = ranks.findIndex(item => item.label === 'A');
+    const hasReachedSpecialEvent = rankIndex >= 0 && aRankIndex >= 0 && rankIndex >= aRankIndex;
     const rankUpperBound = rankIndex >= 0 && rankIndex < ranks.length - 1
       ? ranks[rankIndex + 1].min
       : 100;
@@ -2704,7 +2706,9 @@ export class GameScene extends Phaser.Scene {
       return `<div style=\"position:absolute;left:${left}%;top:0;transform:${anchorTransform};min-width:36px;\">`
         + `<div style=\"position:absolute;left:${stemLeft};top:${stemTop}px;transform:translateX(-50%);width:2px;height:${markerStemHeight}px;background:rgba(255,255,255,0.58);\"></div>`
         + (isSpecialEventMarker
-          ? `<div style=\"position:absolute;left:${stemLeft};top:${minTop - 20}px;transform:translateX(-50%);margin-left:${nudgeX}px;padding:1px 8px;border-radius:999px;border:1px solid rgba(255,220,150,0.85);background:rgba(23,28,38,0.9);font-size:10px;font-weight:800;letter-spacing:0.06em;color:#ffe4a3;white-space:nowrap;\">特殊事件</div>`
+          ? `${hasReachedSpecialEvent
+            ? `<div style=\"position:absolute;left:${stemLeft};top:${minTop - 42}px;transform:translateX(-50%);margin-left:${nudgeX}px;padding:1px 8px;border-radius:999px;border:1px solid rgba(146,255,190,0.85);background:rgba(16,45,32,0.9);font-size:10px;font-weight:800;letter-spacing:0.06em;color:#b6ffd2;white-space:nowrap;\">已達成!</div>`
+            : ''}<div style=\"position:absolute;left:${stemLeft};top:${minTop - 20}px;transform:translateX(-50%);margin-left:${nudgeX}px;padding:1px 8px;border-radius:999px;border:1px solid rgba(255,220,150,0.85);background:rgba(23,28,38,0.9);font-size:10px;font-weight:800;letter-spacing:0.06em;color:#ffe4a3;white-space:nowrap;\">特殊事件</div>`
           : '')
         + `<div style=\"position:absolute;left:${stemLeft};top:${labelTop}px;transform:translateX(-50%);margin-left:${nudgeX}px;font-size:14px;font-weight:800;letter-spacing:0.08em;color:${isCurrentRank ? color : 'rgba(232, 239, 248, 0.88)'};white-space:nowrap;\">${label}</div>`
         + `<div style=\"position:absolute;left:${stemLeft};top:${minTop}px;transform:translateX(-50%);margin-left:${nudgeX}px;font-size:11px;color:rgba(217, 227, 240, 0.72);white-space:nowrap;\">${min}</div>`
