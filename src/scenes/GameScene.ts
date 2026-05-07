@@ -806,6 +806,20 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.positionPromptGrid(x, y);
+
+    if (!this.isRotation && (this.currentSection as NormalSection).effect === 'fadein') {
+      const fadeInDurationMs = this.beatMs * 8;
+      for (const img of this.promptImages) {
+        img.setAlpha(0);
+        this.tweens.add({
+          targets: img,
+          alpha: 0.9,
+          duration: fadeInDurationMs,
+          ease: 'Sine.easeOut',
+        });
+      }
+    }
+
     this.drawHitbox(x, y);
   }
 
@@ -822,7 +836,8 @@ export class GameScene extends Phaser.Scene {
     const rows = 2;
     const cellW = this.settings.hitboxWidth / cols;
     const cellH = this.settings.hitboxHeight / rows;
-    const arrowSize = 120;
+    const isSmall = !this.isRotation && (this.currentSection as NormalSection).effect === 'small';
+    const arrowSize = isSmall ? 60 : 120;
     const startX = x - this.settings.hitboxWidth / 2 + cellW / 2;
     const startY = y - this.settings.hitboxHeight / 2 + cellH / 2;
 

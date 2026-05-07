@@ -5,6 +5,7 @@ export interface NormalSection {
   bpm?: number;
   prompts: Direction[];
   image?: string;
+  effect?: 'small' | 'fadein';
 }
 
 export interface RotationSection {
@@ -222,11 +223,13 @@ export const MAIN_LEVEL_DATA: LevelData = {
         },
         {
           type: 'normal',
+          effect: 'fadein',
           prompts: ['x', 'w', 'x', 'w',
                     'c', 'e', 'q', 'z'],
         },
         {
           type: 'normal',
+          effect: 'small',
           prompts: ['x', 'w', 'x', 'w',
                     'x', 'a', 'd', 'x'],
         },
@@ -339,6 +342,11 @@ export const MAIN_LEVEL_DATA: LevelData = {
 //             type: 'delay',
 //             ms: 4112,
 //             text: 'WARNING',
+//         },
+//         {
+//             type: 'delay',
+//             ms: 2515,
+//             text: '',
 //         },
 //         {
 //           bpm: 183.5,
