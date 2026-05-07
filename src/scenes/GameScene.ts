@@ -2628,7 +2628,6 @@ export class GameScene extends Phaser.Scene {
 
   private buildEndingScoreBar(score: number, rank: string): string {
     const clampedScore = Phaser.Math.Clamp(score, 0, 100);
-    const scorePercent = clampedScore;
     const ranks = [
       { label: 'D', min: 0, color: '#8ea0b8' },
       { label: 'C', min: 70, color: '#7ad7ff' },
@@ -2639,30 +2638,64 @@ export class GameScene extends Phaser.Scene {
       { label: 'S++', min: 100, color: '#ffee00' },
     ];
 
-    const markers = ranks.map(({ label, min, color }) => {
-      const left = min;
+    const markerNudgeX: Record<string, number> = {
+      S: -14,
+      'S+': 0,
+      'S++': 14,
+    };
+    const markerBaseY = 96;
+    const markerStemHeight = 60;
+    const toNonLinearPercent = (min: number): number => {
+      const t = Phaser.Math.Clamp(min / 100, 0, 1);
+      // Expand the dense high-score range near 100 for readable marker spacing.
+      const curved = 1 - Math.log10(1 + 9 * (1 - t));
+      return Phaser.Math.Clamp(curved * 100, 0, 100);
+    };
+    const scoreDisplayPercent = toNonLinearPercent(clampedScore);
+    const markerLefts = ranks.map(item => toNonLinearPercent(item.min));
+
+    const markers = ranks.map(({ label, min, color }, index) => {
+      const left = markerLefts[index];
       const isCurrentRank = label === rank;
-      return `<div style=\"position:absolute;left:${left}%;top:0;transform:translateX(-50%);text-align:center;\">`
-        + `<div style=\"width:2px;height:16px;background:rgba(255,255,255,0.55);margin:0 auto 6px;\"></div>`
-        + `<div style=\"font-size:14px;font-weight:800;letter-spacing:0.08em;color:${isCurrentRank ? color : 'rgba(232, 239, 248, 0.88)'};\">${label}</div>`
-        + `<div style=\"margin-top:3px;font-size:11px;color:rgba(217, 227, 240, 0.72);\">${min}</div>`
+      const nudgeX = markerNudgeX[label] ?? 0;
+      const isLeftEdge = min === 0;
+      const isRightEdge = min === 100;
+      const anchorTransform = isLeftEdge ? 'translateX(0)' : isRightEdge ? 'translateX(-100%)' : 'translateX(-50%)';
+      const stemLeft = isLeftEdge ? '0%' : isRightEdge ? '100%' : '50%';
+      const stemTop = markerBaseY - markerStemHeight;
+      const labelTop = stemTop - 18;
+      const minTop = labelTop - 14;
+
+      return `<div style=\"position:absolute;left:${left}%;top:0;transform:${anchorTransform};min-width:36px;\">`
+        + `<div style=\"position:absolute;left:${stemLeft};top:${stemTop}px;transform:translateX(-50%);width:2px;height:${markerStemHeight}px;background:rgba(255,255,255,0.58);\"></div>`
+        + `<div style=\"position:absolute;left:${stemLeft};top:${labelTop}px;transform:translateX(-50%);margin-left:${nudgeX}px;font-size:14px;font-weight:800;letter-spacing:0.08em;color:${isCurrentRank ? color : 'rgba(232, 239, 248, 0.88)'};white-space:nowrap;\">${label}</div>`
+        + `<div style=\"position:absolute;left:${stemLeft};top:${minTop}px;transform:translateX(-50%);margin-left:${nudgeX}px;font-size:11px;color:rgba(217, 227, 240, 0.72);white-space:nowrap;\">${min}</div>`
         + `</div>`;
     }).join('');
 
+    const gradientStops = ranks.flatMap((item, index) => {
+      const start = toNonLinearPercent(item.min);
+      const nextMin = index < ranks.length - 1 ? ranks[index + 1].min : 100;
+      const end = Phaser.Math.Clamp(Math.max(start, toNonLinearPercent(nextMin)), 0, 100);
+      return [`${item.color} ${start}%`, `${item.color} ${end}%`];
+    }).join(', ');
+
     return [
+      '<style>@keyframes sutoScoreTopFill{from{transform:scaleX(0);}to{transform:scaleX(1);}}</style>',
       '<div style="margin:0 0 16px;">',
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:15px;font-weight:700;color:#d9e3f0;letter-spacing:0.04em;">',
+      '<div style="display:flex;justify-content:flex-start;align-items:center;margin-bottom:8px;font-size:15px;font-weight:700;color:#d9e3f0;letter-spacing:0.04em;">',
       '<span>Score</span>',
-      `<span style="color:#ffffff;">${clampedScore} / 100</span>`,
       '</div>',
-      '<div style="position:relative;padding-top:2px;padding-bottom:34px;">',
+      '<div style="position:relative;padding-top:84px;padding-bottom:0px;">',
+      '<div style="position:absolute;left:0;right:0;top:50px;height:40px;border-radius:999px;background:rgba(64, 120, 72, 0.35);overflow:hidden;box-shadow:inset 0 0 0 1px rgba(140, 255, 162, 0.18);">',
+      `<div style="width:${scoreDisplayPercent}%;height:100%;background:linear-gradient(90deg,#3cff84 0%,#31d66f 55%,#23b95d 100%);transform-origin:left center;transform:scaleX(0);animation:sutoScoreTopFill 0.5s ease-out forwards;"></div>`,
+      '</div>',
       '<div style="position:relative;height:16px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,0.12);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.12);">',
-      '<div style="position:absolute;inset:0;background:linear-gradient(90deg, #60738b 0%, #60738b 50%, #4ec7ff 50%, #4ec7ff 70%, #68ec78 70%, #68ec78 85%, #ffd45f 85%, #ffd45f 95%, #ff8a64 95%, #ff8a64 100%);"></div>',
-      `<div style="position:absolute;left:${scorePercent}%;top:50%;width:20px;height:20px;border-radius:50%;background:#ffffff;border:3px solid rgba(17, 17, 24, 0.92);box-shadow:0 0 0 3px rgba(255,255,255,0.18), 0 6px 18px rgba(0,0,0,0.42);transform:translate(-50%, -50%);"></div>`,
+      `<div style="position:absolute;inset:0;background:linear-gradient(90deg, ${gradientStops});"></div>`,
       '</div>',
-      `<div style="position:absolute;left:${scorePercent}%;top:24px;transform:translateX(-50%);font-size:13px;font-weight:800;color:#ffffff;white-space:nowrap;">${rank} · ${clampedScore}</div>`,
       markers,
       '</div>',
+      `<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:800;color:#ffffff;letter-spacing:0.04em;">${clampedScore} / 100</div>`,
       '</div>',
     ].join('');
   }
@@ -2708,18 +2741,18 @@ export class GameScene extends Phaser.Scene {
         return { accuracyPercent, rank: 'S+', verdict: '幾乎完美！你是控頭的神！' };
     }
     if (accuracyPercent >= 95) {
-      return { accuracyPercent, rank: 'S', verdict: '太誇張了, 你是鬼吧!' };
+      return { accuracyPercent, rank: 'S', verdict: '你比超負荷還快！' };
     }
     if (accuracyPercent >= 90) {
-      return { accuracyPercent, rank: 'A', verdict: '小頭控的好,開台沒煩惱' };
+      return { accuracyPercent, rank: 'A', verdict: '欸欸欸不行太快了太快了' };
     }
     if (accuracyPercent >= 80) {
-      return { accuracyPercent, rank: 'B', verdict: '...好像...越來越能抓到訣竅了' };
+      return { accuracyPercent, rank: 'B', verdict: '還能再更快嗎?' };
     }
     if (accuracyPercent >= 70) {
-      return { accuracyPercent, rank: 'C', verdict: '阿館的頭沒擋好啊 = =' };
+      return { accuracyPercent, rank: 'C', verdict: '很快了, 再快一點' };
     }
-    return { accuracyPercent, rank: 'D', verdict: '主播台差一點就沒了' };
+    return { accuracyPercent, rank: 'D', verdict: '太慢摟' };
   }
 
   private removeEndingVideoOverlay() {
