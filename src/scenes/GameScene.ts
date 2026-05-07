@@ -34,7 +34,7 @@ const GAME_FRAME_BOTTOM = GAME_HEIGHT - GAME_FRAME_INSET_Y;
 const GAME_FRAME_WIDTH = GAME_FRAME_RIGHT - GAME_FRAME_LEFT;
 const GAME_FRAME_HEIGHT = GAME_FRAME_BOTTOM - GAME_FRAME_TOP;
 const FALSE_TOUCH_DAMAGE = 5;
-const MISS_DAMAGE = 15;
+const MISS_DAMAGE = 5;
 const DEFAULT_STAGE_AUDIO_CLIP = 'src/assets/audio/120.wav';
 const HIT_SPARK_TEXTURE_KEY = 'hit_spark';
 const PROMPT_AUDIO_GAP_MS = 50;
@@ -44,6 +44,7 @@ const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   a: 'prompt_L',
   d: 'prompt_R',
 };
+const ENABLE_DEBUG_OVERLAY = true;
 
 type GameMode = 'challenge' | 'story';
 
@@ -109,6 +110,8 @@ export class GameScene extends Phaser.Scene {
   private beatMs = 500;
   private beatCount = 0;
   private gamePhase: 'prompt' | 'check' = 'prompt';
+  private readonly debugMode = ENABLE_DEBUG_OVERLAY;
+  private debugText?: Phaser.GameObjects.Text;
 
   // UI
   private checkpoints: CheckpointUI[] = [];
@@ -291,6 +294,7 @@ export class GameScene extends Phaser.Scene {
     this.currentStage = this.levelData.stages[index];
     this.beatMs = 60000 / this.currentStage.bpm;
     this.currentStageAudioKey = this.currentStage.audio_clip ? getStageAudioKey(this.currentStage.audio_clip) : null;
+    this.updateDebugText();
   }
 
   private createHUD() {
@@ -305,8 +309,37 @@ export class GameScene extends Phaser.Scene {
       wordWrap: { width: 520 },
     }).setOrigin(0.5, 0.5).setDepth(10).setVisible(false);
     this.judgementText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0.5).setDepth(10);
+    if (this.debugMode) {
+      this.debugText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', {
+        fontSize: '26px',
+        color: '#ffe066',
+        fontStyle: 'bold',
+        align: 'center',
+        stroke: '#000000',
+        strokeThickness: 5,
+      }).setOrigin(0.5, 0.5).setDepth(120);
+    }
     this.updateHUD();
     this.updateJudgementText();
+    this.updateDebugText();
+  }
+
+  private getCurrentBpm(): number {
+    if (this.currentSection?.type !== 'delay' && this.currentSection?.bpm != null) {
+      return this.currentSection.bpm;
+    }
+    return this.currentStage?.bpm ?? 0;
+  }
+
+  private formatDebugNumber(value: number): string {
+    if (!Number.isFinite(value)) return '-';
+    return value.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+  }
+
+  private updateDebugText() {
+    if (!this.debugMode || !this.debugText) return;
+    const bpm = this.getCurrentBpm();
+    this.debugText.setText(`BPM ${this.formatDebugNumber(bpm)}\nbeatMs ${this.formatDebugNumber(this.beatMs)}`);
   }
 
   private setDelayText(text?: string) {
@@ -610,6 +643,7 @@ export class GameScene extends Phaser.Scene {
     this.isRotation = this.currentSection.type === 'rotation';
     this.beatCount = 0;
     this.updateHUD();
+    this.updateDebugText();
     this.startPromptPhase();
   }
 
@@ -1931,6 +1965,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update() {
+    this.updateDebugText();
     if (this.gamePhase === 'check' && !this.isPaused) {
       this.checkActiveHits(this.cursorWorldX, this.cursorWorldY);
     }
