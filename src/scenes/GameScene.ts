@@ -24,6 +24,8 @@ import type { GameSettings, Direction } from '../config';
 import { HTML_LAYER, CURSOR_SUBLAYER, SCENE_LAYER } from '../layers';
 import { LEVEL_DATA } from '../levels';
 import type { Stage, Section, NormalSection, RotationSection, DelaySection, LevelData } from '../levels';
+import { GameSceneDebugController } from './debug/GameSceneDebugController';
+import type { DebugEndingPreset } from './debug/GameSceneDebugController';
 
 const ALL_DIRS: Direction[] = ['w', 'e', 'd', 'c', 'x', 'z', 'a', 'q'];
 const CARDINAL_DIRS: Direction[] = ['w', 'x', 'a', 'd'];
@@ -51,7 +53,6 @@ const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
 };
 const BUTTON_EFFECT_REQUIRED_CLICKS = 10;
 const BUTTON_EFFECT_SCALE_STEP = 0.04;
-const ENABLE_DEBUG_OVERLAY = true;
 const ENDING_RETURN_COOLDOWN_MS = 1000;
 
 type GameMode = 'challenge' | 'story';
@@ -91,14 +92,6 @@ interface HitboxRect {
   centerY: number;
 }
 
-interface DebugEndingPreset {
-  rank: string;
-  perfect: number;
-  miss: number;
-  falseTouch: number;
-  life: number;
-}
-
 export class GameScene extends Phaser.Scene {
   private mode: GameMode = 'challenge';
   private levelData: LevelData = LEVEL_DATA;
@@ -126,8 +119,7 @@ export class GameScene extends Phaser.Scene {
   private endingPointerHandler?: (event: PointerEvent) => void;
   private endingMouseHandler?: (event: MouseEvent) => void;
   private endingTouchHandler?: (event: TouchEvent) => void;
-  private debugEndingOverlayRoot?: HTMLDivElement;
-  private debugEndingHotkeyHandler?: (event: KeyboardEvent) => void;
+  private debugController?: GameSceneDebugController;
   private readonly endingRootAttr = 'data-suto-ending-root';
   private readonly endingPromptAttr = 'data-suto-ending-prompt';
   private readonly refreshStorySamVideoBounds = () => {
@@ -154,8 +146,6 @@ export class GameScene extends Phaser.Scene {
   // from delayedCall doesn't compound across sections.
   private sectionTargetEndTimeMs: number | null = null;
   private gamePhase: 'prompt' | 'check' = 'prompt';
-  private readonly debugMode = ENABLE_DEBUG_OVERLAY;
-  private debugText?: Phaser.GameObjects.Text;
 
   // UI
   private checkpoints: CheckpointUI[] = [];
@@ -348,6 +338,12 @@ export class GameScene extends Phaser.Scene {
     this.falseTouchCount = 0;
     this.sectionTargetEndTimeMs = null;
     this.shrinkTweens.clear();
+    this.debugController = new GameSceneDebugController({
+      scene: this,
+      getCurrentBpm: () => this.getCurrentBpm(),
+      getBeatMs: () => this.beatMs,
+      onSelectEndingPreset: (preset) => this.applyEndingPreviewPreset(preset),
+    });
 
     this.hitboxGraphics = this.add.graphics().setDepth(SCENE_LAYER.HITBOX_DEBUG);
     this.createHUD();
@@ -368,7 +364,9 @@ export class GameScene extends Phaser.Scene {
     if (this.pendingDebugEndingPreset) {
       const preset = this.pendingDebugEndingPreset;
       this.pendingDebugEndingPreset = undefined;
-      this.time.delayedCall(0, () => this.previewEndingRank(preset));
+      this.time.delayedCall(0, () => {
+        this.debugController?.triggerEndingPreset(preset);
+      });
       return;
     }
 
@@ -436,7 +434,7 @@ export class GameScene extends Phaser.Scene {
     this.sectionRepeatIteration = 1;
     this.beatMs = 60000 / this.currentStage.bpm;
     this.currentStageAudioKey = this.currentStage.audio_clip ? getStageAudioKey(this.currentStage.audio_clip) : null;
-    this.updateDebugText();
+    this.debugController?.updateMetrics();
   }
 
   private getSectionRepeat(section: Section): number {
@@ -458,119 +456,14 @@ export class GameScene extends Phaser.Scene {
       wordWrap: { width: 520 },
     }).setOrigin(0.5, 0.5).setDepth(SCENE_LAYER.HUD).setVisible(false);
     this.judgementText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0.5).setDepth(SCENE_LAYER.HUD);
-    if (this.debugMode) {
-      this.debugText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', {
-        fontSize: '26px',
-        color: '#ffe066',
-        fontStyle: 'bold',
-        align: 'center',
-        stroke: '#000000',
-        strokeThickness: 5,
-      }).setOrigin(0.5, 0.5).setDepth(SCENE_LAYER.DEBUG_OVERLAY);
-
-      this.createDebugEndingButtons();
-    }
+    this.debugController?.createHud();
     this.updateHUD();
     this.updateJudgementText();
-    this.updateDebugText();
+    this.debugController?.updateMetrics();
   }
 
-  private createDebugEndingButtons() {
-    if (!this.debugMode) return;
-
-    this.removeDebugEndingButtons();
-
-    const presets: DebugEndingPreset[] = [
-      { rank: 'S++', perfect: 100, miss: 0, falseTouch: 0, life: 100 },
-      { rank: 'S+', perfect: 100, miss: 0, falseTouch: 3, life: 96 },
-      { rank: 'S', perfect: 95, miss: 5, falseTouch: 2, life: 92 },
-      { rank: 'A', perfect: 90, miss: 10, falseTouch: 4, life: 84 },
-      { rank: 'B', perfect: 80, miss: 20, falseTouch: 5, life: 72 },
-      { rank: 'C', perfect: 70, miss: 30, falseTouch: 6, life: 58 },
-      { rank: 'D', perfect: 60, miss: 40, falseTouch: 8, life: 36 },
-    ];
-
-    const root = document.createElement('div');
-    root.setAttribute('data-suto-debug-ending', '1');
-    root.style.position = 'fixed';
-    root.style.left = '12px';
-    root.style.top = '12px';
-    root.style.zIndex = String(HTML_LAYER.GAME_FRAME_BEZEL - 1);
-    root.style.display = 'grid';
-    root.style.gridTemplateColumns = 'repeat(2, minmax(86px, 1fr))';
-    root.style.gap = '8px';
-    root.style.padding = '12px';
-    root.style.width = '224px';
-    root.style.background = 'rgba(15, 20, 32, 0.96)';
-    root.style.border = '2px solid #ffd24d';
-    root.style.borderRadius = '10px';
-    root.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.45)';
-    root.style.fontFamily = "'Noto Sans TC', 'PingFang TC', sans-serif";
-    root.style.pointerEvents = 'auto';
-
-    const title = document.createElement('div');
-    title.textContent = 'DEBUG 結算預覽';
-    title.style.gridColumn = '1 / -1';
-    title.style.fontSize = '16px';
-    title.style.fontWeight = '800';
-    title.style.color = '#ffe066';
-    root.appendChild(title);
-
-    presets.forEach(preset => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = preset.rank;
-      button.style.height = '40px';
-      button.style.border = '2px solid #c8dcff';
-      button.style.borderRadius = '8px';
-      button.style.background = '#233042';
-      button.style.color = '#ffffff';
-      button.style.fontSize = '20px';
-      button.style.fontWeight = '800';
-      button.style.cursor = 'pointer';
-      button.onmouseenter = () => {
-        button.style.background = '#385276';
-        button.style.borderColor = '#ffffff';
-      };
-      button.onmouseleave = () => {
-        button.style.background = '#233042';
-        button.style.borderColor = '#c8dcff';
-      };
-      button.onclick = () => this.previewEndingRank(preset);
-      root.appendChild(button);
-    });
-
-    const hint = document.createElement('div');
-    hint.textContent = '快捷鍵: 1~7';
-    hint.style.gridColumn = '1 / -1';
-    hint.style.fontSize = '14px';
-    hint.style.fontWeight = '700';
-    hint.style.color = '#ffffff';
-    root.appendChild(hint);
-
-    document.body.appendChild(root);
-    this.debugEndingOverlayRoot = root;
-
-    this.debugEndingHotkeyHandler = (event: KeyboardEvent) => {
-      const index = Number(event.key) - 1;
-      if (!Number.isInteger(index) || index < 0 || index >= presets.length) return;
-      this.previewEndingRank(presets[index]);
-    };
-    window.addEventListener('keydown', this.debugEndingHotkeyHandler);
-  }
-
-  private removeDebugEndingButtons() {
-    if (this.debugEndingHotkeyHandler) {
-      window.removeEventListener('keydown', this.debugEndingHotkeyHandler);
-      this.debugEndingHotkeyHandler = undefined;
-    }
-
-    this.debugEndingOverlayRoot?.remove();
-    this.debugEndingOverlayRoot = undefined;
-  }
-
-  private previewEndingRank(preset: DebugEndingPreset) {
-    if (!this.debugMode || this.endingSequenceStarted || this.isGameOver) return;
+  private applyEndingPreviewPreset(preset: DebugEndingPreset) {
+    if (this.endingSequenceStarted || this.isGameOver) return;
 
     this.perfectCount = preset.perfect;
     this.missCount = preset.miss;
@@ -579,13 +472,13 @@ export class GameScene extends Phaser.Scene {
     this.updateJudgementText();
     this.drawLifeBar();
 
-    this.playDebugEndingPreviewSequence();
+    this.playEndingPreviewSequence();
   }
 
-  private playDebugEndingPreviewSequence() {
+  private playEndingPreviewSequence() {
     if (this.endingSequenceStarted || this.isGameOver) return;
     this.endingSequenceStarted = true;
-    this.removeDebugEndingButtons();
+    this.debugController?.hideEndingOverlay();
 
     this.isPaused = false;
     this.clearButtonEffectUI();
@@ -617,17 +510,6 @@ export class GameScene extends Phaser.Scene {
       return this.currentSection.bpm;
     }
     return this.currentStage?.bpm ?? 0;
-  }
-
-  private formatDebugNumber(value: number): string {
-    if (!Number.isFinite(value)) return '-';
-    return value.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
-  }
-
-  private updateDebugText() {
-    if (!this.debugMode || !this.debugText) return;
-    const bpm = this.getCurrentBpm();
-    this.debugText.setText(`BPM ${this.formatDebugNumber(bpm)}\nbeatMs ${this.formatDebugNumber(this.beatMs)}`);
   }
 
   private getStageAudioPlaybackRate(): number {
@@ -839,7 +721,8 @@ export class GameScene extends Phaser.Scene {
     this.input.setDefaultCursor('default');
     this.setGifCursorVisible(false);
     this.clearButtonEffectUI();
-    this.removeDebugEndingButtons();
+    this.debugController?.dispose();
+    this.debugController = undefined;
     this.removeStorySamVideo();
     this.removeEndingVideoOverlay();
     this.hideLoadingOverlay();
@@ -989,7 +872,7 @@ export class GameScene extends Phaser.Scene {
     this.isRotation = this.currentSection.type === 'rotation';
     this.beatCount = 0;
     this.updateHUD();
-    this.updateDebugText();
+    this.debugController?.updateMetrics();
     this.startPromptPhase();
   }
 
@@ -2915,7 +2798,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update() {
-    this.updateDebugText();
+    this.debugController?.updateMetrics();
     if (this.gamePhase === 'check' && !this.isPaused && !this.isButtonEffectActive) {
       this.checkActiveHits(this.cursorWorldX, this.cursorWorldY);
     }

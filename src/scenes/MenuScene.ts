@@ -5,21 +5,17 @@ import tutorialLoopUrl from '../assets/audio/loop/tutorial.wav';
 import { DEFAULT_SETTINGS } from '../config';
 import type { GameSettings } from '../config';
 import { HTML_LAYER, SCENE_LAYER } from '../layers';
+import {
+  DEBUG_ENDING_PRESETS,
+  ENABLE_GAME_SCENE_DEBUG_OVERLAY,
+} from './debug/GameSceneDebugController';
+import type { DebugEndingPreset } from './debug/GameSceneDebugController';
 
 const SETTINGS_STORAGE_KEY = 'suto.gameSettings';
 const MASTER_VOLUME_MIN = 0;
 const MASTER_VOLUME_MAX = 1;
 const MASTER_VOLUME_STEP = 0.01;
 const MASTER_VOLUME_PREVIEW_INTERVAL_MS = 120;
-const ENABLE_DEBUG_OVERLAY = true;
-
-interface DebugEndingPreset {
-  rank: string;
-  perfect: number;
-  miss: number;
-  falseTouch: number;
-  life: number;
-}
 
 export class MenuScene extends Phaser.Scene {
   private settings: GameSettings;
@@ -180,27 +176,15 @@ export class MenuScene extends Phaser.Scene {
 
     this.buildJudgementRulesOverlay();
 
-    if (ENABLE_DEBUG_OVERLAY) {
+    if (ENABLE_GAME_SCENE_DEBUG_OVERLAY) {
       this.createDebugEndingOverlay();
     }
-  }
-
-  private getDebugEndingPresets(): DebugEndingPreset[] {
-    return [
-      { rank: 'S++', perfect: 100, miss: 0, falseTouch: 0, life: 100 },
-      { rank: 'S+', perfect: 100, miss: 0, falseTouch: 3, life: 96 },
-      { rank: 'S', perfect: 95, miss: 5, falseTouch: 2, life: 92 },
-      { rank: 'A', perfect: 90, miss: 10, falseTouch: 4, life: 84 },
-      { rank: 'B', perfect: 80, miss: 20, falseTouch: 5, life: 72 },
-      { rank: 'C', perfect: 70, miss: 30, falseTouch: 6, life: 58 },
-      { rank: 'D', perfect: 60, miss: 40, falseTouch: 8, life: 36 },
-    ];
   }
 
   private createDebugEndingOverlay() {
     this.removeDebugEndingOverlay();
 
-    const presets = this.getDebugEndingPresets();
+    const presets = DEBUG_ENDING_PRESETS;
     const root = document.createElement('div');
     root.setAttribute('data-suto-menu-debug-ending', '1');
     root.style.position = 'fixed';
