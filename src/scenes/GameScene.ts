@@ -51,7 +51,7 @@ const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
 };
 const BUTTON_EFFECT_REQUIRED_CLICKS = 10;
 const BUTTON_EFFECT_SCALE_STEP = 0.04;
-const ENABLE_DEBUG_OVERLAY = false;
+const ENABLE_DEBUG_OVERLAY = true;
 const ENDING_RETURN_COOLDOWN_MS = 1000;
 
 type GameMode = 'challenge' | 'story';
@@ -91,6 +91,14 @@ interface HitboxRect {
   centerY: number;
 }
 
+interface DebugEndingPreset {
+  rank: string;
+  perfect: number;
+  miss: number;
+  falseTouch: number;
+  life: number;
+}
+
 export class GameScene extends Phaser.Scene {
   private mode: GameMode = 'challenge';
   private levelData: LevelData = LEVEL_DATA;
@@ -118,6 +126,8 @@ export class GameScene extends Phaser.Scene {
   private endingPointerHandler?: (event: PointerEvent) => void;
   private endingMouseHandler?: (event: MouseEvent) => void;
   private endingTouchHandler?: (event: TouchEvent) => void;
+  private debugEndingOverlayRoot?: HTMLDivElement;
+  private debugEndingHotkeyHandler?: (event: KeyboardEvent) => void;
   private readonly endingRootAttr = 'data-suto-ending-root';
   private readonly endingPromptAttr = 'data-suto-ending-prompt';
   private readonly refreshStorySamVideoBounds = () => {
@@ -275,16 +285,18 @@ export class GameScene extends Phaser.Scene {
   // ~800ms WebAudio cold-start consumption is hidden as a transition).
   private loadingOverlayRect?: Phaser.GameObjects.Rectangle;
   private loadingOverlayImage?: Phaser.GameObjects.Image;
+  private pendingDebugEndingPreset?: DebugEndingPreset;
 
   constructor() {
     super('GameScene');
   }
 
-  init(data: { settings: GameSettings; stageIndex: number; mode?: GameMode; levelData?: LevelData }) {
+  init(data: { settings: GameSettings; stageIndex: number; mode?: GameMode; levelData?: LevelData; debugEndingPreset?: DebugEndingPreset }) {
     this.settings = data.settings;
     this.stageIndex = data.stageIndex ?? 0;
     this.mode = data.mode ?? 'challenge';
     this.levelData = data.levelData ?? LEVEL_DATA;
+    this.pendingDebugEndingPreset = data.debugEndingPreset;
   }
 
   preload() {
@@ -352,6 +364,13 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard!.on('keydown-ESC', () => this.onEsc());
     this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => this.onMouseMove(ptr));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanupScene());
+
+    if (this.pendingDebugEndingPreset) {
+      const preset = this.pendingDebugEndingPreset;
+      this.pendingDebugEndingPreset = undefined;
+      this.time.delayedCall(0, () => this.previewEndingRank(preset));
+      return;
+    }
 
     if (this.mode === 'story') {
       this.time.delayedCall(this.settings.storyStartDelayMs, () => this.startSection());
@@ -448,10 +467,149 @@ export class GameScene extends Phaser.Scene {
         stroke: '#000000',
         strokeThickness: 5,
       }).setOrigin(0.5, 0.5).setDepth(SCENE_LAYER.DEBUG_OVERLAY);
+
+      this.createDebugEndingButtons();
     }
     this.updateHUD();
     this.updateJudgementText();
     this.updateDebugText();
+  }
+
+  private createDebugEndingButtons() {
+    if (!this.debugMode) return;
+
+    this.removeDebugEndingButtons();
+
+    const presets: DebugEndingPreset[] = [
+      { rank: 'S++', perfect: 100, miss: 0, falseTouch: 0, life: 100 },
+      { rank: 'S+', perfect: 100, miss: 0, falseTouch: 3, life: 96 },
+      { rank: 'S', perfect: 95, miss: 5, falseTouch: 2, life: 92 },
+      { rank: 'A', perfect: 90, miss: 10, falseTouch: 4, life: 84 },
+      { rank: 'B', perfect: 80, miss: 20, falseTouch: 5, life: 72 },
+      { rank: 'C', perfect: 70, miss: 30, falseTouch: 6, life: 58 },
+      { rank: 'D', perfect: 60, miss: 40, falseTouch: 8, life: 36 },
+    ];
+
+    const root = document.createElement('div');
+    root.setAttribute('data-suto-debug-ending', '1');
+    root.style.position = 'fixed';
+    root.style.left = '12px';
+    root.style.top = '12px';
+    root.style.zIndex = String(HTML_LAYER.GAME_FRAME_BEZEL - 1);
+    root.style.display = 'grid';
+    root.style.gridTemplateColumns = 'repeat(2, minmax(86px, 1fr))';
+    root.style.gap = '8px';
+    root.style.padding = '12px';
+    root.style.width = '224px';
+    root.style.background = 'rgba(15, 20, 32, 0.96)';
+    root.style.border = '2px solid #ffd24d';
+    root.style.borderRadius = '10px';
+    root.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.45)';
+    root.style.fontFamily = "'Noto Sans TC', 'PingFang TC', sans-serif";
+    root.style.pointerEvents = 'auto';
+
+    const title = document.createElement('div');
+    title.textContent = 'DEBUG 結算預覽';
+    title.style.gridColumn = '1 / -1';
+    title.style.fontSize = '16px';
+    title.style.fontWeight = '800';
+    title.style.color = '#ffe066';
+    root.appendChild(title);
+
+    presets.forEach(preset => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = preset.rank;
+      button.style.height = '40px';
+      button.style.border = '2px solid #c8dcff';
+      button.style.borderRadius = '8px';
+      button.style.background = '#233042';
+      button.style.color = '#ffffff';
+      button.style.fontSize = '20px';
+      button.style.fontWeight = '800';
+      button.style.cursor = 'pointer';
+      button.onmouseenter = () => {
+        button.style.background = '#385276';
+        button.style.borderColor = '#ffffff';
+      };
+      button.onmouseleave = () => {
+        button.style.background = '#233042';
+        button.style.borderColor = '#c8dcff';
+      };
+      button.onclick = () => this.previewEndingRank(preset);
+      root.appendChild(button);
+    });
+
+    const hint = document.createElement('div');
+    hint.textContent = '快捷鍵: 1~7';
+    hint.style.gridColumn = '1 / -1';
+    hint.style.fontSize = '14px';
+    hint.style.fontWeight = '700';
+    hint.style.color = '#ffffff';
+    root.appendChild(hint);
+
+    document.body.appendChild(root);
+    this.debugEndingOverlayRoot = root;
+
+    this.debugEndingHotkeyHandler = (event: KeyboardEvent) => {
+      const index = Number(event.key) - 1;
+      if (!Number.isInteger(index) || index < 0 || index >= presets.length) return;
+      this.previewEndingRank(presets[index]);
+    };
+    window.addEventListener('keydown', this.debugEndingHotkeyHandler);
+  }
+
+  private removeDebugEndingButtons() {
+    if (this.debugEndingHotkeyHandler) {
+      window.removeEventListener('keydown', this.debugEndingHotkeyHandler);
+      this.debugEndingHotkeyHandler = undefined;
+    }
+
+    this.debugEndingOverlayRoot?.remove();
+    this.debugEndingOverlayRoot = undefined;
+  }
+
+  private previewEndingRank(preset: DebugEndingPreset) {
+    if (!this.debugMode || this.endingSequenceStarted || this.isGameOver) return;
+
+    this.perfectCount = preset.perfect;
+    this.missCount = preset.miss;
+    this.falseTouchCount = preset.falseTouch;
+    this.lifeValue = Phaser.Math.Clamp(preset.life, 0, 100);
+    this.updateJudgementText();
+    this.drawLifeBar();
+
+    this.playDebugEndingPreviewSequence();
+  }
+
+  private playDebugEndingPreviewSequence() {
+    if (this.endingSequenceStarted || this.isGameOver) return;
+    this.endingSequenceStarted = true;
+    this.removeDebugEndingButtons();
+
+    this.isPaused = false;
+    this.clearButtonEffectUI();
+    this.input.setDefaultCursor('default');
+    this.pauseContainer?.setVisible(false);
+    this.countdownText?.setVisible(false);
+    this.beatTimer?.remove(false);
+    this.promptRotationTween?.stop();
+    this.stopAllShrinks();
+    this.clearPromptGrid();
+    this.stopStagePhaseClip();
+    this.stopPromptAudioSequence();
+    this.removeStorySamVideo();
+    this.sound.stopAll();
+    this.suppressGameFrameMask = true;
+    this.setGameFrameMaskVisible(false);
+    this.setCheckpointsVisible(false);
+    this.setGifCursorVisible(false);
+    this.hitboxGraphics.clear();
+
+    this.playEndingVideoWithSummaryAndReturn(endingVideo2Url).catch(() => {
+      this.removeEndingVideoOverlay();
+      this.returnToMenu();
+    });
   }
 
   private getCurrentBpm(): number {
@@ -681,6 +839,7 @@ export class GameScene extends Phaser.Scene {
     this.input.setDefaultCursor('default');
     this.setGifCursorVisible(false);
     this.clearButtonEffectUI();
+    this.removeDebugEndingButtons();
     this.removeStorySamVideo();
     this.removeEndingVideoOverlay();
     this.hideLoadingOverlay();
@@ -849,9 +1008,9 @@ export class GameScene extends Phaser.Scene {
     this.onBeat();
     this.beatTimer = this.time.addEvent({ delay: this.beatMs, repeat: 7, callback: this.onBeat, callbackScope: this });
 
-    // if (!this.isRotation && this.mode !== 'story') {
-    //   this.startPromptAudioSequence((this.currentSection as NormalSection).prompts);
-    // }
+    if (!this.isRotation && this.mode !== 'story') {
+      this.startPromptAudioSequence((this.currentSection as NormalSection).prompts);
+    }
   }
 
   private startCheckPhase() {
@@ -2556,8 +2715,8 @@ export class GameScene extends Phaser.Scene {
   private createEndingSummaryCard() {
     if (!this.endingVideoRoot) return;
 
-    const { score, rank, verdict } = this.buildEndingSummary();
-    const scoreBar = this.buildEndingScoreBar(score, rank);
+    const { accuracyPercent, rank, verdict } = this.buildEndingSummary();
+    const scoreBar = this.buildEndingScoreBar(accuracyPercent, rank);
 
     this.endingSummaryCard = document.createElement('div');
     this.endingSummaryCard.style.position = 'absolute';
@@ -2575,7 +2734,7 @@ export class GameScene extends Phaser.Scene {
     this.endingSummaryCard.style.fontFamily = "'Noto Sans TC', 'PingFang TC', sans-serif";
     this.endingSummaryCard.style.pointerEvents = 'none';
     this.endingSummaryCard.innerHTML = [
-      `<div style=\"font-size:40px;font-weight:800;letter-spacing:1px;line-height:1.05;margin-bottom:10px;\">Score ${score}</div>`,
+      `<div style=\"font-size:40px;font-weight:800;letter-spacing:1px;line-height:1.05;margin-bottom:10px;\">Accuracy ${accuracyPercent} %</div>`,
       `<div style=\"font-size:30px;font-weight:800;color:#ffe082;letter-spacing:1px;margin-bottom:12px;\">評價 ${rank}</div>`,
       scoreBar,
       `<div style=\"font-size:26px;font-weight:700;line-height:1.3;margin-bottom:12px;\">${verdict}</div>`,
@@ -2585,18 +2744,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildEndingScoreBar(score: number, rank: string): string {
-    const clampedScore = Phaser.Math.Clamp(score, 0, 1000);
-    const scorePercent = (clampedScore / 1000) * 100;
+    const clampedScore = Phaser.Math.Clamp(score, 0, 100);
+    const scorePercent = clampedScore;
     const ranks = [
       { label: 'D', min: 0, color: '#8ea0b8' },
-      { label: 'C', min: 500, color: '#7ad7ff' },
-      { label: 'B', min: 700, color: '#7cff8f' },
-      { label: 'A', min: 850, color: '#ffd86e' },
-      { label: 'S', min: 950, color: '#ff8c6b' },
+      { label: 'C', min: 70, color: '#7ad7ff' },
+      { label: 'B', min: 80, color: '#dd4d00' },
+      { label: 'A', min: 90, color: '#ff0000' },
+      { label: 'S', min: 95, color: '#00ffe5' },
+      { label: 'S+', min: 99, color: '#66ff00' },
+      { label: 'S++', min: 100, color: '#ffee00' },
     ];
 
     const markers = ranks.map(({ label, min, color }) => {
-      const left = (min / 1000) * 100;
+      const left = min;
       const isCurrentRank = label === rank;
       return `<div style=\"position:absolute;left:${left}%;top:0;transform:translateX(-50%);text-align:center;\">`
         + `<div style=\"width:2px;height:16px;background:rgba(255,255,255,0.55);margin:0 auto 6px;\"></div>`
@@ -2609,7 +2770,7 @@ export class GameScene extends Phaser.Scene {
       '<div style="margin:0 0 16px;">',
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:15px;font-weight:700;color:#d9e3f0;letter-spacing:0.04em;">',
       '<span>Score Gauge</span>',
-      `<span style="color:#ffffff;">${clampedScore} / 1000</span>`,
+      `<span style="color:#ffffff;">${clampedScore} / 100</span>`,
       '</div>',
       '<div style="position:relative;padding-top:2px;padding-bottom:34px;">',
       '<div style="position:relative;height:16px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,0.12);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.12);">',
@@ -2653,24 +2814,29 @@ export class GameScene extends Phaser.Scene {
     return Phaser.Math.Clamp(this.settings?.masterVolume ?? DEFAULT_SETTINGS.masterVolume, 0, 1);
   }
 
-  private buildEndingSummary(): { score: number; rank: string; verdict: string } {
-    const totalJudgementCount = this.perfectCount + this.missCount + this.falseTouchCount;
+  private buildEndingSummary(): { accuracyPercent: number; rank: string; verdict: string } {
+    const totalJudgementCount = this.perfectCount + this.missCount;
     const accuracy = totalJudgementCount > 0 ? this.perfectCount / totalJudgementCount : 1;
-    const score = Math.round(accuracy * 850 + (this.lifeValue / 100) * 150);
-
-    if (score >= 950) {
-      return { score, rank: 'S', verdict: '節奏之神，幾乎沒有任何破綻。' };
+    const accuracyPercent = Math.round(accuracy * 100);
+    if (this.missCount ===0 )   {
+        if (this.falseTouchCount === 0) {
+            return { accuracyPercent, rank: 'S++', verdict: '完美無缺！等等...你花這麼多時間練這個做什麼?' };
+        }
+        return { accuracyPercent, rank: 'S+', verdict: '幾乎完美！你是控頭的神！' };
     }
-    if (score >= 850) {
-      return { score, rank: 'A', verdict: '節拍穩定，整體演出非常漂亮。' };
+    if (accuracyPercent >= 95) {
+      return { accuracyPercent, rank: 'S', verdict: '太誇張了, 你是鬼吧!' };
     }
-    if (score >= 700) {
-      return { score, rank: 'B', verdict: '節奏感不錯，再練一點就能衝高分。' };
+    if (accuracyPercent >= 90) {
+      return { accuracyPercent, rank: 'A', verdict: '小頭控的好,開台沒煩惱' };
     }
-    if (score >= 500) {
-      return { score, rank: 'C', verdict: '有抓到重點，但判定穩定度還要加強。' };
+    if (accuracyPercent >= 80) {
+      return { accuracyPercent, rank: 'B', verdict: '...好像...越來越能抓到訣竅了' };
     }
-    return { score, rank: 'D', verdict: '先把節奏踩穩，下一輪會更好。' };
+    if (accuracyPercent >= 70) {
+      return { accuracyPercent, rank: 'C', verdict: '阿館的頭沒擋好啊 = =' };
+    }
+    return { accuracyPercent, rank: 'D', verdict: '主播台差一點就沒了' };
   }
 
   private removeEndingVideoOverlay() {

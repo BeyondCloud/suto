@@ -4,13 +4,22 @@ import mainlineClickAudioUrl from '../assets/audio/short/來.wav';
 import tutorialLoopUrl from '../assets/audio/loop/tutorial.wav';
 import { DEFAULT_SETTINGS } from '../config';
 import type { GameSettings } from '../config';
-import { SCENE_LAYER } from '../layers';
+import { HTML_LAYER, SCENE_LAYER } from '../layers';
 
 const SETTINGS_STORAGE_KEY = 'suto.gameSettings';
 const MASTER_VOLUME_MIN = 0;
 const MASTER_VOLUME_MAX = 1;
 const MASTER_VOLUME_STEP = 0.01;
 const MASTER_VOLUME_PREVIEW_INTERVAL_MS = 120;
+const ENABLE_DEBUG_OVERLAY = true;
+
+interface DebugEndingPreset {
+  rank: string;
+  perfect: number;
+  miss: number;
+  falseTouch: number;
+  life: number;
+}
 
 export class MenuScene extends Phaser.Scene {
   private settings: GameSettings;
@@ -23,6 +32,8 @@ export class MenuScene extends Phaser.Scene {
   private tutorialLoopSound?: Phaser.Sound.BaseSound;
   private welcomeSound?: Phaser.Sound.BaseSound;
   private lastVolumePreviewAt = 0;
+  private debugEndingOverlayRoot?: HTMLDivElement;
+  private debugEndingHotkeyHandler?: (event: KeyboardEvent) => void;
 
   constructor() {
     super('MenuScene');
@@ -50,6 +61,7 @@ export class MenuScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.stopWelcomeAudio();
       this.stopTutorialLoop();
+      this.removeDebugEndingOverlay();
     });
 
     this.playWelcomeAudio();
@@ -167,6 +179,113 @@ export class MenuScene extends Phaser.Scene {
     this.settingsContainer.setVisible(false);
 
     this.buildJudgementRulesOverlay();
+
+    if (ENABLE_DEBUG_OVERLAY) {
+      this.createDebugEndingOverlay();
+    }
+  }
+
+  private getDebugEndingPresets(): DebugEndingPreset[] {
+    return [
+      { rank: 'S++', perfect: 100, miss: 0, falseTouch: 0, life: 100 },
+      { rank: 'S+', perfect: 100, miss: 0, falseTouch: 3, life: 96 },
+      { rank: 'S', perfect: 95, miss: 5, falseTouch: 2, life: 92 },
+      { rank: 'A', perfect: 90, miss: 10, falseTouch: 4, life: 84 },
+      { rank: 'B', perfect: 80, miss: 20, falseTouch: 5, life: 72 },
+      { rank: 'C', perfect: 70, miss: 30, falseTouch: 6, life: 58 },
+      { rank: 'D', perfect: 60, miss: 40, falseTouch: 8, life: 36 },
+    ];
+  }
+
+  private createDebugEndingOverlay() {
+    this.removeDebugEndingOverlay();
+
+    const presets = this.getDebugEndingPresets();
+    const root = document.createElement('div');
+    root.setAttribute('data-suto-menu-debug-ending', '1');
+    root.style.position = 'fixed';
+    root.style.left = '12px';
+    root.style.top = '12px';
+    root.style.zIndex = String(HTML_LAYER.GAME_FRAME_BEZEL - 1);
+    root.style.display = 'grid';
+    root.style.gridTemplateColumns = 'repeat(2, minmax(86px, 1fr))';
+    root.style.gap = '8px';
+    root.style.padding = '12px';
+    root.style.width = '224px';
+    root.style.background = 'rgba(15, 20, 32, 0.96)';
+    root.style.border = '2px solid #ffd24d';
+    root.style.borderRadius = '10px';
+    root.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.45)';
+    root.style.fontFamily = "'Noto Sans TC', 'PingFang TC', sans-serif";
+    root.style.pointerEvents = 'auto';
+
+    const title = document.createElement('div');
+    title.textContent = 'MENU DEBUG 結算';
+    title.style.gridColumn = '1 / -1';
+    title.style.fontSize = '16px';
+    title.style.fontWeight = '800';
+    title.style.color = '#ffe066';
+    root.appendChild(title);
+
+    presets.forEach(preset => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = preset.rank;
+      button.style.height = '40px';
+      button.style.border = '2px solid #c8dcff';
+      button.style.borderRadius = '8px';
+      button.style.background = '#233042';
+      button.style.color = '#ffffff';
+      button.style.fontSize = '20px';
+      button.style.fontWeight = '800';
+      button.style.cursor = 'pointer';
+      button.onmouseenter = () => {
+        button.style.background = '#385276';
+        button.style.borderColor = '#ffffff';
+      };
+      button.onmouseleave = () => {
+        button.style.background = '#233042';
+        button.style.borderColor = '#c8dcff';
+      };
+      button.onclick = () => this.startDebugEndingPreview(preset);
+      root.appendChild(button);
+    });
+
+    const hint = document.createElement('div');
+    hint.textContent = '快捷鍵: 1~7';
+    hint.style.gridColumn = '1 / -1';
+    hint.style.fontSize = '14px';
+    hint.style.fontWeight = '700';
+    hint.style.color = '#ffffff';
+    root.appendChild(hint);
+
+    document.body.appendChild(root);
+    this.debugEndingOverlayRoot = root;
+
+    this.debugEndingHotkeyHandler = (event: KeyboardEvent) => {
+      const index = Number(event.key) - 1;
+      if (!Number.isInteger(index) || index < 0 || index >= presets.length) return;
+      this.startDebugEndingPreview(presets[index]);
+    };
+    window.addEventListener('keydown', this.debugEndingHotkeyHandler);
+  }
+
+  private removeDebugEndingOverlay() {
+    if (this.debugEndingHotkeyHandler) {
+      window.removeEventListener('keydown', this.debugEndingHotkeyHandler);
+      this.debugEndingHotkeyHandler = undefined;
+    }
+    this.debugEndingOverlayRoot?.remove();
+    this.debugEndingOverlayRoot = undefined;
+  }
+
+  private startDebugEndingPreview(preset: DebugEndingPreset) {
+    this.scene.start('GameScene', {
+      settings: this.settings,
+      stageIndex: 0,
+      mode: 'challenge',
+      debugEndingPreset: preset,
+    });
   }
 
   private buildJudgementRulesOverlay() {
