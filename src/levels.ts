@@ -366,7 +366,22 @@ export const MAIN_LEVEL_DATA: LevelData = {
         }
 
       ],
-    }
+    },
+    // {
+    //   stage_number: 3,
+    //   bpm: 183,
+    //   sections: [
+    //     {
+    //       bpm: 183.5,
+    //       type: 'normal',
+    //       effect: 'button',
+    //       image: 'src/assets/cmonbruh.png',
+    //       prompts: ['x', 'x', 'x', 'x',
+    //                 'x', 'x', 'x', 'x'],
+    //     }
+
+    //   ],
+    // }
 
   ],
 };

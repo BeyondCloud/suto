@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import suto400GifUrl from '../assets/suto400_2x.gif';
 import gameoverBgUrl from '../assets/gameover.png';
 import samVideoUrl from '../assets/mp4/sam.mp4';
+import endingVideo1Url from '../assets/end1-1.mp4';
+import endingVideo2Url from '../assets/end1-2.mp4';
 import promptDUrl from '../assets/audio/D.wav';
 import promptLUrl from '../assets/audio/L.wav';
 import promptRUrl from '../assets/audio/R.wav';
@@ -48,6 +50,7 @@ const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
 const BUTTON_EFFECT_REQUIRED_CLICKS = 10;
 const BUTTON_EFFECT_SCALE_STEP = 0.04;
 const ENABLE_DEBUG_OVERLAY = false;
+const ENDING_RETURN_COOLDOWN_MS = 1000;
 
 type GameMode = 'challenge' | 'story';
 
@@ -101,6 +104,19 @@ export class GameScene extends Phaser.Scene {
   private currentSection!: Section;
   private storySamVideoRoot?: HTMLDivElement;
   private storySamVideo?: HTMLVideoElement;
+  private endingVideoRoot?: HTMLDivElement;
+  private endingVideo?: HTMLVideoElement;
+  private endingSummaryCard?: HTMLDivElement;
+  private endingPromptText?: HTMLDivElement;
+  private endingReturnReady = false;
+  private endingSequenceStarted = false;
+  private endingReturnReadyEvent?: Phaser.Time.TimerEvent;
+  private endingKeyHandler?: (event: KeyboardEvent) => void;
+  private endingPointerHandler?: (event: PointerEvent) => void;
+  private endingMouseHandler?: (event: MouseEvent) => void;
+  private endingTouchHandler?: (event: TouchEvent) => void;
+  private readonly endingRootAttr = 'data-suto-ending-root';
+  private readonly endingPromptAttr = 'data-suto-ending-prompt';
   private readonly refreshStorySamVideoBounds = () => {
     if (!this.storySamVideoRoot) return;
     const rect = this.game.canvas.getBoundingClientRect();
@@ -108,6 +124,14 @@ export class GameScene extends Phaser.Scene {
     this.storySamVideoRoot.style.top = `${rect.top}px`;
     this.storySamVideoRoot.style.width = `${rect.width}px`;
     this.storySamVideoRoot.style.height = `${rect.height}px`;
+  };
+  private readonly refreshEndingVideoBounds = () => {
+    if (!this.endingVideoRoot) return;
+    const rect = this.game.canvas.getBoundingClientRect();
+    this.endingVideoRoot.style.left = `${rect.left}px`;
+    this.endingVideoRoot.style.top = `${rect.top}px`;
+    this.endingVideoRoot.style.width = `${rect.width}px`;
+    this.endingVideoRoot.style.height = `${rect.height}px`;
   };
 
   // Timing
@@ -129,6 +153,7 @@ export class GameScene extends Phaser.Scene {
   private cursorGifBorder!: HTMLDivElement;
   private cursorCheckPointDot!: HTMLDivElement;
   private gameFrameMask: HTMLDivElement[] = [];
+  private suppressGameFrameMask = false;
   private cursorGifAngle = { value: 180 };
   private cursorGifAngleTween?: Phaser.Tweens.Tween;
   private cursorScaleX = 1;
@@ -216,6 +241,12 @@ export class GameScene extends Phaser.Scene {
   private buttonEffectContainer?: Phaser.GameObjects.Container;
   private buttonEffectRect?: Phaser.GameObjects.Rectangle;
   private buttonEffectProgress?: Phaser.GameObjects.Text;
+  private buttonEffectLabel?: Phaser.GameObjects.Text;
+  private buttonEffectCountdownRing?: Phaser.GameObjects.Graphics;
+  private buttonEffectCountdownText?: Phaser.GameObjects.Text;
+  private buttonEffectCountdownTween?: Phaser.Tweens.Tween;
+  private buttonEffectCountdownDurationMs = 0;
+  private readonly buttonEffectCountdownState = { value: 1 };
 
   // Check phase
   private beatTargets: Direction[] = [];
@@ -284,6 +315,8 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.isGameOver = false;
+    this.endingSequenceStarted = false;
+    this.suppressGameFrameMask = false;
     this.loadStage(this.stageIndex);
     this.sectionIndex = 0;
     this.lifeValue = 100;
@@ -551,6 +584,9 @@ export class GameScene extends Phaser.Scene {
     this.setGifCursorVisible(false);
     this.clearButtonEffectUI();
     this.removeStorySamVideo();
+    this.removeEndingVideoOverlay();
+    this.endingSequenceStarted = false;
+    this.suppressGameFrameMask = false;
     this.stopStagePhaseClip();
     this.stopPromptAudioSequence();
     this.cursorGifAngleTween?.stop();
@@ -588,6 +624,11 @@ export class GameScene extends Phaser.Scene {
   private refreshGameFrameMask(rect: DOMRect) {
     if (this.gameFrameMask.length !== 4) return;
 
+    if (this.suppressGameFrameMask) {
+      this.setGameFrameMaskVisible(false);
+      return;
+    }
+
     const insetX = GAME_FRAME_INSET_X * this.cursorScaleX;
     const insetY = GAME_FRAME_INSET_Y * this.cursorScaleY;
     const [top, bottom, left, right] = this.gameFrameMask;
@@ -612,9 +653,15 @@ export class GameScene extends Phaser.Scene {
     right.style.width = `${insetX}px`;
     right.style.height = `${Math.max(0, rect.height - insetY * 2)}px`;
 
+    this.setGameFrameMaskVisible(true);
+  }
+
+  private setGameFrameMaskVisible(visible: boolean) {
     for (const panel of this.gameFrameMask) {
-      panel.style.display = 'block';
-      document.body.appendChild(panel);
+      panel.style.display = visible ? 'block' : 'none';
+      if (visible) {
+        document.body.appendChild(panel);
+      }
     }
   }
 
@@ -702,9 +749,9 @@ export class GameScene extends Phaser.Scene {
     this.onBeat();
     this.beatTimer = this.time.addEvent({ delay: this.beatMs, repeat: 7, callback: this.onBeat, callbackScope: this });
 
-    // if (!this.isRotation && this.mode !== 'story') {
-    //   this.startPromptAudioSequence((this.currentSection as NormalSection).prompts);
-    // }
+    if (!this.isRotation && this.mode !== 'story') {
+      this.startPromptAudioSequence((this.currentSection as NormalSection).prompts);
+    }
   }
 
   private startCheckPhase() {
@@ -810,7 +857,11 @@ export class GameScene extends Phaser.Scene {
     if (this.sectionIndex >= this.currentStage.sections.length) {
       this.stageIndex++;
       if (this.stageIndex >= this.levelData.stages.length) {
-        this.time.delayedCall(500, () => this.scene.start('MenuScene'));
+        if (this.mode === 'story') {
+          this.playStoryEndingSequence();
+        } else {
+          this.time.delayedCall(500, () => this.scene.start('MenuScene'));
+        }
       } else {
         this.loadStage(this.stageIndex);
         this.sectionIndex = 0;
@@ -1555,20 +1606,86 @@ export class GameScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    rect.on('pointerover', () => {
-      rect.setFillStyle(0xd43d3d, 1);
-      rect.setStrokeStyle(4, 0xfff5f5, 1);
-    });
-    rect.on('pointerout', () => {
-      rect.setFillStyle(0xbf2f2f, 0.96);
-      rect.setStrokeStyle(4, 0xffffff, 0.95);
-    });
+    rect.on('pointerover', () => this.applyButtonEffectTheme(true));
+    rect.on('pointerout', () => this.applyButtonEffectTheme(false));
     rect.on('pointerdown', () => this.onButtonEffectClick());
 
     container.add([rect, label, progress]);
     this.buttonEffectContainer = container;
     this.buttonEffectRect = rect;
     this.buttonEffectProgress = progress;
+    this.buttonEffectLabel = label;
+
+    this.buttonEffectCountdownRing = this.add.graphics().setDepth(SCENE_LAYER.HUD + 7);
+    this.buttonEffectCountdownText = this.add.text(x, y - 130, '', {
+      fontSize: '28px',
+      color: '#ffe8a6',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(SCENE_LAYER.HUD + 8);
+
+    this.buttonEffectCountdownDurationMs = this.beatMs * 8;
+    this.buttonEffectCountdownState.value = 1;
+    this.drawButtonEffectCountdown();
+    this.buttonEffectCountdownTween = this.tweens.add({
+      targets: this.buttonEffectCountdownState,
+      value: 0,
+      duration: this.buttonEffectCountdownDurationMs,
+      ease: 'Linear',
+      onUpdate: () => this.drawButtonEffectCountdown(),
+      onComplete: () => this.drawButtonEffectCountdown(),
+    });
+
+    this.applyButtonEffectTheme(false);
+  }
+
+  private drawButtonEffectCountdown() {
+    if (!this.buttonEffectCountdownRing || !this.buttonEffectCountdownText) return;
+
+    const ratio = Phaser.Math.Clamp(this.buttonEffectCountdownState.value, 0, 1);
+    const x = GAME_WIDTH / 2;
+    const y = GAME_HEIGHT - 120;
+    const radius = 74;
+    const start = -Math.PI / 2;
+    const end = start + Math.PI * 2 * ratio;
+
+    this.buttonEffectCountdownRing.clear();
+    this.buttonEffectCountdownRing.lineStyle(8, 0x1f1f27, 0.42);
+    this.buttonEffectCountdownRing.strokeCircle(x, y, radius);
+
+    if (ratio > 0) {
+      this.buttonEffectCountdownRing.lineStyle(10, 0xffdb6e, 0.58);
+      this.buttonEffectCountdownRing.beginPath();
+      this.buttonEffectCountdownRing.arc(x, y, radius, start, end, false);
+      this.buttonEffectCountdownRing.strokePath();
+    }
+
+    const remainSec = Math.max(0, (ratio * this.buttonEffectCountdownDurationMs) / 1000);
+    this.buttonEffectCountdownText.setText(`${remainSec.toFixed(1)}s`);
+  }
+
+  private applyButtonEffectTheme(hovered: boolean) {
+    if (!this.buttonEffectRect) return;
+    if (this.buttonEffectClicks >= BUTTON_EFFECT_REQUIRED_CLICKS) return;
+
+    const isLatePhase = this.buttonEffectClicks > 5;
+    if (isLatePhase) {
+      if (hovered) {
+        this.buttonEffectRect.setFillStyle(0x8655e8, 1);
+        this.buttonEffectRect.setStrokeStyle(4, 0xf4ebff, 1);
+      } else {
+        this.buttonEffectRect.setFillStyle(0x7341d8, 0.96);
+        this.buttonEffectRect.setStrokeStyle(4, 0xe8daff, 0.95);
+      }
+      return;
+    }
+
+    if (hovered) {
+      this.buttonEffectRect.setFillStyle(0xd43d3d, 1);
+      this.buttonEffectRect.setStrokeStyle(4, 0xfff5f5, 1);
+    } else {
+      this.buttonEffectRect.setFillStyle(0xbf2f2f, 0.96);
+      this.buttonEffectRect.setStrokeStyle(4, 0xffffff, 0.95);
+    }
   }
 
   private onButtonEffectClick() {
@@ -1595,11 +1712,18 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.buttonEffectProgress?.setText(`${this.buttonEffectClicks}/${BUTTON_EFFECT_REQUIRED_CLICKS}`);
+    this.buttonEffectLabel?.setText(this.buttonEffectClicks > 5 ? '憂鬱藍調' : '嚴厲斥責');
+    this.applyButtonEffectTheme(false);
 
     if (this.buttonEffectClicks >= BUTTON_EFFECT_REQUIRED_CLICKS) {
       this.buttonEffectRect?.disableInteractive();
       this.buttonEffectRect?.setFillStyle(0x2f9d44, 0.98);
       this.buttonEffectProgress?.setColor('#d7ffe0');
+
+      // End this button section immediately once the required clicks are met,
+      // instead of waiting for the remaining beats to elapse.
+      this.beatTimer?.remove(false);
+      this.time.delayedCall(0, () => this.onCheckPhaseEnd());
     }
   }
 
@@ -1610,6 +1734,15 @@ export class GameScene extends Phaser.Scene {
     this.buttonEffectContainer = undefined;
     this.buttonEffectRect = undefined;
     this.buttonEffectProgress = undefined;
+    this.buttonEffectLabel = undefined;
+    this.buttonEffectCountdownTween?.stop();
+    this.buttonEffectCountdownTween = undefined;
+    this.buttonEffectCountdownRing?.destroy();
+    this.buttonEffectCountdownRing = undefined;
+    this.buttonEffectCountdownText?.destroy();
+    this.buttonEffectCountdownText = undefined;
+    this.buttonEffectCountdownDurationMs = 0;
+    this.buttonEffectCountdownState.value = 1;
     if (!this.isGameOver && !this.isPaused) {
       this.input.setDefaultCursor('none');
     }
@@ -2033,6 +2166,7 @@ export class GameScene extends Phaser.Scene {
     this.stopStagePhaseClip();
     this.stopPromptAudioSequence();
     this.removeStorySamVideo();
+    this.removeEndingVideoOverlay();
     this.sound.stopAll();
     this.sound.play('gameover_sfx');
     this.setCheckpointsVisible(false);
@@ -2094,6 +2228,13 @@ export class GameScene extends Phaser.Scene {
         this.cursorGifAngleTween.resume();
       }
     }
+    if (this.buttonEffectCountdownTween) {
+      if (paused) {
+        this.buttonEffectCountdownTween.pause();
+      } else {
+        this.buttonEffectCountdownTween.resume();
+      }
+    }
     if (this.promptRotationTween) {
       if (paused) {
         this.promptRotationTween.pause();
@@ -2107,6 +2248,7 @@ export class GameScene extends Phaser.Scene {
     this.isPaused = false;
     this.clearButtonEffectUI();
     this.removeStorySamVideo();
+    this.removeEndingVideoOverlay();
     this.stopStagePhaseClip();
     this.stopPromptAudioSequence();
     this.setGameplayTimersPaused(false);
@@ -2120,8 +2262,272 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(0, () => this.scene.start('MenuScene'));
   }
 
+  private playStoryEndingSequence() {
+    if (this.endingSequenceStarted || this.isGameOver) return;
+    this.endingSequenceStarted = true;
+
+    this.isPaused = false;
+    this.clearButtonEffectUI();
+    this.input.setDefaultCursor('default');
+    this.pauseContainer?.setVisible(false);
+    this.countdownText?.setVisible(false);
+    this.beatTimer?.remove(false);
+    this.promptRotationTween?.stop();
+    this.stopAllShrinks();
+    this.clearPromptGrid();
+    this.stopStagePhaseClip();
+    this.stopPromptAudioSequence();
+    this.removeStorySamVideo();
+    this.sound.stopAll();
+    this.suppressGameFrameMask = true;
+    this.setGameFrameMaskVisible(false);
+    this.setCheckpointsVisible(false);
+    this.setGifCursorVisible(false);
+    this.hitboxGraphics.clear();
+
+    this.playStoryEndingSequenceInternal().catch(() => {
+      this.removeEndingVideoOverlay();
+      this.returnToMenu();
+    });
+  }
+
+  private async playStoryEndingSequenceInternal() {
+    await this.playEndingVideo(endingVideo1Url);
+    await this.playEndingVideoWithSummaryAndReturn(endingVideo2Url);
+  }
+
+  private playEndingVideo(videoUrl: string): Promise<void> {
+    return new Promise((resolve) => {
+      this.removeEndingVideoOverlay();
+      this.createEndingVideoRoot(videoUrl);
+      let completed = false;
+
+      const complete = () => {
+        if (completed) return;
+        completed = true;
+        this.removeEndingVideoOverlay();
+        resolve();
+      };
+
+      if (!this.endingVideo) {
+        complete();
+        return;
+      }
+
+      this.endingVideo.addEventListener('ended', complete, { once: true });
+      this.endingVideo.addEventListener('error', complete, { once: true });
+      this.endingVideo.play().catch(() => {
+        complete();
+      });
+    });
+  }
+
+  private playEndingVideoWithSummaryAndReturn(videoUrl: string): Promise<void> {
+    return new Promise((resolve) => {
+      this.removeEndingVideoOverlay();
+      this.createEndingVideoRoot(videoUrl);
+      this.createEndingSummaryCard();
+      this.createEndingPromptText();
+      let finished = false;
+
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        this.removeEndingVideoOverlay();
+        this.returnToMenu();
+        resolve();
+      };
+
+      const tryFinish = () => {
+        if (!this.endingReturnReady) return;
+        finish();
+      };
+
+      this.endingReturnReady = false;
+      this.endingPromptText!.textContent = '讀取結算中...';
+      this.endingReturnReadyEvent = this.time.delayedCall(ENDING_RETURN_COOLDOWN_MS, () => {
+        this.endingReturnReady = true;
+        if (this.endingPromptText) {
+          this.endingPromptText.textContent = '按任意按鍵返回主選單';
+        }
+      });
+
+      this.endingKeyHandler = () => tryFinish();
+      this.endingPointerHandler = () => tryFinish();
+      this.endingMouseHandler = () => tryFinish();
+      this.endingTouchHandler = () => tryFinish();
+      window.addEventListener('keydown', this.endingKeyHandler);
+      window.addEventListener('pointerdown', this.endingPointerHandler);
+      document.addEventListener('mousedown', this.endingMouseHandler, true);
+      document.addEventListener('touchstart', this.endingTouchHandler, true);
+
+      if (!this.endingVideo) {
+        finish();
+        return;
+      }
+
+      this.endingVideo.addEventListener('error', () => {
+        // Video decode failure should not block returning to menu.
+        this.endingReturnReady = true;
+        if (this.endingPromptText) {
+          this.endingPromptText.textContent = '按任意按鍵返回主選單';
+        }
+      }, { once: true });
+
+      this.endingVideo.play().catch(() => {
+        this.endingReturnReady = true;
+        if (this.endingPromptText) {
+          this.endingPromptText.textContent = '按任意按鍵返回主選單';
+        }
+      });
+    });
+  }
+
+  private createEndingVideoRoot(videoUrl: string) {
+    this.endingVideoRoot = document.createElement('div');
+    this.endingVideoRoot.setAttribute(this.endingRootAttr, '1');
+    this.endingVideoRoot.style.position = 'fixed';
+    this.endingVideoRoot.style.pointerEvents = 'auto';
+    this.endingVideoRoot.style.background = '#000000';
+    this.endingVideoRoot.style.zIndex = String(HTML_LAYER.FULLSCREEN_VIDEO);
+    this.endingVideoRoot.style.overflow = 'hidden';
+
+    this.endingVideo = document.createElement('video');
+    this.endingVideo.src = videoUrl;
+    this.endingVideo.autoplay = true;
+    this.endingVideo.loop = false;
+    this.endingVideo.controls = false;
+    this.endingVideo.playsInline = true;
+    this.endingVideo.preload = 'auto';
+    this.endingVideo.style.width = '100%';
+    this.endingVideo.style.height = '100%';
+    this.endingVideo.style.objectFit = 'contain';
+    this.endingVideo.style.background = '#000000';
+
+    this.endingVideoRoot.appendChild(this.endingVideo);
+    document.body.appendChild(this.endingVideoRoot);
+
+    this.refreshEndingVideoBounds();
+    window.addEventListener('resize', this.refreshEndingVideoBounds);
+  }
+
+  private createEndingSummaryCard() {
+    if (!this.endingVideoRoot) return;
+
+    const { score, rank, verdict } = this.buildEndingSummary();
+
+    this.endingSummaryCard = document.createElement('div');
+    this.endingSummaryCard.style.position = 'absolute';
+    this.endingSummaryCard.style.left = '50%';
+    this.endingSummaryCard.style.top = '60%';
+    this.endingSummaryCard.style.transform = 'translate(-50%, -50%)';
+    this.endingSummaryCard.style.width = 'min(72vw, 620px)';
+    this.endingSummaryCard.style.maxWidth = '92%';
+    this.endingSummaryCard.style.padding = '22px 26px';
+    this.endingSummaryCard.style.background = 'rgba(8, 12, 18, 0.74)';
+    this.endingSummaryCard.style.border = '2px solid rgba(255, 255, 255, 0.84)';
+    this.endingSummaryCard.style.borderRadius = '14px';
+    this.endingSummaryCard.style.boxShadow = '0 16px 36px rgba(0, 0, 0, 0.5)';
+    this.endingSummaryCard.style.color = '#ffffff';
+    this.endingSummaryCard.style.fontFamily = "'Noto Sans TC', 'PingFang TC', sans-serif";
+    this.endingSummaryCard.style.pointerEvents = 'none';
+    this.endingSummaryCard.innerHTML = [
+      `<div style=\"font-size:34px;font-weight:800;letter-spacing:1px;line-height:1.05;margin-bottom:8px;\">Score ${score}</div>`,
+      `<div style=\"font-size:25px;font-weight:800;color:#ffe082;letter-spacing:1px;margin-bottom:10px;\">評價 ${rank}</div>`,
+      `<div style=\"font-size:22px;font-weight:700;line-height:1.3;margin-bottom:10px;\">${verdict}</div>`,
+      `<div style=\"font-size:18px;line-height:1.55;color:#d9e3f0;\">Perfect ${this.perfectCount} / Miss ${this.missCount} / X ${this.falseTouchCount} / HP ${this.lifeValue}</div>`,
+    ].join('');
+    this.endingVideoRoot.appendChild(this.endingSummaryCard);
+  }
+
+  private createEndingPromptText() {
+    if (!this.endingVideoRoot) return;
+
+    this.endingPromptText = document.createElement('div');
+    this.endingPromptText.setAttribute(this.endingPromptAttr, '1');
+    this.endingPromptText.style.position = 'absolute';
+    this.endingPromptText.style.left = '50%';
+    this.endingPromptText.style.bottom = '6%';
+    this.endingPromptText.style.transform = 'translateX(-50%)';
+    this.endingPromptText.style.color = '#ffffff';
+    this.endingPromptText.style.fontFamily = "'Noto Sans TC', 'PingFang TC', sans-serif";
+    this.endingPromptText.style.fontSize = '30px';
+    this.endingPromptText.style.fontWeight = '800';
+    this.endingPromptText.style.letterSpacing = '1px';
+    this.endingPromptText.style.textShadow =
+      '0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000';
+    this.endingPromptText.style.pointerEvents = 'none';
+    this.endingVideoRoot.appendChild(this.endingPromptText);
+  }
+
+  private buildEndingSummary(): { score: number; rank: string; verdict: string } {
+    const totalJudgementCount = this.perfectCount + this.missCount + this.falseTouchCount;
+    const accuracy = totalJudgementCount > 0 ? this.perfectCount / totalJudgementCount : 1;
+    const score = Math.round(accuracy * 850 + (this.lifeValue / 100) * 150);
+
+    if (score >= 950) {
+      return { score, rank: 'S', verdict: '節奏之神，幾乎沒有任何破綻。' };
+    }
+    if (score >= 850) {
+      return { score, rank: 'A', verdict: '節拍穩定，整體演出非常漂亮。' };
+    }
+    if (score >= 700) {
+      return { score, rank: 'B', verdict: '節奏感不錯，再練一點就能衝高分。' };
+    }
+    if (score >= 500) {
+      return { score, rank: 'C', verdict: '有抓到重點，但判定穩定度還要加強。' };
+    }
+    return { score, rank: 'D', verdict: '先把節奏踩穩，下一輪會更好。' };
+  }
+
+  private removeEndingVideoOverlay() {
+    window.removeEventListener('resize', this.refreshEndingVideoBounds);
+
+    this.endingReturnReadyEvent?.remove(false);
+    this.endingReturnReadyEvent = undefined;
+    this.endingReturnReady = false;
+
+    if (this.endingKeyHandler) {
+      window.removeEventListener('keydown', this.endingKeyHandler);
+      this.endingKeyHandler = undefined;
+    }
+    if (this.endingPointerHandler) {
+      window.removeEventListener('pointerdown', this.endingPointerHandler);
+      this.endingPointerHandler = undefined;
+    }
+    if (this.endingMouseHandler) {
+      document.removeEventListener('mousedown', this.endingMouseHandler, true);
+      this.endingMouseHandler = undefined;
+    }
+    if (this.endingTouchHandler) {
+      document.removeEventListener('touchstart', this.endingTouchHandler, true);
+      this.endingTouchHandler = undefined;
+    }
+
+    if (this.endingVideo) {
+      this.endingVideo.pause();
+      this.endingVideo.currentTime = 0;
+      this.endingVideo.src = '';
+      this.endingVideo.load();
+      this.endingVideo.remove();
+      this.endingVideo = undefined;
+    }
+
+    this.endingSummaryCard?.remove();
+    this.endingSummaryCard = undefined;
+
+    this.endingPromptText?.remove();
+    this.endingPromptText = undefined;
+
+    this.endingVideoRoot?.remove();
+    this.endingVideoRoot = undefined;
+
+    const staleRoots = document.querySelectorAll<HTMLDivElement>(`[${this.endingRootAttr}]`);
+    staleRoots.forEach(node => node.remove());
+  }
+
   private onEsc() {
-    if (this.isPaused) return;
+    if (this.isPaused || this.endingSequenceStarted) return;
     this.isPaused = true;
     this.setGameplayTimersPaused(true);
     this.pauseContainer.setVisible(true);
