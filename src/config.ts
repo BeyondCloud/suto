@@ -2,6 +2,7 @@ export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 720;
 
 export interface GameSettings {
+  masterVolume: number;
   bpm: number;
   shrinkLeadMs: number;
   perfectJudgeWindowMs: number;
@@ -13,6 +14,7 @@ export interface GameSettings {
 }
 
 export const DEFAULT_SETTINGS: GameSettings = {
+  masterVolume: 1,
   bpm: 183,
   shrinkLeadMs: 500,
   perfectJudgeWindowMs: 220,

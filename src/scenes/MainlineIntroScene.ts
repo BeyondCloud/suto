@@ -3,7 +3,7 @@ import openingVideoUrl from '../assets/mp4/開頭影片.mp4';
 import tutorial2VideoUrl from '../assets/tutorial-2.mp4';
 import tutorialLoopUrl from '../assets/audio/loop/tutorial.wav';
 import type { GameSettings } from '../config';
-import { GAME_HEIGHT, GAME_WIDTH } from '../config';
+import { DEFAULT_SETTINGS, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { HTML_LAYER, SCENE_LAYER } from '../layers';
 import { MAIN_LEVEL_DATA } from '../levels';
 
@@ -72,6 +72,7 @@ export class MainlineIntroScene extends Phaser.Scene {
   }
 
   create() {
+    this.applyMasterVolume();
     this.tutorial2StartRequested = false;
     this.forceRemoveTutorial2Artifacts();
     this.input.setDefaultCursor('default');
@@ -113,6 +114,7 @@ export class MainlineIntroScene extends Phaser.Scene {
     this.openingVideo.src = openingVideoUrl;
     this.openingVideo.autoplay = true;
     this.openingVideo.controls = false;
+    this.openingVideo.volume = this.getMasterVolume();
     this.openingVideo.playsInline = true;
     this.openingVideo.preload = 'auto';
     this.openingVideo.style.width = '100%';
@@ -227,6 +229,7 @@ export class MainlineIntroScene extends Phaser.Scene {
     this.tutorial2Video.autoplay = true;
     this.tutorial2Video.loop = true;
     this.tutorial2Video.controls = false;
+    this.tutorial2Video.volume = this.getMasterVolume();
     this.tutorial2Video.playsInline = true;
     this.tutorial2Video.preload = 'auto';
     this.tutorial2Video.style.width = '100%';
@@ -384,6 +387,7 @@ export class MainlineIntroScene extends Phaser.Scene {
 
   private playTutorialLoop() {
     this.stopTutorialLoop();
+    this.applyMasterVolume();
     this.tutorialLoopSound = this.sound.add('tutorial_loop', { loop: true });
     this.tutorialLoopSound.play();
   }
@@ -395,5 +399,15 @@ export class MainlineIntroScene extends Phaser.Scene {
     this.tutorialLoopSound.stop();
     this.tutorialLoopSound.destroy();
     this.tutorialLoopSound = undefined;
+  }
+
+  private applyMasterVolume() {
+    this.sound.volume = this.getMasterVolume();
+    if (this.openingVideo) this.openingVideo.volume = this.getMasterVolume();
+    if (this.tutorial2Video) this.tutorial2Video.volume = this.getMasterVolume();
+  }
+
+  private getMasterVolume(): number {
+    return Phaser.Math.Clamp(this.settings?.masterVolume ?? DEFAULT_SETTINGS.masterVolume, 0, 1);
   }
 }

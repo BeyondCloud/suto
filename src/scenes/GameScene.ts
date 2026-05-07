@@ -15,6 +15,7 @@ import storyCheckStartUrl from '../assets/audio/short/suto.wav';
 import gameoverSfxUrl from '../assets/audio/long/gameover.wav';
 import stage120Url from '../assets/audio/120.wav';
 import {
+  DEFAULT_SETTINGS,
   GAME_WIDTH, GAME_HEIGHT,
   DIR_ANGLE,
   getRotationPoints,
@@ -322,6 +323,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.applyMasterVolume();
     this.isGameOver = false;
     this.endingSequenceStarted = false;
     this.suppressGameFrameMask = false;
@@ -1296,6 +1298,7 @@ export class GameScene extends Phaser.Scene {
     this.storySamVideo.loop = true;
     this.storySamVideo.controls = false;
     this.storySamVideo.muted = false;
+    this.storySamVideo.volume = this.getMasterVolume();
     this.storySamVideo.playsInline = true;
     this.storySamVideo.preload = 'auto';
     this.storySamVideo.style.width = '100%';
@@ -2535,6 +2538,7 @@ export class GameScene extends Phaser.Scene {
     this.endingVideo.autoplay = true;
     this.endingVideo.loop = false;
     this.endingVideo.controls = false;
+    this.endingVideo.volume = this.getMasterVolume();
     this.endingVideo.playsInline = true;
     this.endingVideo.preload = 'auto';
     this.endingVideo.style.width = '100%';
@@ -2596,6 +2600,16 @@ export class GameScene extends Phaser.Scene {
       '0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000';
     this.endingPromptText.style.pointerEvents = 'none';
     this.endingVideoRoot.appendChild(this.endingPromptText);
+  }
+
+  private applyMasterVolume() {
+    this.sound.volume = this.getMasterVolume();
+    if (this.storySamVideo) this.storySamVideo.volume = this.getMasterVolume();
+    if (this.endingVideo) this.endingVideo.volume = this.getMasterVolume();
+  }
+
+  private getMasterVolume(): number {
+    return Phaser.Math.Clamp(this.settings?.masterVolume ?? DEFAULT_SETTINGS.masterVolume, 0, 1);
   }
 
   private buildEndingSummary(): { score: number; rank: string; verdict: string } {
