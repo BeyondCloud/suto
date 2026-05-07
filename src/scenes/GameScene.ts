@@ -215,7 +215,6 @@ export class GameScene extends Phaser.Scene {
   private buttonEffectClicks = 0;
   private buttonEffectContainer?: Phaser.GameObjects.Container;
   private buttonEffectRect?: Phaser.GameObjects.Rectangle;
-  private buttonEffectLabel?: Phaser.GameObjects.Text;
   private buttonEffectProgress?: Phaser.GameObjects.Text;
 
   // Check phase
@@ -1536,6 +1535,7 @@ export class GameScene extends Phaser.Scene {
     this.clearButtonEffectUI();
     this.isButtonEffectActive = true;
     this.buttonEffectClicks = 0;
+    this.input.setDefaultCursor('default');
 
     const x = GAME_WIDTH / 2;
     const y = GAME_HEIGHT - 120;
@@ -1549,7 +1549,7 @@ export class GameScene extends Phaser.Scene {
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5);
-    const progress = this.add.text(0, 56, `0/${BUTTON_EFFECT_REQUIRED_CLICKS}`, {
+    const progress = this.add.text(0, -78, `0/${BUTTON_EFFECT_REQUIRED_CLICKS}`, {
       fontSize: '24px',
       color: '#ffe6e6',
       fontStyle: 'bold',
@@ -1568,7 +1568,6 @@ export class GameScene extends Phaser.Scene {
     container.add([rect, label, progress]);
     this.buttonEffectContainer = container;
     this.buttonEffectRect = rect;
-    this.buttonEffectLabel = label;
     this.buttonEffectProgress = progress;
   }
 
@@ -1610,8 +1609,10 @@ export class GameScene extends Phaser.Scene {
     this.buttonEffectContainer?.destroy(true);
     this.buttonEffectContainer = undefined;
     this.buttonEffectRect = undefined;
-    this.buttonEffectLabel = undefined;
     this.buttonEffectProgress = undefined;
+    if (!this.isGameOver && !this.isPaused) {
+      this.input.setDefaultCursor('none');
+    }
   }
 
   // ---------- Input ----------
@@ -2141,8 +2142,8 @@ export class GameScene extends Phaser.Scene {
         this.countdownText.setVisible(false);
         this.isPaused = false;
         this.setGameplayTimersPaused(false);
-        this.input.setDefaultCursor('none');
-        this.setGifCursorVisible(this.gamePhase === 'check');
+        this.input.setDefaultCursor(this.isButtonEffectActive ? 'default' : 'none');
+        this.setGifCursorVisible(this.gamePhase === 'check' && !this.isButtonEffectActive);
       }
     };
     tick();
