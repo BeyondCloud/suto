@@ -2687,6 +2687,7 @@ export class GameScene extends Phaser.Scene {
     const markers = ranks.map(({ label, min, color }, index) => {
       const left = markerLefts[index];
       const isCurrentRank = label === rank;
+      const isSpecialEventMarker = label === 'A';
       const nudgeX = markerNudgeX[label] ?? 0;
       const isLeftEdge = min === 0;
       const isRightEdge = min === 100;
@@ -2698,6 +2699,9 @@ export class GameScene extends Phaser.Scene {
 
       return `<div style=\"position:absolute;left:${left}%;top:0;transform:${anchorTransform};min-width:36px;\">`
         + `<div style=\"position:absolute;left:${stemLeft};top:${stemTop}px;transform:translateX(-50%);width:2px;height:${markerStemHeight}px;background:rgba(255,255,255,0.58);\"></div>`
+        + (isSpecialEventMarker
+          ? `<div style=\"position:absolute;left:${stemLeft};top:${minTop - 20}px;transform:translateX(-50%);margin-left:${nudgeX}px;padding:1px 8px;border-radius:999px;border:1px solid rgba(255,220,150,0.85);background:rgba(23,28,38,0.9);font-size:10px;font-weight:800;letter-spacing:0.06em;color:#ffe4a3;white-space:nowrap;\">特殊事件</div>`
+          : '')
         + `<div style=\"position:absolute;left:${stemLeft};top:${labelTop}px;transform:translateX(-50%);margin-left:${nudgeX}px;font-size:14px;font-weight:800;letter-spacing:0.08em;color:${isCurrentRank ? color : 'rgba(232, 239, 248, 0.88)'};white-space:nowrap;\">${label}</div>`
         + `<div style=\"position:absolute;left:${stemLeft};top:${minTop}px;transform:translateX(-50%);margin-left:${nudgeX}px;font-size:11px;color:rgba(217, 227, 240, 0.72);white-space:nowrap;\">${min}</div>`
         + `</div>`;
