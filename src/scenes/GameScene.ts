@@ -435,26 +435,31 @@ export class GameScene extends Phaser.Scene {
     let total = 0;
     let current = 0;
 
-    for (let i = 0; i < this.currentStage.sections.length; i++) {
-      const section = this.currentStage.sections[i];
-      if (section.type === 'delay') {
-        if (i > this.sectionIndex) break;
-        continue;
+    for (let stageIdx = 0; stageIdx < this.levelData.stages.length; stageIdx++) {
+      const stage = this.levelData.stages[stageIdx];
+      for (let sectionIdx = 0; sectionIdx < stage.sections.length; sectionIdx++) {
+        const section = stage.sections[sectionIdx];
+        if (section.type === 'delay') continue;
+
+        const repeat = this.getSectionRepeat(section);
+        total += repeat;
+
+        if (stageIdx < this.stageIndex) {
+          current += repeat;
+          continue;
+        }
+
+        if (stageIdx === this.stageIndex) {
+          if (sectionIdx < this.sectionIndex) {
+            current += repeat;
+            continue;
+          }
+
+          if (sectionIdx === this.sectionIndex) {
+            current += Math.min(this.sectionRepeatIteration, repeat);
+          }
+        }
       }
-
-      const repeat = this.getSectionRepeat(section);
-      total += repeat;
-
-      if (i < this.sectionIndex) {
-        current += repeat;
-        continue;
-      }
-
-      if (i === this.sectionIndex) {
-        current += Math.min(this.sectionRepeatIteration, repeat);
-      }
-
-      if (i >= this.sectionIndex) break;
     }
 
     if (total === 0) return { current: 0, total: 0 };
