@@ -126,7 +126,7 @@ export class MenuScene extends Phaser.Scene {
 
   private buildSettingsPanel() {
     const bg = this.add.rectangle(0, 0, 620, 290, 0x111122, 0.95);
-    const title = this.add.text(0, -102, 'Settings', { fontSize: '28px', color: '#fff' }).setOrigin(0.5);
+    const title = this.add.text(0, -102, '設定', { fontSize: '28px', color: '#fff' }).setOrigin(0.5);
 
     const makeRow = (label: string, yOff: number, getValue: () => string | number, onMinus: () => void, onPlus: () => void, onMinusTen?: () => void, onPlusTen?: () => void) => {
       const lbl = this.add.text(-230, yOff, label, { fontSize: '20px', color: '#ccc' }).setOrigin(0, 0.5);
