@@ -2432,10 +2432,10 @@ export class GameScene extends Phaser.Scene {
     this.endingSummaryCard.style.fontFamily = "'Noto Sans TC', 'PingFang TC', sans-serif";
     this.endingSummaryCard.style.pointerEvents = 'none';
     this.endingSummaryCard.innerHTML = [
-      `<div style=\"font-size:34px;font-weight:800;letter-spacing:1px;line-height:1.05;margin-bottom:8px;\">Score ${score}</div>`,
-      `<div style=\"font-size:25px;font-weight:800;color:#ffe082;letter-spacing:1px;margin-bottom:10px;\">評價 ${rank}</div>`,
-      `<div style=\"font-size:22px;font-weight:700;line-height:1.3;margin-bottom:10px;\">${verdict}</div>`,
-      `<div style=\"font-size:18px;line-height:1.55;color:#d9e3f0;\">Perfect ${this.perfectCount} / Miss ${this.missCount} / X ${this.falseTouchCount} / HP ${this.lifeValue}</div>`,
+      `<div style=\"font-size:40px;font-weight:800;letter-spacing:1px;line-height:1.05;margin-bottom:10px;\">Score ${score}</div>`,
+      `<div style=\"font-size:30px;font-weight:800;color:#ffe082;letter-spacing:1px;margin-bottom:12px;\">評價 ${rank}</div>`,
+      `<div style=\"font-size:26px;font-weight:700;line-height:1.3;margin-bottom:12px;\">${verdict}</div>`,
+      `<div style=\"font-size:22px;line-height:1.55;color:#d9e3f0;\"><span style=\"color:#7cff8f;font-weight:700;\">Perfect ${this.perfectCount}</span> / <span style=\"color:#ff5a6b;font-weight:700;\">Miss ${this.missCount}</span> / <span style=\"color:#ffb14a;font-weight:700;\">X ${this.falseTouchCount}</span> / HP ${this.lifeValue}</div>`,
     ].join('');
     this.endingVideoRoot.appendChild(this.endingSummaryCard);
   }
