@@ -9,7 +9,7 @@ import promptUUrl from '../assets/audio/U.wav';
 import clapUrl from '../assets/audio/clap.wav';
 import missUrl from '../assets/audio/miss.wav';
 import storyCheckStartUrl from '../assets/audio/short/suto.wav';
-import gameoverSfxUrl from '../assets/audio/long/這二十個影片有十九個影片長這樣到底要我怎麼開直播拉.wav';
+import gameoverSfxUrl from '../assets/audio/long/gameover.wav';
 import stage120Url from '../assets/audio/120.wav';
 import {
   GAME_WIDTH, GAME_HEIGHT,
@@ -45,6 +45,8 @@ const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   a: 'prompt_L',
   d: 'prompt_R',
 };
+const BUTTON_EFFECT_REQUIRED_CLICKS = 10;
+const BUTTON_EFFECT_SCALE_STEP = 0.04;
 const ENABLE_DEBUG_OVERLAY = false;
 
 type GameMode = 'challenge' | 'story';
@@ -207,6 +209,14 @@ export class GameScene extends Phaser.Scene {
   private promptCellWidth = 0;
   private promptCellHeight = 0;
   private promptIndicatorSize = 0;
+
+  // Button effect
+  private isButtonEffectActive = false;
+  private buttonEffectClicks = 0;
+  private buttonEffectContainer?: Phaser.GameObjects.Container;
+  private buttonEffectRect?: Phaser.GameObjects.Rectangle;
+  private buttonEffectLabel?: Phaser.GameObjects.Text;
+  private buttonEffectProgress?: Phaser.GameObjects.Text;
 
   // Check phase
   private beatTargets: Direction[] = [];
@@ -540,6 +550,7 @@ export class GameScene extends Phaser.Scene {
   private cleanupScene() {
     this.input.setDefaultCursor('default');
     this.setGifCursorVisible(false);
+    this.clearButtonEffectUI();
     this.removeStorySamVideo();
     this.stopStagePhaseClip();
     this.stopPromptAudioSequence();
@@ -634,6 +645,7 @@ export class GameScene extends Phaser.Scene {
   private startSection() {
     if (this.isGameOver) return;
     this.currentSection = this.currentStage.sections[this.sectionIndex];
+    this.clearButtonEffectUI();
 
     let sectionDurationMs: number;
     if (this.currentSection.type === 'delay') {
@@ -701,6 +713,22 @@ export class GameScene extends Phaser.Scene {
     this.gamePhase = 'check';
     this.stopPromptAudioSequence();
     this.clearPromptGrid();
+
+    if (this.isButtonEffectSection()) {
+      this.stopAllShrinks();
+      this.setCheckpointsVisible(false);
+      this.setGifCursorVisible(false);
+      this.hitboxGraphics.clear();
+      this.beatCount = 0;
+      this.showButtonEffectUI();
+
+      this.beatTimer?.remove();
+      this.onBeat();
+      this.beatTimer = this.time.addEvent({ delay: this.beatMs, repeat: 7, callback: this.onBeat, callbackScope: this });
+      return;
+    }
+
+    this.clearButtonEffectUI();
     this.setInnerCheckpointsVisible(true);
     this.beatCount = 0;
     this.buildBeatTargets();
@@ -723,6 +751,16 @@ export class GameScene extends Phaser.Scene {
         this.startCheckPhase();
       }
     } else {
+      if (this.isButtonEffectActive) {
+        this.beatCount++;
+        if (this.beatCount >= 8) {
+          this.beatTimer?.remove();
+          const remaining = Math.max(0, (this.sectionTargetEndTimeMs ?? this.time.now) - this.time.now);
+          this.time.delayedCall(remaining, () => this.onCheckPhaseEnd());
+        }
+        return;
+      }
+
       if (this.beatCount >= 8) {
         this.beatTimer?.remove();
         return;
@@ -741,6 +779,20 @@ export class GameScene extends Phaser.Scene {
 
   private onCheckPhaseEnd() {
     if (this.isGameOver) return;
+
+    if (this.isButtonEffectActive) {
+      const success = this.buttonEffectClicks >= BUTTON_EFFECT_REQUIRED_CLICKS;
+      this.clearButtonEffectUI();
+      if (!success) {
+        this.triggerGameOver();
+        return;
+      }
+      this.setCheckpointsVisible(false);
+      this.setGifCursorVisible(false);
+      this.advanceToNextSection();
+      return;
+    }
+
     if (this.pendingShrinkStartCount > 0 || this.activeShrinks.size > 0) {
       this.time.delayedCall(16, () => this.onCheckPhaseEnd());
       return;
@@ -754,6 +806,7 @@ export class GameScene extends Phaser.Scene {
 
   private advanceToNextSection() {
     if (this.isGameOver) return;
+    this.clearButtonEffectUI();
     this.sectionIndex++;
     if (this.sectionIndex >= this.currentStage.sections.length) {
       this.stageIndex++;
@@ -1475,6 +1528,92 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private isButtonEffectSection(): boolean {
+    return this.currentSection.type === 'normal' && this.currentSection.effect === 'button';
+  }
+
+  private showButtonEffectUI() {
+    this.clearButtonEffectUI();
+    this.isButtonEffectActive = true;
+    this.buttonEffectClicks = 0;
+
+    const x = GAME_WIDTH / 2;
+    const y = GAME_HEIGHT - 120;
+    const container = this.add.container(x, y).setDepth(SCENE_LAYER.HUD + 6);
+
+    const rect = this.add.rectangle(0, 0, 360, 96, 0xbf2f2f, 0.96)
+      .setStrokeStyle(4, 0xffffff, 0.95)
+      .setInteractive({ useHandCursor: true });
+    const label = this.add.text(0, -10, '嚴厲斥責', {
+      fontSize: '42px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    const progress = this.add.text(0, 56, `0/${BUTTON_EFFECT_REQUIRED_CLICKS}`, {
+      fontSize: '24px',
+      color: '#ffe6e6',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    rect.on('pointerover', () => {
+      rect.setFillStyle(0xd43d3d, 1);
+      rect.setStrokeStyle(4, 0xfff5f5, 1);
+    });
+    rect.on('pointerout', () => {
+      rect.setFillStyle(0xbf2f2f, 0.96);
+      rect.setStrokeStyle(4, 0xffffff, 0.95);
+    });
+    rect.on('pointerdown', () => this.onButtonEffectClick());
+
+    container.add([rect, label, progress]);
+    this.buttonEffectContainer = container;
+    this.buttonEffectRect = rect;
+    this.buttonEffectLabel = label;
+    this.buttonEffectProgress = progress;
+  }
+
+  private onButtonEffectClick() {
+    if (!this.isButtonEffectActive || this.isPaused || this.isGameOver) return;
+    if (this.buttonEffectClicks >= BUTTON_EFFECT_REQUIRED_CLICKS) return;
+
+    this.buttonEffectClicks++;
+    this.perfectCount++;
+    this.updateJudgementText();
+    this.lifeValue = Math.min(100, this.lifeValue + 4);
+    this.drawLifeBar();
+    this.sound.play('clap');
+
+    const targetScale = 1 + this.buttonEffectClicks * BUTTON_EFFECT_SCALE_STEP;
+    if (this.buttonEffectContainer) {
+      this.tweens.killTweensOf(this.buttonEffectContainer);
+      this.tweens.add({
+        targets: this.buttonEffectContainer,
+        scaleX: targetScale,
+        scaleY: targetScale,
+        duration: 100,
+        ease: 'Back.easeOut',
+      });
+    }
+
+    this.buttonEffectProgress?.setText(`${this.buttonEffectClicks}/${BUTTON_EFFECT_REQUIRED_CLICKS}`);
+
+    if (this.buttonEffectClicks >= BUTTON_EFFECT_REQUIRED_CLICKS) {
+      this.buttonEffectRect?.disableInteractive();
+      this.buttonEffectRect?.setFillStyle(0x2f9d44, 0.98);
+      this.buttonEffectProgress?.setColor('#d7ffe0');
+    }
+  }
+
+  private clearButtonEffectUI() {
+    this.isButtonEffectActive = false;
+    this.buttonEffectClicks = 0;
+    this.buttonEffectContainer?.destroy(true);
+    this.buttonEffectContainer = undefined;
+    this.buttonEffectRect = undefined;
+    this.buttonEffectLabel = undefined;
+    this.buttonEffectProgress = undefined;
+  }
+
   // ---------- Input ----------
 
   private onMouseMove(ptr: Phaser.Input.Pointer) {
@@ -1502,7 +1641,7 @@ export class GameScene extends Phaser.Scene {
 
   private drawHitbox(x: number, y: number) {
     this.hitboxGraphics.clear();
-    if (!this.isGameOver && (this.gamePhase === 'prompt' || this.gamePhase === 'check') && !this.isPaused) {
+    if (!this.isGameOver && (this.gamePhase === 'prompt' || this.gamePhase === 'check') && !this.isPaused && !this.isButtonEffectActive) {
       this.hitboxGraphics.lineStyle(2, 0xffffff, 1);
       this.hitboxGraphics.strokeRect(x - this.settings.hitboxWidth / 2, y - this.settings.hitboxHeight / 2, this.settings.hitboxWidth, this.settings.hitboxHeight);
     }
@@ -1885,6 +2024,7 @@ export class GameScene extends Phaser.Scene {
     if (this.isGameOver) return;
 
     this.isGameOver = true;
+    this.clearButtonEffectUI();
     this.input.setDefaultCursor('default');
     this.beatTimer?.remove();
     this.stopAllShrinks();
@@ -1964,6 +2104,7 @@ export class GameScene extends Phaser.Scene {
 
   private returnToMenu() {
     this.isPaused = false;
+    this.clearButtonEffectUI();
     this.removeStorySamVideo();
     this.stopStagePhaseClip();
     this.stopPromptAudioSequence();
@@ -2009,7 +2150,7 @@ export class GameScene extends Phaser.Scene {
 
   update() {
     this.updateDebugText();
-    if (this.gamePhase === 'check' && !this.isPaused) {
+    if (this.gamePhase === 'check' && !this.isPaused && !this.isButtonEffectActive) {
       this.checkActiveHits(this.cursorWorldX, this.cursorWorldY);
     }
   }

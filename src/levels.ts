@@ -5,7 +5,7 @@ export interface NormalSection {
   bpm?: number;
   prompts: Direction[];
   image?: string;
-  effect?: 'small' | 'fadein';
+  effect?: 'small' | 'fadein' | 'button';
 }
 
 export interface RotationSection {
@@ -61,6 +61,15 @@ export const LEVEL_DATA: LevelData = {
         //   start: 'U',
         //   rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
         // },
+        {
+          bpm: 183.5,
+          type: 'normal',
+          effect: 'button',
+          image: 'src/assets/cmonbruh.png',
+          prompts: ['x', 'x', 'x', 'x',
+                    'x', 'x', 'x', 'x'],
+        },
+
         {
           type: 'normal',
           prompts: ['x', 'w', 'x', 'w',
@@ -169,7 +178,6 @@ export const MAIN_LEVEL_DATA: LevelData = {
       sections: [
         {
           type: 'normal',
-          image: 'src/assets/cmonbruh.png',
           prompts: ['x', 'w', 'x', 'w',
                     'x', 'w', 'x', 'w'],
         },
@@ -251,59 +259,6 @@ export const MAIN_LEVEL_DATA: LevelData = {
         },
       ],
     },
-   {
-      stage_number: 3,
-      bpm: 183,
-      sections: [
-        {
-          bpm: 215.5,
-          type: 'normal',
-          prompts: ['w', 'w', 'w', 'w',
-                    'w', 'w', 'w', 'w'],
-        },
-        {
-          bpm: 243.5,
-          type: 'normal',
-          prompts: ['w', 'w', 'w', 'w',
-                    'w', 'w', 'w', 'w'],
-        },
-        {
-          bpm: 257,
-          type: 'normal',
-          prompts: ['w', 'w', 'w', 'w',
-                    'w', 'w', 'w', 'w'],
-        },
-        {
-          bpm: 275,
-          type: 'normal',
-          prompts: ['w', 'w', 'w', 'w',
-                    'w', 'w', 'w', 'w'],
-        },
-        {
-          bpm: 291,
-          type: 'normal',
-          prompts: ['w', 'w', 'w', 'w',
-                    'w', 'w', 'w', 'w'],
-        },
-        {
-            type: 'delay',
-            ms: 4112,
-            text: 'WARNING',
-        },
-        {
-            type: 'delay',
-            ms: 2515,
-            text: '',
-        },
-        {
-          bpm: 183.5,
-          type: 'normal',
-          image: 'src/assets/cmonbruh.png',
-          prompts: ['x', 'x', 'x', 'x',
-                    'x', 'x', 'x', 'x'],
-        }
-      ],
-    }
 //    {
 //       stage_number: 3,
 //       bpm: 183,
@@ -311,32 +266,32 @@ export const MAIN_LEVEL_DATA: LevelData = {
 //         {
 //           bpm: 215.5,
 //           type: 'normal',
-//           prompts: ['x', 'a', 'w', 'w',
-//                     'x', 'd', 'x', 'x'],
+//           prompts: ['w', 'w', 'w', 'w',
+//                     'w', 'w', 'w', 'w'],
 //         },
 //         {
 //           bpm: 243.5,
 //           type: 'normal',
-//           prompts: ['x', 'c', 'w', 'c',
-//                     'a', 'q', 'x', 'e'],
+//           prompts: ['w', 'w', 'w', 'w',
+//                     'w', 'w', 'w', 'w'],
 //         },
 //         {
 //           bpm: 257,
 //           type: 'normal',
-//           prompts: ['c', 'x', 'a', 'c',
-//                     'w', 'q', 'c', 'e'],
+//           prompts: ['w', 'w', 'w', 'w',
+//                     'w', 'w', 'w', 'w'],
 //         },
 //         {
 //           bpm: 275,
 //           type: 'normal',
-//           prompts: ['x', 'w', 'c', 'w',
-//                     'q', 'c', 'z', 'x'],
+//           prompts: ['w', 'w', 'w', 'w',
+//                     'w', 'w', 'w', 'w'],
 //         },
 //         {
 //           bpm: 291,
 //           type: 'normal',
-//           prompts: ['x', 'd', 'c', 'x',
-//                     'w', 'x', 'a', 'x'],
+//           prompts: ['w', 'w', 'w', 'w',
+//                     'w', 'w', 'w', 'w'],
 //         },
 //         {
 //             type: 'delay',
@@ -351,11 +306,67 @@ export const MAIN_LEVEL_DATA: LevelData = {
 //         {
 //           bpm: 183.5,
 //           type: 'normal',
+//           image: 'src/assets/cmonbruh.png',
 //           prompts: ['x', 'x', 'x', 'x',
 //                     'x', 'x', 'x', 'x'],
 //         }
 //       ],
 //     }
+   {
+      stage_number: 3,
+      bpm: 183,
+      sections: [
+        {
+          bpm: 215.5,
+          type: 'normal',
+          prompts: ['x', 'a', 'w', 'w',
+                    'x', 'd', 'x', 'x'],
+        },
+        {
+          bpm: 243.5,
+          type: 'normal',
+          prompts: ['x', 'c', 'w', 'c',
+                    'a', 'q', 'x', 'e'],
+        },
+        {
+          bpm: 257,
+          type: 'normal',
+          prompts: ['c', 'x', 'a', 'c',
+                    'w', 'q', 'c', 'e'],
+        },
+        {
+          bpm: 275,
+          type: 'normal',
+          prompts: ['x', 'w', 'c', 'w',
+                    'q', 'c', 'z', 'x'],
+        },
+        {
+          bpm: 291,
+          type: 'normal',
+          prompts: ['x', 'd', 'c', 'x',
+                    'w', 'x', 'a', 'x'],
+        },
+        {
+            type: 'delay',
+            ms: 4112,
+            text: 'WARNING',
+        },
+        {
+            type: 'delay',
+            ms: 2515,
+            text: '',
+        },
+        {
+          bpm: 183.5,
+          type: 'normal',
+          effect: 'button',
+          image: 'src/assets/cmonbruh.png',
+          prompts: ['x', 'x', 'x', 'x',
+                    'x', 'x', 'x', 'x'],
+        }
+
+      ],
+    }
 
   ],
 };
