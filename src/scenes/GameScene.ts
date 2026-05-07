@@ -998,7 +998,7 @@ export class GameScene extends Phaser.Scene {
     this.storySamVideoRoot = document.createElement('div');
     this.storySamVideoRoot.style.position = 'fixed';
     this.storySamVideoRoot.style.pointerEvents = 'none';
-    this.storySamVideoRoot.style.zIndex = '40';
+    this.storySamVideoRoot.style.zIndex = '-1';
 
     const shell = document.createElement('div');
     shell.style.position = 'absolute';

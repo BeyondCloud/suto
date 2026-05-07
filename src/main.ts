@@ -8,7 +8,7 @@ const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
-  backgroundColor: '#000000',
+  transparent: true,
   scene: [MenuScene, MainlineIntroScene, GameScene],
   parent: 'app',
   scale: {
@@ -17,4 +17,25 @@ const config: Phaser.Types.Core.GameConfig = {
   },
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+const gameAreaBg = document.createElement('div');
+gameAreaBg.style.position = 'fixed';
+gameAreaBg.style.background = '#000000';
+gameAreaBg.style.zIndex = '-2';
+gameAreaBg.style.pointerEvents = 'none';
+document.body.appendChild(gameAreaBg);
+
+const syncGameAreaBg = () => {
+  const canvas = game.canvas;
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  gameAreaBg.style.left = `${rect.left}px`;
+  gameAreaBg.style.top = `${rect.top}px`;
+  gameAreaBg.style.width = `${rect.width}px`;
+  gameAreaBg.style.height = `${rect.height}px`;
+};
+
+window.addEventListener('resize', syncGameAreaBg);
+game.scale.on(Phaser.Scale.Events.RESIZE, syncGameAreaBg);
+requestAnimationFrame(syncGameAreaBg);
