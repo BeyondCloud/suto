@@ -8,6 +8,7 @@ import { HTML_LAYER, SCENE_LAYER } from '../layers';
 import { MAIN_LEVEL_DATA } from '../levels';
 
 const INTRO_COUNTDOWN_BPM = 183.5;
+const CJK_UI_FONT_FAMILY = "'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif";
 
 export class MainlineIntroScene extends Phaser.Scene {
   private settings!: GameSettings;
@@ -250,11 +251,11 @@ export class MainlineIntroScene extends Phaser.Scene {
     this.tutorial2PromptRoot.style.transform = 'translate(-50%, -50%)';
     this.tutorial2PromptRoot.style.zIndex = String(HTML_LAYER.FULLSCREEN_VIDEO_PROMPT);
     this.tutorial2PromptRoot.style.color = '#ffffff';
-    this.tutorial2PromptRoot.style.fontFamily = 'Courier';
-    this.tutorial2PromptRoot.style.fontWeight = '700';
+    this.tutorial2PromptRoot.style.fontFamily = CJK_UI_FONT_FAMILY;
+    this.tutorial2PromptRoot.style.fontWeight = 'bold';
     this.tutorial2PromptRoot.style.fontSize = '32px';
-    this.tutorial2PromptRoot.style.textShadow =
-      '0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000';
+    this.tutorial2PromptRoot.style.webkitTextStroke = '6px #000000';
+    this.tutorial2PromptRoot.style.paintOrder = 'stroke fill';
     document.body.appendChild(this.tutorial2PromptRoot);
 
     this.refreshOpeningVideoBounds();

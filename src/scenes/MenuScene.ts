@@ -22,6 +22,7 @@ const MASTER_VOLUME_PREVIEW_INTERVAL_MS = 120;
 const PRACTICE_CUSTOM_STORAGE_KEY = 'suto.practice.custom.v1';
 const PRACTICE_RETURN_STORAGE_KEY = 'suto.practice.return.mode.once';
 const PRACTICE_REPEAT_COUNT = 999;
+const UI_CJK_FONT_FAMILY = "'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif";
 
 type PracticeMode = 'mainline' | 'custom';
 type PracticeCommand = Direction | 'L' | 'R';
@@ -48,6 +49,7 @@ export class MenuScene extends Phaser.Scene {
   private judgementRulesContainer!: Phaser.GameObjects.Container;
   private judgementRulesImage!: Phaser.GameObjects.Image;
   private judgementRulesStep = 0;
+  private judgementRulesKeyHandler?: (event: KeyboardEvent) => void;
   private tutorialLoopSound?: Phaser.Sound.BaseSound;
   private welcomeSound?: Phaser.Sound.BaseSound;
   private lastVolumePreviewAt = 0;
@@ -146,6 +148,10 @@ export class MenuScene extends Phaser.Scene {
       if (this.practiceBpmKeyHandler) {
         window.removeEventListener('keydown', this.practiceBpmKeyHandler);
         this.practiceBpmKeyHandler = undefined;
+      }
+      if (this.judgementRulesKeyHandler) {
+        this.input.keyboard?.off('keydown', this.judgementRulesKeyHandler);
+        this.judgementRulesKeyHandler = undefined;
       }
     });
 
@@ -410,12 +416,13 @@ export class MenuScene extends Phaser.Scene {
     const imageScale = Math.min((width * 0.94) / image.width, (height * 0.86) / image.height);
     image.setScale(imageScale);
 
-    const prompt = this.add.text(width / 2, height - 42, '點一下繼續', {
-      fontSize: '26px',
+    const prompt = this.add.text(width / 2, height - 42, '按任意按鍵繼續', {
+      fontSize: '32px',
+      fontFamily: "'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif",
       color: '#ffffff',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 5,
+      strokeThickness: 6,
     }).setOrigin(0.5);
 
     this.judgementRulesContainer = this.add.container(0, 0, [background, image, prompt]);
@@ -428,6 +435,15 @@ export class MenuScene extends Phaser.Scene {
     image.on('pointerdown', () => this.advanceJudgementRules());
     prompt.setInteractive({ useHandCursor: true });
     prompt.on('pointerdown', () => this.advanceJudgementRules());
+
+    this.judgementRulesKeyHandler = (event: KeyboardEvent) => {
+      if (!this.judgementRulesContainer.visible) {
+        return;
+      }
+      event.preventDefault();
+      this.advanceJudgementRules();
+    };
+    this.input.keyboard?.on('keydown', this.judgementRulesKeyHandler);
   }
 
   private buildMainlinePracticeItems(): PracticeMainlineItem[] {
@@ -827,8 +843,10 @@ export class MenuScene extends Phaser.Scene {
     clearBtnBg.on('pointerout', () => clearBtnBg.setFillStyle(0x5f3f27, 1));
     const clearBtn = this.add.text(actionBtnX, gridTop + 240, '清空', {
       fontSize: '30px',
+      fontFamily: UI_CJK_FONT_FAMILY,
       color: '#ffe9d4',
       fontStyle: 'bold',
+      padding: { top: 5, bottom: 2 },
     }).setOrigin(0.5);
     clearBtnBg.on('pointerdown', () => {
       this.practiceCustomBuildCommands = [];
@@ -843,8 +861,10 @@ export class MenuScene extends Phaser.Scene {
     undoBtnBg.on('pointerout', () => undoBtnBg.setFillStyle(0x3a465f, 1));
     const undoBtn = this.add.text(actionBtnX, gridTop + 168, '後退', {
       fontSize: '30px',
+      fontFamily: UI_CJK_FONT_FAMILY,
       color: '#eef4ff',
       fontStyle: 'bold',
+      padding: { top: 5, bottom: 2 },
     }).setOrigin(0.5);
     undoBtnBg.on('pointerdown', () => {
       if (this.practiceCustomBuildCommands.length === 0) return;
@@ -859,8 +879,10 @@ export class MenuScene extends Phaser.Scene {
     this.practiceCustomAddBtnBg.on('pointerdown', () => this.addPracticeCustomSet());
     this.practiceCustomAddBtn = this.add.text(actionBtnX, gridTop + 96, '新增', {
       fontSize: '30px',
+      fontFamily: UI_CJK_FONT_FAMILY,
       color: '#8fbd99',
       fontStyle: 'bold',
+      padding: { top: 5, bottom: 2 },
     }).setOrigin(0.5);
     this.practiceCustomBuilderContainer.add([
       rotateLeftBtnBg,
