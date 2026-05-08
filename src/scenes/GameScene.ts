@@ -31,6 +31,7 @@ import { GameSceneDebugController } from './debug/GameSceneDebugController';
 import type { DebugEndingPreset } from './debug/GameSceneDebugController';
 import { EndingSequenceOverlay } from './EndingSequenceOverlay.ts';
 import type { EndingSummaryInput } from './EndingSequenceOverlay.ts';
+import { runThreeTwoOneCountdown } from './shared/threeTwoOneCountdown';
 
 const ALL_DIRS: Direction[] = ['w', 'e', 'd', 'c', 'x', 'z', 'a', 'q'];
 const CARDINAL_DIRS: Direction[] = ['w', 'x', 'a', 'd'];
@@ -263,17 +264,22 @@ export class GameScene extends Phaser.Scene {
   private loadingOverlayRect?: Phaser.GameObjects.Rectangle;
   private loadingOverlayImage?: Phaser.GameObjects.Image;
   private pendingDebugEndingPreset?: DebugEndingPreset;
+  private introCountdownBpm?: number;
 
   constructor() {
     super('GameScene');
   }
 
-  init(data: { settings: GameSettings; stageIndex: number; mode?: GameMode; levelData?: LevelData; debugEndingPreset?: DebugEndingPreset }) {
+  init(data: { settings: GameSettings; stageIndex: number; mode?: GameMode; levelData?: LevelData; debugEndingPreset?: DebugEndingPreset; introCountdownBpm?: number }) {
     this.settings = data.settings;
     this.stageIndex = data.stageIndex ?? 0;
     this.mode = data.mode ?? 'challenge';
     this.levelData = data.levelData ?? LEVEL_DATA;
     this.pendingDebugEndingPreset = data.debugEndingPreset;
+    const countdownBpm = data.introCountdownBpm;
+    this.introCountdownBpm = typeof countdownBpm === 'number' && Number.isFinite(countdownBpm) && countdownBpm > 0
+      ? countdownBpm
+      : undefined;
   }
 
   preload() {
@@ -342,7 +348,6 @@ export class GameScene extends Phaser.Scene {
     this.createHitSparkTexture();
     this.createCursors();
     this.createPauseMenu();
-    this.createStorySamVideo();
     this.flashOverlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xffffff, 0).setDepth(SCENE_LAYER.FLASH_OVERLAY);
 
     this.setCheckpointsVisible(false);
@@ -361,7 +366,19 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.mode === 'story') {
-      this.time.delayedCall(this.settings.storyStartDelayMs, () => this.startSection());
+      const startStorySection = () => {
+        this.createStorySamVideo();
+        this.time.delayedCall(this.settings.storyStartDelayMs, () => this.startSection());
+      };
+
+      if (this.introCountdownBpm) {
+        runThreeTwoOneCountdown(this, this.countdownText, {
+          intervalMs: 60000 / this.introCountdownBpm,
+          onComplete: startStorySection,
+        });
+      } else {
+        startStorySection();
+      }
     } else {
       this.showLoadingOverlay();
       this.prewarmStageAudio().then(() => {
@@ -708,7 +725,7 @@ export class GameScene extends Phaser.Scene {
     this.updateGifCursorPosition(cx, cy);
     window.addEventListener('resize', this.refreshGifCursorLayout);
     window.addEventListener('pointermove', this.onWindowPointerMove, { passive: true });
-    this.input.setDefaultCursor('none');
+    this.input.setDefaultCursor('default');
   }
 
   private cleanupScene() {
@@ -873,6 +890,7 @@ export class GameScene extends Phaser.Scene {
   private startPromptPhase() {
     if (this.isGameOver) return;
     this.gamePhase = 'prompt';
+    this.input.setDefaultCursor('default');
     this.setCheckpointsVisible(false);
     this.clearPromptGrid();
     this.buildPromptGrid();
@@ -898,6 +916,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.isButtonEffectSection()) {
       this.stopAllShrinks();
+      this.input.setDefaultCursor('default');
       this.setCheckpointsVisible(false);
       this.setGifCursorVisible(false);
       this.hitboxGraphics.clear();
@@ -911,6 +930,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.clearButtonEffectUI();
+    this.input.setDefaultCursor('none');
     this.setInnerCheckpointsVisible(true);
     this.beatCount = 0;
     this.buildBeatTargets();
@@ -1939,7 +1959,7 @@ export class GameScene extends Phaser.Scene {
     this.buttonEffectCountdownDurationMs = 0;
     this.buttonEffectCountdownState.value = 1;
     if (!this.isGameOver && !this.isPaused) {
-      this.input.setDefaultCursor('none');
+      this.input.setDefaultCursor(this.gamePhase === 'check' && !this.isButtonEffectActive ? 'none' : 'default');
     }
   }
 
@@ -2525,22 +2545,16 @@ export class GameScene extends Phaser.Scene {
 
   private resumeWithCountdown() {
     this.pauseContainer.setVisible(false);
-    this.countdownText.setVisible(true);
-    let count = 3;
-    const tick = () => {
-      if (count > 0) {
-        this.countdownText.setText(String(count));
-        count--;
-        this.time.delayedCall(this.beatMs, tick);
-      } else {
+    runThreeTwoOneCountdown(this, this.countdownText, {
+      intervalMs: this.beatMs,
+      onComplete: () => {
         this.countdownText.setVisible(false);
         this.isPaused = false;
         this.setGameplayTimersPaused(false);
-        this.input.setDefaultCursor(this.isButtonEffectActive ? 'default' : 'none');
+        this.input.setDefaultCursor(this.gamePhase === 'check' && !this.isButtonEffectActive ? 'none' : 'default');
         this.setGifCursorVisible(this.gamePhase === 'check' && !this.isButtonEffectActive);
-      }
-    };
-    tick();
+      },
+    });
   }
 
   update() {

@@ -7,6 +7,8 @@ import { DEFAULT_SETTINGS, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { HTML_LAYER, SCENE_LAYER } from '../layers';
 import { MAIN_LEVEL_DATA } from '../levels';
 
+const INTRO_COUNTDOWN_BPM = 183.5;
+
 export class MainlineIntroScene extends Phaser.Scene {
   private settings!: GameSettings;
   private openingRoot?: HTMLDivElement;
@@ -267,36 +269,6 @@ export class MainlineIntroScene extends Phaser.Scene {
     const startGame = () => {
       if (this.tutorial2StartRequested) return;
       this.tutorial2StartRequested = true;
-      this.tutorial2Root?.style.setProperty('display', 'none');
-      this.tutorial2PromptRoot?.style.setProperty('display', 'none');
-      if (this.tutorial2ConfirmKeyHandler) {
-        window.removeEventListener('keydown', this.tutorial2ConfirmKeyHandler);
-        this.tutorial2ConfirmKeyHandler = undefined;
-      }
-      if (this.tutorial2ConfirmPointerHandler) {
-        window.removeEventListener('pointerdown', this.tutorial2ConfirmPointerHandler);
-        this.tutorial2ConfirmPointerHandler = undefined;
-      }
-      if (this.tutorial2ConfirmMouseHandler) {
-        document.removeEventListener('mousedown', this.tutorial2ConfirmMouseHandler, true);
-        this.tutorial2ConfirmMouseHandler = undefined;
-      }
-      if (this.tutorial2ConfirmTouchHandler) {
-        document.removeEventListener('touchstart', this.tutorial2ConfirmTouchHandler, true);
-        this.tutorial2ConfirmTouchHandler = undefined;
-      }
-      if (this.tutorial2ConfirmDomHandler) {
-        this.tutorial2Root?.removeEventListener('pointerdown', this.tutorial2ConfirmDomHandler);
-        this.tutorial2Root?.removeEventListener('mousedown', this.tutorial2ConfirmDomHandler);
-        this.tutorial2Root?.removeEventListener('touchstart', this.tutorial2ConfirmDomHandler);
-        this.tutorial2Video?.removeEventListener('pointerdown', this.tutorial2ConfirmDomHandler);
-        this.tutorial2Video?.removeEventListener('mousedown', this.tutorial2ConfirmDomHandler);
-        this.tutorial2Video?.removeEventListener('touchstart', this.tutorial2ConfirmDomHandler);
-        this.tutorial2PromptRoot?.removeEventListener('pointerdown', this.tutorial2ConfirmDomHandler);
-        this.tutorial2PromptRoot?.removeEventListener('mousedown', this.tutorial2ConfirmDomHandler);
-        this.tutorial2PromptRoot?.removeEventListener('touchstart', this.tutorial2ConfirmDomHandler);
-        this.tutorial2ConfirmDomHandler = undefined;
-      }
       this.continuePromptText?.setVisible(false);
       this.stopTutorialLoop();
       this.removeTutorial2Video();
@@ -306,6 +278,7 @@ export class MainlineIntroScene extends Phaser.Scene {
         stageIndex: 0,
         mode: 'story',
         levelData: MAIN_LEVEL_DATA,
+        introCountdownBpm: INTRO_COUNTDOWN_BPM,
       });
     };
 
