@@ -384,7 +384,12 @@ export class GameScene extends Phaser.Scene {
       this.prewarmStageAudio().then(() => {
         this.hideLoadingOverlay();
         if (this.isGameOver || !this.scene.isActive()) return;
-        this.startSection();
+        const stageBpm = this.currentStage?.bpm;
+        const intervalMs = (typeof stageBpm === 'number' && stageBpm > 0) ? 60000 / stageBpm : 60000 / 183.5;
+        runThreeTwoOneCountdown(this, this.countdownText, {
+          intervalMs,
+          onComplete: () => this.startSection(),
+        });
       });
     }
   }
@@ -820,6 +825,7 @@ export class GameScene extends Phaser.Scene {
   private createPauseMenu() {
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
     this.pauseContainer = this.add.container(cx, cy).setDepth(SCENE_LAYER.PAUSE_MENU).setVisible(false);
+    const overlay = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x888888, 0.5);
     const bg = this.add.rectangle(0, 0, 400, 280, 0x000000, 0.85);
     const title = this.add.text(0, -100, 'PAUSED', { fontSize: '36px', color: '#fff' }).setOrigin(0.5);
 
@@ -834,7 +840,7 @@ export class GameScene extends Phaser.Scene {
     const resumeBtn = makeBtn('繼續', -30, () => this.resumeWithCountdown());
     const homeBtn = makeBtn('返回主頁', 30, () => this.returnToMenu());
 
-    this.pauseContainer.add([bg, title, resumeBtn, homeBtn]);
+    this.pauseContainer.add([overlay, bg, title, resumeBtn, homeBtn]);
     this.countdownText = this.add.text(cx, cy, '', { fontSize: '80px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(SCENE_LAYER.COUNTDOWN).setVisible(false);
   }
 
