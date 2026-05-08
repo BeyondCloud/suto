@@ -462,7 +462,7 @@ export class GameScene extends Phaser.Scene {
       align: 'center',
       wordWrap: { width: 520 },
     }).setOrigin(0.5, 0.5).setDepth(SCENE_LAYER.HUD).setVisible(false);
-    this.judgementText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0.5).setDepth(SCENE_LAYER.HUD);
+    this.judgementText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.72, '', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0.5).setDepth(SCENE_LAYER.HUD);
     this.debugController?.createHud();
     this.updateHUD();
     this.updateJudgementText();
