@@ -35,6 +35,10 @@ import {
   type EndingSummaryInput,
 } from './shared/endingSummary.ts';
 import { runThreeTwoOneCountdown, type ThreeTwoOneCountdownController } from './shared/threeTwoOneCountdown';
+import {
+  installButtonHoverSound,
+  preloadButtonHoverSound,
+} from './shared/buttonHoverSound';
 
 const ALL_DIRS: Direction[] = ['w', 'e', 'd', 'c', 'x', 'z', 'a', 'q'];
 const CARDINAL_DIRS: Direction[] = ['w', 'x', 'a', 'd'];
@@ -314,6 +318,7 @@ export class GameScene extends Phaser.Scene {
     this.load.audio('miss', missUrl);
     this.load.audio('story_check_start', storyCheckStartUrl);
     this.load.audio('gameover_sfx', gameoverSfxUrl);
+    preloadButtonHoverSound(this);
 
     const customSectionImages = new Set(
       this.levelData.stages.flatMap(stage =>
@@ -343,6 +348,7 @@ export class GameScene extends Phaser.Scene {
       onReturnToMenu: () => this.returnToMenu(),
     });
     this.applyMasterVolume();
+    installButtonHoverSound(this);
     this.isGameOver = false;
     this.endingSequenceStarted = false;
     this.suppressGameFrameMask = false;

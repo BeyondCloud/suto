@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../../config';
 import { HTML_LAYER, SCENE_LAYER } from '../../layers';
+import { wireDomButtonHoverSound } from '../shared/buttonHoverSound';
 // Turn on debug mode by adding ?debug=1 to the URL, e.g., http://localhost:5173/?debug=1
 function parseDebugModeFromUrl(): boolean {
   if (typeof window === 'undefined') return false;
@@ -141,6 +142,7 @@ export class GameSceneDebugController {
         button.style.background = '#385276';
         button.style.borderColor = '#ffffff';
       };
+      wireDomButtonHoverSound(this.scene, button);
       button.onmouseleave = () => {
         button.style.background = '#233042';
         button.style.borderColor = '#c8dcff';

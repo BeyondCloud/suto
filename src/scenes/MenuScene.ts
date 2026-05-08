@@ -13,6 +13,11 @@ import {
   DEBUG_MODE,
 } from './debug/GameSceneDebugController';
 import type { DebugEndingPreset } from './debug/GameSceneDebugController';
+import {
+  installButtonHoverSound,
+  preloadButtonHoverSound,
+  wireDomButtonHoverSound,
+} from './shared/buttonHoverSound';
 
 const SETTINGS_STORAGE_KEY = 'suto.gameSettings';
 const MASTER_VOLUME_MIN = 0;
@@ -97,6 +102,7 @@ export class MenuScene extends Phaser.Scene {
     this.load.audio('welcome', welcomeAudioUrl);
     this.load.audio('mainline-click', mainlineClickAudioUrl);
     this.load.audio('tutorial_loop', tutorialLoopUrl);
+    preloadButtonHoverSound(this);
   }
 
   init(data?: { openPracticeMode?: boolean; practiceMode?: PracticeMode }) {
@@ -129,6 +135,7 @@ export class MenuScene extends Phaser.Scene {
     const menuGapY = height * 0.08;
     this.input.setDefaultCursor('default');
     this.applyMasterVolume();
+    installButtonHoverSound(this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.endPracticeBpmInlineEdit(false);
@@ -363,6 +370,7 @@ export class MenuScene extends Phaser.Scene {
         button.style.background = '#385276';
         button.style.borderColor = '#ffffff';
       };
+      wireDomButtonHoverSound(this, button);
       button.onmouseleave = () => {
         button.style.background = '#233042';
         button.style.borderColor = '#c8dcff';
@@ -1263,6 +1271,9 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private buildSettingsPanel() {
+    const { width, height } = this.scale;
+    const inputBlocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.001)
+      .setInteractive({ useHandCursor: false });
     const bg = this.add.rectangle(0, 0, 620, 290, 0x111122, 0.95);
     const title = this.add.text(0, -102, '設定', { fontSize: '28px', color: '#fff' }).setOrigin(0.5);
 
@@ -1307,6 +1318,7 @@ export class MenuScene extends Phaser.Scene {
     closeBtn.on('pointerdown', () => this.toggleSettings());
 
     this.settingsContainer.add([
+      inputBlocker,
       bg, title,
       ...volumeSlider,
       ...storyDelayRow,
