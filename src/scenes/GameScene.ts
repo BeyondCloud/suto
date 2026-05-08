@@ -452,7 +452,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showChallengePrepareMessage() {
-    this.challengePrepareText?.setText('請準備').setVisible(true);
+    const stageBpm = this.currentStage?.bpm;
+    const bpmText = typeof stageBpm === 'number' && Number.isFinite(stageBpm) && stageBpm > 0
+      ? (Number.isInteger(stageBpm) ? `${stageBpm}` : stageBpm.toFixed(1))
+      : '--';
+    this.challengePrepareText?.setText(`BPM: ${bpmText} 請準備`).setVisible(true);
   }
 
   private hideChallengePrepareMessage() {
@@ -658,7 +662,7 @@ export class GameScene extends Phaser.Scene {
     this.roundText = this.add.text(cx, GAME_FRAME_TOP + 52, '', { fontSize: '20px', color: '#cccccc' }).setOrigin(0.5, 0).setDepth(SCENE_LAYER.HUD);
     this.challengePrepareText = this.add.text(cx, GAME_HEIGHT * 0.28, '請準備', {
       fontSize: '48px',
-      color: '#ffffff',
+      color: '#ffe45c',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 6,
