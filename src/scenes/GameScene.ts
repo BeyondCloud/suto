@@ -57,7 +57,6 @@ const FALSE_TOUCH_DAMAGE = 5;
 const MISS_DAMAGE = 5;
 const DEFAULT_STAGE_AUDIO_CLIP = 'src/assets/audio/120.wav';
 const HIT_SPARK_TEXTURE_KEY = 'hit_spark';
-const PROMPT_AUDIO_GAP_MS = 50;
 const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   w: 'prompt_U',
   x: 'prompt_D',
@@ -114,9 +113,9 @@ export class GameScene extends Phaser.Scene {
   private stageIndex!: number;
   private currentStage!: Stage;
   private currentStageAudioKey: string | null = null;
+  private currentStageAudioBaseBpm?: number;
   private currentStageAudio?: Phaser.Sound.BaseSound;
-  private promptAudioSound?: Phaser.Sound.BaseSound;
-  private promptAudioEvents: Phaser.Time.TimerEvent[] = [];
+  private promptAudioSounds: Phaser.Sound.BaseSound[] = [];
   private promptAudioSequenceId = 0;
   private sectionIndex = 0;
   private sectionRepeatIteration = 1;
@@ -429,13 +428,8 @@ export class GameScene extends Phaser.Scene {
       this.prewarmStageAudio().then(() => {
         this.hideLoadingOverlay();
         if (this.isGameOver || !this.scene.isActive()) return;
-        const clipDerivedBpm = this.getStageClipDerivedBpm();
-        const stageBpm = this.currentStage?.bpm;
-        const intervalMs = (typeof clipDerivedBpm === 'number' && clipDerivedBpm > 0)
-          ? 60000 / clipDerivedBpm
-          : (typeof stageBpm === 'number' && stageBpm > 0)
-            ? 60000 / stageBpm
-            : this.beatMs;
+        const baseBpm = this.getStageAudioBaseBpm();
+        const intervalMs = baseBpm > 0 ? 60000 / baseBpm : this.beatMs;
         this.startIntroCountdown(intervalMs, () => this.startSection());
       });
     }
@@ -461,6 +455,22 @@ export class GameScene extends Phaser.Scene {
 
     if (!Number.isFinite(durationSec) || durationSec <= 0) return undefined;
     return (16 * 60) / durationSec;
+  }
+
+  private getStageAudioBaseBpm(): number {
+    if (typeof this.currentStageAudioBaseBpm === 'number' && this.currentStageAudioBaseBpm > 0) {
+      return this.currentStageAudioBaseBpm;
+    }
+
+    const clipDerivedBpm = this.getStageClipDerivedBpm();
+    if (typeof clipDerivedBpm === 'number' && clipDerivedBpm > 0) {
+      this.currentStageAudioBaseBpm = clipDerivedBpm;
+      return clipDerivedBpm;
+    }
+
+    const stageBpm = this.currentStage?.bpm ?? 0;
+    this.currentStageAudioBaseBpm = stageBpm > 0 ? stageBpm : undefined;
+    return stageBpm;
   }
 
   private startIntroCountdown(intervalMs: number, onComplete: () => void) {
@@ -522,7 +532,7 @@ export class GameScene extends Phaser.Scene {
   // still hitting the first real play.
   private prewarmStageAudio(): Promise<void> {
     if (!this.currentStageAudioKey || this.mode !== 'challenge') return Promise.resolve();
-    const baseBpm = this.currentStage?.bpm ?? 0;
+    const baseBpm = this.getStageAudioBaseBpm();
     if (baseBpm <= 0) return Promise.resolve();
 
     const rates = new Set<number>();
@@ -561,6 +571,7 @@ export class GameScene extends Phaser.Scene {
     this.sectionRepeatIteration = 1;
     this.beatMs = 60000 / this.currentStage.bpm;
     this.currentStageAudioKey = this.currentStage.audio_clip ? getStageAudioKey(this.currentStage.audio_clip) : null;
+    this.currentStageAudioBaseBpm = undefined;
     this.debugController?.updateMetrics();
   }
 
@@ -643,7 +654,7 @@ export class GameScene extends Phaser.Scene {
 
   private getStageAudioPlaybackRate(): number {
     if (this.mode !== 'challenge') return 1;
-    const baseBpm = this.currentStage?.bpm ?? 0;
+    const baseBpm = this.getStageAudioBaseBpm();
     const targetBpm = this.getCurrentBpm();
     if (baseBpm <= 0 || targetBpm <= 0) return 1;
     return Phaser.Math.Clamp(targetBpm / baseBpm, 0.25, 4);
@@ -1056,16 +1067,11 @@ export class GameScene extends Phaser.Scene {
     this.beatTimer?.remove();
     this.onBeat();
     this.beatTimer = this.time.addEvent({ delay: this.beatMs, repeat: 7, callback: this.onBeat, callbackScope: this });
-
-    if (!this.isRotation && this.mode !== 'story') {
-      this.startPromptAudioSequence((this.currentSection as NormalSection).prompts);
-    }
   }
 
   private startCheckPhase() {
     if (this.isGameOver) return;
     this.gamePhase = 'check';
-    this.stopPromptAudioSequence();
     this.clearPromptGrid();
 
     if (this.isButtonEffectSection()) {
@@ -1101,6 +1107,7 @@ export class GameScene extends Phaser.Scene {
     if (this.isGameOver) return;
     if (this.gamePhase === 'prompt') {
       this.highlightPromptBeat(this.beatCount);
+      this.playPromptAudioForBeat(this.beatCount);
       this.beatCount++;
       if (this.beatCount >= 8) {
         this.beatTimer?.remove();
@@ -1356,64 +1363,43 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private startPromptAudioSequence(prompts: Direction[]) {
-    this.stopPromptAudioSequence();
-
-    const audioKeys = prompts.flatMap(dir => {
-      const key = PROMPT_AUDIO_KEYS[dir];
-      return key ? [key] : [];
-    });
-    if (audioKeys.length === 0) return;
+  private playPromptAudioForBeat(beat: number) {
+    if (this.isRotation || this.mode === 'story') return;
+    const prompts = (this.currentSection as NormalSection).prompts;
+    const audioKey = PROMPT_AUDIO_KEYS[prompts[beat]];
+    if (!audioKey) return;
 
     const sequenceId = this.promptAudioSequenceId;
-    let index = 0;
+    const promptSound = this.sound.add(audioKey);
+    this.promptAudioSounds.push(promptSound);
 
-    const playNext = () => {
-      if (sequenceId !== this.promptAudioSequenceId || index >= audioKeys.length) return;
+    promptSound.once(Phaser.Sound.Events.COMPLETE, () => {
+      this.promptAudioSounds = this.promptAudioSounds.filter(sound => sound !== promptSound);
+      promptSound.destroy();
+    });
 
-      const promptSound = this.sound.add(audioKeys[index]);
-      index++;
-      this.promptAudioSound = promptSound;
-
-      promptSound.once(Phaser.Sound.Events.COMPLETE, () => {
-        if (this.promptAudioSound === promptSound) {
-          this.promptAudioSound = undefined;
-        }
-        promptSound.destroy();
-        if (sequenceId !== this.promptAudioSequenceId || index >= audioKeys.length) return;
-
-        const event = this.time.delayedCall(PROMPT_AUDIO_GAP_MS, () => {
-          this.promptAudioEvents = this.promptAudioEvents.filter(item => item !== event);
-          playNext();
-        });
-        event.paused = this.isPaused;
-        this.promptAudioEvents.push(event);
-      });
-
-      promptSound.play();
-    };
-
-    playNext();
+    if (sequenceId === this.promptAudioSequenceId) promptSound.play();
   }
 
   private pausePromptAudioSequence() {
-    if (this.promptAudioSound?.isPlaying) this.promptAudioSound.pause();
-    for (const event of this.promptAudioEvents) event.paused = true;
+    for (const sound of this.promptAudioSounds) {
+      if (sound.isPlaying) sound.pause();
+    }
   }
 
   private resumePromptAudioSequence() {
-    if (this.promptAudioSound?.isPaused) this.promptAudioSound.resume();
-    for (const event of this.promptAudioEvents) event.paused = false;
+    for (const sound of this.promptAudioSounds) {
+      if (sound.isPaused) sound.resume();
+    }
   }
 
   private stopPromptAudioSequence() {
     this.promptAudioSequenceId++;
-    for (const event of this.promptAudioEvents) event.remove(false);
-    this.promptAudioEvents = [];
-    if (!this.promptAudioSound) return;
-    this.promptAudioSound.stop();
-    this.promptAudioSound.destroy();
-    this.promptAudioSound = undefined;
+    for (const sound of this.promptAudioSounds) {
+      sound.stop();
+      sound.destroy();
+    }
+    this.promptAudioSounds = [];
   }
 
   private playStagePhaseClip() {
