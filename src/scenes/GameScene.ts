@@ -1260,7 +1260,7 @@ export class GameScene extends Phaser.Scene {
     const rows = 2;
     const cellW = this.settings.hitboxWidth / cols;
     const cellH = this.settings.hitboxHeight / rows;
-    const isSmall = !this.isRotation && (this.currentSection as NormalSection).effect === 'small';
+    const isSmall = !this.isRotation && this.currentSection?.type === 'normal' && this.currentSection.effect === 'small';
     const arrowSize = isSmall ? 60 : 120;
     const startX = x - this.settings.hitboxWidth / 2 + cellW / 2;
     const startY = y - this.settings.hitboxHeight / 2 + cellH / 2;
@@ -1432,6 +1432,18 @@ export class GameScene extends Phaser.Scene {
     stageAudio.once(Phaser.Sound.Events.COMPLETE, () => {
       if (this.currentStageAudio === stageAudio) this.currentStageAudio = undefined;
       stageAudio.destroy();
+    });
+    const ctx = (this.sound as unknown as { context?: AudioContext }).context;
+    console.log('[audio-latency]', {
+      sectionBpm: this.currentSection?.type !== 'delay' ? (this.currentSection as NormalSection | RotationSection).bpm ?? this.currentStage?.bpm : undefined,
+      stageBpm: this.currentStage?.bpm,
+      rate,
+      perfNow: performance.now().toFixed(2),
+      ctxCurrentTime: ctx?.currentTime?.toFixed(4),
+      baseLatency: ctx?.baseLatency,
+      outputLatency: (ctx as AudioContext & { outputLatency?: number })?.outputLatency,
+      sampleRate: ctx?.sampleRate,
+      ctxState: ctx?.state,
     });
     stageAudio.play({ rate });
   }
