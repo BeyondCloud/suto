@@ -16,6 +16,7 @@ import clapUrl from '../assets/audio/clap.wav';
 import missUrl from '../assets/audio/miss.wav';
 import storyCheckStartUrl from '../assets/audio/short/suto.wav';
 import gameoverSfxUrl from '../assets/audio/long/gameover.wav';
+import tutorialLoopUrl from '../assets/audio/loop/tutorial.wav';
 import stage120Url from '../assets/audio/120.wav';
 import {
   DEFAULT_SETTINGS,
@@ -67,6 +68,8 @@ const BUTTON_EFFECT_REQUIRED_CLICKS = 10;
 const BUTTON_EFFECT_SCALE_STEP = 0.04;
 const DEFAULT_DELAY_TEXT_COLOR = '#37ff55';
 const PRACTICE_RETURN_STORAGE_KEY = 'suto.practice.return.mode.once';
+const CHALLENGE_TUTORIAL_AUDIO_KEY = 'challenge_tutorial_intro';
+const CHALLENGE_TUTORIAL_BEATS = 8;
 
 type GameMode = 'challenge' | 'story';
 type PracticeReturnMode = 'mainline' | 'custom';
@@ -115,6 +118,7 @@ export class GameScene extends Phaser.Scene {
   private currentStageAudioKey: string | null = null;
   private currentStageAudioBaseBpm?: number;
   private currentStageAudio?: Phaser.Sound.BaseSound;
+  private challengeTutorialAudio?: Phaser.Sound.BaseSound;
   private promptAudioSounds: Phaser.Sound.BaseSound[] = [];
   private promptAudioSequenceId = 0;
   private sectionIndex = 0;
@@ -140,6 +144,7 @@ export class GameScene extends Phaser.Scene {
   private introCountdownController?: ThreeTwoOneCountdownController;
   private pendingSectionStartDelayEvent?: Phaser.Time.TimerEvent;
   private phaseTransitionEvent?: Phaser.Time.TimerEvent;
+  private pendingPerfectClapEvents: Phaser.Time.TimerEvent[] = [];
   private pauseStartedAtMs: number | null = null;
   // Cumulative absolute time the current section should end at, so frame jitter
   // from delayedCall doesn't compound across sections.
@@ -222,6 +227,7 @@ export class GameScene extends Phaser.Scene {
   private delayText!: Phaser.GameObjects.Text;
   private stageText!: Phaser.GameObjects.Text;
   private roundText!: Phaser.GameObjects.Text;
+  private challengePrepareText?: Phaser.GameObjects.Text;
   private beatTimer!: Phaser.Time.TimerEvent;
 
   // Prompt phase
@@ -317,6 +323,7 @@ export class GameScene extends Phaser.Scene {
     this.load.audio('miss', missUrl);
     this.load.audio('story_check_start', storyCheckStartUrl);
     this.load.audio('gameover_sfx', gameoverSfxUrl);
+    this.load.audio(CHALLENGE_TUTORIAL_AUDIO_KEY, tutorialLoopUrl);
     preloadButtonHoverSound(this);
 
     const customSectionImages = new Set(
@@ -424,15 +431,91 @@ export class GameScene extends Phaser.Scene {
         startStorySection();
       }
     } else {
-      this.showLoadingOverlay();
-      this.prewarmStageAudio().then(() => {
-        this.hideLoadingOverlay();
-        if (this.isGameOver || !this.scene.isActive()) return;
-        const baseBpm = this.getStageAudioBaseBpm();
-        const intervalMs = baseBpm > 0 ? 60000 / baseBpm : this.beatMs;
-        this.startIntroCountdown(intervalMs, () => this.startSection());
-      });
+      this.beginChallengeStageIntro(() => this.startSection());
     }
+  }
+
+  private beginChallengeStageIntro(onComplete: () => void) {
+    this.showChallengePrepareMessage();
+    this.prewarmStageAudio()
+      .then(() => this.playChallengeTutorialCue())
+      .then(() => {
+        this.hideChallengePrepareMessage();
+        if (this.isGameOver || !this.scene.isActive()) return;
+        onComplete();
+      })
+      .catch(() => {
+        this.hideChallengePrepareMessage();
+        if (this.isGameOver || !this.scene.isActive()) return;
+        onComplete();
+      });
+  }
+
+  private showChallengePrepareMessage() {
+    this.challengePrepareText?.setText('請準備').setVisible(true);
+  }
+
+  private hideChallengePrepareMessage() {
+    this.challengePrepareText?.setVisible(false);
+  }
+
+  private getAudioClipDurationSec(audioKey: string): number | undefined {
+    const cachedAudio = this.cache.audio.get(audioKey) as unknown;
+    if (cachedAudio instanceof AudioBuffer) {
+      const durationSec = cachedAudio.length / cachedAudio.sampleRate;
+      if (Number.isFinite(durationSec) && durationSec > 0) {
+        return durationSec;
+      }
+    }
+
+    const probe = this.sound.add(audioKey);
+    const durationSec = probe.duration;
+    probe.destroy();
+    if (!Number.isFinite(durationSec) || durationSec <= 0) return undefined;
+    return durationSec;
+  }
+
+  private getClipDerivedBpm(audioKey: string, beats: number): number | undefined {
+    if (!(beats > 0)) return undefined;
+    const durationSec = this.getAudioClipDurationSec(audioKey);
+    if (!(typeof durationSec === 'number' && Number.isFinite(durationSec) && durationSec > 0)) {
+      return undefined;
+    }
+    return (beats * 60) / durationSec;
+  }
+
+  private playChallengeTutorialCue(): Promise<void> {
+    if (this.mode !== 'challenge') return Promise.resolve();
+
+    let rate = 1;
+    const stageBpm = this.currentStage?.bpm ?? 0;
+    const tutorialBaseBpm = this.getClipDerivedBpm(CHALLENGE_TUTORIAL_AUDIO_KEY, CHALLENGE_TUTORIAL_BEATS);
+    if (stageBpm > 0 && typeof tutorialBaseBpm === 'number' && tutorialBaseBpm > 0) {
+      rate = Phaser.Math.Clamp(stageBpm / tutorialBaseBpm, 0.25, 4);
+    }
+
+    this.challengeTutorialAudio?.stop();
+    this.challengeTutorialAudio?.destroy();
+
+    const tutorialAudio = this.sound.add(CHALLENGE_TUTORIAL_AUDIO_KEY);
+    this.challengeTutorialAudio = tutorialAudio;
+
+    return new Promise<void>(resolve => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (this.challengeTutorialAudio === tutorialAudio) {
+          this.challengeTutorialAudio = undefined;
+        }
+        tutorialAudio.destroy();
+        resolve();
+      };
+
+      tutorialAudio.once(Phaser.Sound.Events.COMPLETE, finish);
+      const started = tutorialAudio.play({ rate });
+      if (!started) finish();
+    });
   }
 
   // Stage clips are assumed to be seamless 16-beat loops.
@@ -440,21 +523,7 @@ export class GameScene extends Phaser.Scene {
   // actual audio file instead of relying on a fixed hardcoded BPM.
   private getStageClipDerivedBpm(): number | undefined {
     if (!this.currentStageAudioKey) return undefined;
-
-    const cachedAudio = this.cache.audio.get(this.currentStageAudioKey) as unknown;
-    let durationSec: number | undefined;
-    if (cachedAudio instanceof AudioBuffer) {
-      durationSec = cachedAudio.length / cachedAudio.sampleRate;
-    }
-
-    if (!(typeof durationSec === 'number' && Number.isFinite(durationSec) && durationSec > 0)) {
-      const probe = this.sound.add(this.currentStageAudioKey);
-      durationSec = probe.duration;
-      probe.destroy();
-    }
-
-    if (!Number.isFinite(durationSec) || durationSec <= 0) return undefined;
-    return (16 * 60) / durationSec;
+    return this.getClipDerivedBpm(this.currentStageAudioKey, 16);
   }
 
   private getStageAudioBaseBpm(): number {
@@ -569,6 +638,7 @@ export class GameScene extends Phaser.Scene {
   private loadStage(index: number) {
     this.currentStage = this.levelData.stages[index];
     this.sectionRepeatIteration = 1;
+    this.sectionTargetEndTimeMs = null;
     this.beatMs = 60000 / this.currentStage.bpm;
     this.currentStageAudioKey = this.currentStage.audio_clip ? getStageAudioKey(this.currentStage.audio_clip) : null;
     this.currentStageAudioBaseBpm = undefined;
@@ -586,6 +656,14 @@ export class GameScene extends Phaser.Scene {
     const cx = GAME_WIDTH / 2;
     this.stageText = this.add.text(cx, GAME_FRAME_TOP + 18, '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0).setDepth(SCENE_LAYER.HUD);
     this.roundText = this.add.text(cx, GAME_FRAME_TOP + 52, '', { fontSize: '20px', color: '#cccccc' }).setOrigin(0.5, 0).setDepth(SCENE_LAYER.HUD);
+    this.challengePrepareText = this.add.text(cx, GAME_HEIGHT * 0.28, '請準備', {
+      fontSize: '48px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 6,
+      align: 'center',
+    }).setOrigin(0.5).setDepth(SCENE_LAYER.COUNTDOWN).setVisible(false);
     this.delayText = this.add.text(cx, GAME_HEIGHT / 4, '', {
       fontSize: '80px',
       color: DEFAULT_DELAY_TEXT_COLOR,
@@ -881,8 +959,15 @@ export class GameScene extends Phaser.Scene {
       this.cancelIntroCountdown();
       this.pendingSectionStartDelayEvent?.remove(false);
       this.pendingSectionStartDelayEvent = undefined;
+      this.clearPendingPerfectClapEvents();
       this.clearPhaseTransitionEvent();
       this.stopStagePhaseClip();
+      this.hideChallengePrepareMessage();
+      if (this.challengeTutorialAudio) {
+        this.challengeTutorialAudio.stop();
+        this.challengeTutorialAudio.destroy();
+        this.challengeTutorialAudio = undefined;
+      }
       this.stopPromptAudioSequence();
       this.cursorGifAngleTween?.stop();
       window.removeEventListener('resize', this.refreshGifCursorLayout);
@@ -1007,6 +1092,7 @@ export class GameScene extends Phaser.Scene {
 
   private startSection() {
     if (this.isGameOver) return;
+    this.hideChallengePrepareMessage();
     this.currentSection = this.currentStage.sections[this.sectionIndex];
     this.clearButtonEffectUI();
 
@@ -1193,7 +1279,11 @@ export class GameScene extends Phaser.Scene {
       } else {
         this.loadStage(this.stageIndex);
         this.sectionIndex = 0;
-        this.startSection();
+        if (this.mode === 'challenge') {
+          this.beginChallengeStageIntro(() => this.startSection());
+        } else {
+          this.startSection();
+        }
       }
     } else {
       this.startSection();
@@ -2414,7 +2504,7 @@ export class GameScene extends Phaser.Scene {
       cp.edgeZone?.setAlpha(0.16);
       cp.edgeLine?.setAlpha(1).setVisible(this.shouldShowCardinalGuideLine());
     }
-    this.onPerfect(active.dir);
+    this.onPerfect(active.dir, active.judgementTimeMs);
   }
 
   private hasActiveShrinkForDir(dir: Direction): boolean {
@@ -2424,11 +2514,11 @@ export class GameScene extends Phaser.Scene {
     return false;
   }
 
-  private onPerfect(dir: Direction) {
+  private onPerfect(dir: Direction, judgementTimeMs: number) {
     this.penaltyCooldownUntil = this.time.now + this.beatMs;
     this.falseTouchedLines.clear();
     this.perfectCount++;
-    this.sound.play('clap');
+    this.playPerfectClapAligned(judgementTimeMs);
     this.updateJudgementText();
     this.lifeValue = Math.min(100, this.lifeValue + 4);
     this.drawLifeBar();
@@ -2436,6 +2526,29 @@ export class GameScene extends Phaser.Scene {
     this.showJudgement(dir, 'perfect', '#7cff8f');
     this.flashOverlay.setAlpha(0.35);
     this.tweens.add({ targets: this.flashOverlay, alpha: 0, duration: 180, ease: 'Linear' });
+  }
+
+  private playPerfectClapAligned(judgementTimeMs: number) {
+    const delayMs = judgementTimeMs - this.time.now;
+    if (delayMs <= 0) {
+      this.sound.play('clap');
+      return;
+    }
+
+    const event = this.time.delayedCall(delayMs, () => {
+      this.pendingPerfectClapEvents = this.pendingPerfectClapEvents.filter(item => item !== event);
+      if (this.isGameOver || this.isReturningToMenu || !this.scene.isActive()) return;
+      this.sound.play('clap');
+    });
+    event.paused = this.isPaused;
+    this.pendingPerfectClapEvents.push(event);
+  }
+
+  private clearPendingPerfectClapEvents() {
+    for (const event of this.pendingPerfectClapEvents) {
+      event.remove(false);
+    }
+    this.pendingPerfectClapEvents = [];
   }
 
   private onMiss(dir: Direction) {
@@ -2529,6 +2642,7 @@ export class GameScene extends Phaser.Scene {
     this.clearPromptGrid();
     this.stopStagePhaseClip();
     this.stopPromptAudioSequence();
+    this.clearPendingPerfectClapEvents();
     this.removeStorySamVideo();
     this.endingOverlay.removeOverlay();
     this.sound.stopAll();
@@ -2581,6 +2695,7 @@ export class GameScene extends Phaser.Scene {
       this.resumeStorySamVideo();
     }
     for (const event of this.shrinkStartEvents) event.paused = paused;
+    for (const event of this.pendingPerfectClapEvents) event.paused = paused;
     for (const tween of this.shrinkTweens.values()) {
       if (paused) {
         tween.pause();
@@ -2634,6 +2749,7 @@ export class GameScene extends Phaser.Scene {
       this.endingOverlay?.removeOverlay();
       this.stopStagePhaseClip();
       this.stopPromptAudioSequence();
+      this.clearPendingPerfectClapEvents();
       this.beatTimer?.remove(false);
       for (const event of this.shrinkStartEvents) event.remove(false);
       this.shrinkStartEvents = [];
@@ -2684,6 +2800,7 @@ export class GameScene extends Phaser.Scene {
       this.endingOverlay?.removeOverlay();
       this.stopStagePhaseClip();
       this.stopPromptAudioSequence();
+      this.clearPendingPerfectClapEvents();
       this.beatTimer?.remove(false);
       for (const event of this.shrinkStartEvents) event.remove(false);
       this.shrinkStartEvents = [];
