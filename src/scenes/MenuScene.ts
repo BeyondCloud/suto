@@ -338,7 +338,7 @@ export class MenuScene extends Phaser.Scene {
     root.style.gridTemplateColumns = 'repeat(2, minmax(86px, 1fr))';
     root.style.gap = '8px';
     root.style.padding = '12px';
-    root.style.width = '224px';
+    root.style.width = '248px';
     root.style.background = 'rgba(15, 20, 32, 0.96)';
     root.style.border = '2px solid #ffd24d';
     root.style.borderRadius = '10px';
@@ -353,6 +353,49 @@ export class MenuScene extends Phaser.Scene {
     title.style.fontWeight = '800';
     title.style.color = '#ffe066';
     root.appendChild(title);
+
+    const nodeConfirmRow = document.createElement('div');
+    nodeConfirmRow.style.gridColumn = '1 / -1';
+    nodeConfirmRow.style.display = 'flex';
+    nodeConfirmRow.style.alignItems = 'center';
+    nodeConfirmRow.style.justifyContent = 'space-between';
+    nodeConfirmRow.style.gap = '8px';
+
+    const nodeConfirmLabel = document.createElement('div');
+    nodeConfirmLabel.textContent = '拍點確認';
+    nodeConfirmLabel.style.fontSize = '14px';
+    nodeConfirmLabel.style.fontWeight = '700';
+    nodeConfirmLabel.style.color = '#d8e8ff';
+    nodeConfirmRow.appendChild(nodeConfirmLabel);
+
+    const nodeConfirmButton = document.createElement('button');
+    nodeConfirmButton.type = 'button';
+    nodeConfirmButton.textContent = this.settings.nodeConfirmToggle ? 'ON (全節拍判定 x)' : 'OFF';
+    nodeConfirmButton.style.height = '30px';
+    nodeConfirmButton.style.padding = '0 10px';
+    nodeConfirmButton.style.border = '1px solid #8fb3dc';
+    nodeConfirmButton.style.borderRadius = '6px';
+    nodeConfirmButton.style.background = '#1f2b3b';
+    nodeConfirmButton.style.color = '#ffffff';
+    nodeConfirmButton.style.fontSize = '13px';
+    nodeConfirmButton.style.fontWeight = '700';
+    nodeConfirmButton.style.cursor = 'pointer';
+    nodeConfirmButton.onmouseenter = () => {
+      nodeConfirmButton.style.background = '#314865';
+      nodeConfirmButton.style.borderColor = '#c8dcff';
+    };
+    wireDomButtonHoverSound(this, nodeConfirmButton);
+    nodeConfirmButton.onmouseleave = () => {
+      nodeConfirmButton.style.background = '#1f2b3b';
+      nodeConfirmButton.style.borderColor = '#8fb3dc';
+    };
+    nodeConfirmButton.onclick = () => {
+      this.settings.nodeConfirmToggle = !this.settings.nodeConfirmToggle;
+      nodeConfirmButton.textContent = this.settings.nodeConfirmToggle ? 'ON (全節拍判定 x)' : 'OFF';
+      this.saveSettings();
+    };
+    nodeConfirmRow.appendChild(nodeConfirmButton);
+    root.appendChild(nodeConfirmRow);
 
     presets.forEach(preset => {
       const button = document.createElement('button');
@@ -1274,8 +1317,8 @@ export class MenuScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const inputBlocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.001)
       .setInteractive({ useHandCursor: false });
-    const bg = this.add.rectangle(0, 0, 620, 290, 0x111122, 0.95);
-    const title = this.add.text(0, -102, '設定', { fontSize: '28px', color: '#fff' }).setOrigin(0.5);
+    const bg = this.add.rectangle(0, 0, 620, 340, 0x111122, 0.95);
+    const title = this.add.text(0, -122, '設定', { fontSize: '28px', color: '#fff' }).setOrigin(0.5);
 
     const makeRow = (label: string, yOff: number, getValue: () => string | number, onMinus: () => void, onPlus: () => void, onMinusTen?: () => void, onPlusTen?: () => void) => {
       const lbl = this.add.text(-230, yOff, label, { fontSize: '20px', color: '#ccc' }).setOrigin(0, 0.5);
@@ -1314,7 +1357,24 @@ export class MenuScene extends Phaser.Scene {
       },
     );
 
-    const closeBtn = this.add.text(0, 104, '[ CLOSE ]', { fontSize: '22px', color: '#ffaaaa' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const debugNodeConfirmToggleRow: Phaser.GameObjects.GameObject[] = [];
+    if (DEBUG_MODE) {
+      const label = this.add.text(-230, 82, '拍點確認', { fontSize: '20px', color: '#ccc' }).setOrigin(0, 0.5);
+      const value = this.add.text(95, 82, this.settings.nodeConfirmToggle ? 'ON (全節拍判定 x)' : 'OFF', { fontSize: '20px', color: '#fff' }).setOrigin(0.5);
+      const button = this.add.text(190, 82, '[ TOGGLE ]', { fontSize: '17px', color: '#8fd3ff', fontStyle: 'bold' })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+
+      button.on('pointerdown', () => {
+        this.settings.nodeConfirmToggle = !this.settings.nodeConfirmToggle;
+        value.setText(this.settings.nodeConfirmToggle ? 'ON (全節拍判定 x)' : 'OFF');
+        this.saveSettings();
+      });
+
+      debugNodeConfirmToggleRow.push(label, value, button);
+    }
+
+    const closeBtn = this.add.text(0, 134, '[ CLOSE ]', { fontSize: '22px', color: '#ffaaaa' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.toggleSettings());
 
     this.settingsContainer.add([
@@ -1322,6 +1382,7 @@ export class MenuScene extends Phaser.Scene {
       bg, title,
       ...volumeSlider,
       ...storyDelayRow,
+      ...debugNodeConfirmToggleRow,
       closeBtn,
     ]);
   }

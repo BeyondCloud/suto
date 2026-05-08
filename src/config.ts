@@ -6,6 +6,7 @@ export interface GameSettings {
   bpm: number;
   shrinkLeadMs: number;
   perfectJudgeWindowMs: number;
+  nodeConfirmToggle: boolean;
   hitboxWidth: number;
   hitboxHeight: number;
   checkDepth: number;
@@ -18,6 +19,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   bpm: 183,
   shrinkLeadMs: 500,
   perfectJudgeWindowMs: 220,
+  nodeConfirmToggle: false,
   hitboxWidth: 500,
   hitboxHeight: 300,
   checkDepth: 50,
