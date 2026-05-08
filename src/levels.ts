@@ -195,7 +195,7 @@ export const MAIN_LEVEL_DATA: LevelData = {
         },
         {
           type: 'delay',
-          ms: 2263,
+          ms: 2363,
           text: 'Level - 3',
         },
       ],

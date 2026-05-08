@@ -640,30 +640,20 @@ export class GameScene extends Phaser.Scene {
     let total = 0;
     let current = 0;
 
-    for (let stageIdx = 0; stageIdx < this.levelData.stages.length; stageIdx++) {
-      const stage = this.levelData.stages[stageIdx];
-      for (let sectionIdx = 0; sectionIdx < stage.sections.length; sectionIdx++) {
-        const section = stage.sections[sectionIdx];
-        if (section.type === 'delay') continue;
+    for (let sectionIdx = 0; sectionIdx < this.currentStage.sections.length; sectionIdx++) {
+      const section = this.currentStage.sections[sectionIdx];
+      if (section.type === 'delay') continue;
 
-        const repeat = this.getSectionRepeat(section);
-        total += repeat;
+      const repeat = this.getSectionRepeat(section);
+      total += repeat;
 
-        if (stageIdx < this.stageIndex) {
-          current += repeat;
-          continue;
-        }
+      if (sectionIdx < this.sectionIndex) {
+        current += repeat;
+        continue;
+      }
 
-        if (stageIdx === this.stageIndex) {
-          if (sectionIdx < this.sectionIndex) {
-            current += repeat;
-            continue;
-          }
-
-          if (sectionIdx === this.sectionIndex) {
-            current += Math.min(this.sectionRepeatIteration, repeat);
-          }
-        }
+      if (sectionIdx === this.sectionIndex) {
+        current += Math.min(this.sectionRepeatIteration, repeat);
       }
     }
 
@@ -1554,16 +1544,18 @@ export class GameScene extends Phaser.Scene {
   private buildBeatTargets() {
     this.beatTargets = [];
     this.beatTargetPairs = [];
+    const forceXJudge = this.mode === 'story' && this.settings.nodeConfirmToggle;
     if (this.isRotation) {
       const sec = this.currentSection as RotationSection;
       let cur: Direction = sec.start;
       for (let i = 0; i < 8; i++) {
         const [diag, next] = getRotationPoints(cur, sec.rotate[i]);
-        this.beatTargetPairs.push([cur, diag]);
+        this.beatTargetPairs.push(forceXJudge ? ['x', 'x'] : [cur, diag]);
         cur = next;
       }
     } else {
-      this.beatTargets = (this.currentSection as NormalSection).prompts;
+      const prompts = (this.currentSection as NormalSection).prompts;
+      this.beatTargets = forceXJudge ? prompts.map(() => 'x') : prompts;
     }
   }
 
