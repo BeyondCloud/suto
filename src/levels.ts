@@ -75,6 +75,13 @@ export const LEVEL_DATA: LevelData = {
         //     repeat: 10,
         // },
         {
+          bpm: 183.5,
+          type: 'normal',
+          prompts: ['w', 'x', 'a', 'd',
+                    'w', 'x', 'a', 'd'],
+            repeat: 10,
+        },
+        {
           bpm: 291,
           type: 'normal',
           prompts: ['x', 'd', 'c', 'x',
@@ -319,59 +326,6 @@ export const MAIN_LEVEL_DATA: LevelData = {
         },
       ],
     },
-//    {
-//       stage_number: 3,
-//       bpm: 183,
-//       sections: [
-//         {
-//           bpm: 215.5,
-//           type: 'normal',
-//           prompts: ['w', 'w', 'w', 'w',
-//                     'w', 'w', 'w', 'w'],
-//         },
-//         {
-//           bpm: 243.5,
-//           type: 'normal',
-//           prompts: ['w', 'w', 'w', 'w',
-//                     'w', 'w', 'w', 'w'],
-//         },
-//         {
-//           bpm: 257,
-//           type: 'normal',
-//           prompts: ['w', 'w', 'w', 'w',
-//                     'w', 'w', 'w', 'w'],
-//         },
-//         {
-//           bpm: 275,
-//           type: 'normal',
-//           prompts: ['w', 'w', 'w', 'w',
-//                     'w', 'w', 'w', 'w'],
-//         },
-//         {
-//           bpm: 291,
-//           type: 'normal',
-//           prompts: ['w', 'w', 'w', 'w',
-//                     'w', 'w', 'w', 'w'],
-//         },
-//         {
-//             type: 'delay',
-//             ms: 4112,
-//             text: 'WARNING',
-//         },
-//         {
-//             type: 'delay',
-//             ms: 2515,
-//             text: '',
-//         },
-//         {
-//           bpm: 183.5,
-//           type: 'normal',
-//           image: 'src/assets/cmonbruh.png',
-//           prompts: ['x', 'x', 'x', 'x',
-//                     'x', 'x', 'x', 'x'],
-//         }
-//       ],
-//     }
    {
       stage_number: 3,
       bpm: 183,
@@ -428,21 +382,5 @@ export const MAIN_LEVEL_DATA: LevelData = {
 
       ],
     },
-    // {
-    //   stage_number: 3,
-    //   bpm: 183,
-    //   sections: [
-    //     {
-    //       bpm: 183.5,
-    //       type: 'normal',
-    //       effect: 'button',
-    //       image: 'src/assets/cmonbruh.png',
-    //       prompts: ['x', 'x', 'x', 'x',
-    //                 'x', 'x', 'x', 'x'],
-    //     }
-
-    //   ],
-    // }
-
   ],
 };

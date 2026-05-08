@@ -60,8 +60,10 @@ const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
 const BUTTON_EFFECT_REQUIRED_CLICKS = 10;
 const BUTTON_EFFECT_SCALE_STEP = 0.04;
 const DEFAULT_DELAY_TEXT_COLOR = '#37ff55';
+const PRACTICE_RETURN_STORAGE_KEY = 'suto.practice.return.mode.once';
 
 type GameMode = 'challenge' | 'story';
+type PracticeReturnMode = 'mainline' | 'custom';
 
 const getStageAudioKey = (clipPath: string): string => `stage_audio_${clipPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
 const getCustomImageKey = (imgPath: string): string => `custom_img_${imgPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
@@ -265,17 +267,27 @@ export class GameScene extends Phaser.Scene {
   private loadingOverlayImage?: Phaser.GameObjects.Image;
   private pendingDebugEndingPreset?: DebugEndingPreset;
   private introCountdownBpm?: number;
+  private isReturningToMenu = false;
+  private showPracticeReturnButton = false;
+  private practiceReturnMode: PracticeReturnMode = 'mainline';
+  private practiceReturnContainer?: Phaser.GameObjects.Container;
+  private escKeyHandler?: () => void;
+  private windowEscKeyHandler?: (event: KeyboardEvent) => void;
+  private documentEscCaptureHandler?: (event: KeyboardEvent) => void;
 
   constructor() {
     super('GameScene');
   }
 
-  init(data: { settings: GameSettings; stageIndex: number; mode?: GameMode; levelData?: LevelData; debugEndingPreset?: DebugEndingPreset; introCountdownBpm?: number }) {
+  init(data: { settings: GameSettings; stageIndex: number; mode?: GameMode; levelData?: LevelData; debugEndingPreset?: DebugEndingPreset; introCountdownBpm?: number; showPracticeReturnButton?: boolean; practiceReturnMode?: PracticeReturnMode }) {
     this.settings = data.settings;
     this.stageIndex = data.stageIndex ?? 0;
     this.mode = data.mode ?? 'challenge';
     this.levelData = data.levelData ?? LEVEL_DATA;
     this.pendingDebugEndingPreset = data.debugEndingPreset;
+    this.isReturningToMenu = false;
+    this.showPracticeReturnButton = data.showPracticeReturnButton === true;
+    this.practiceReturnMode = data.practiceReturnMode === 'custom' ? 'custom' : 'mainline';
     const countdownBpm = data.introCountdownBpm;
     this.introCountdownBpm = typeof countdownBpm === 'number' && Number.isFinite(countdownBpm) && countdownBpm > 0
       ? countdownBpm
@@ -348,11 +360,29 @@ export class GameScene extends Phaser.Scene {
     this.createHitSparkTexture();
     this.createCursors();
     this.createPauseMenu();
+    if (this.showPracticeReturnButton) {
+      this.createPracticeReturnButton();
+    }
     this.flashOverlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xffffff, 0).setDepth(SCENE_LAYER.FLASH_OVERLAY);
 
     this.setCheckpointsVisible(false);
 
-    this.input.keyboard!.on('keydown-ESC', () => this.onEsc());
+    this.escKeyHandler = () => this.onEsc();
+    this.input.keyboard?.on('keydown-ESC', this.escKeyHandler);
+    this.windowEscKeyHandler = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (!this.scene.isActive()) return;
+      event.preventDefault();
+      this.onEsc();
+    };
+    window.addEventListener('keydown', this.windowEscKeyHandler);
+    this.documentEscCaptureHandler = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (!this.scene.isActive()) return;
+      event.preventDefault();
+      this.onEsc();
+    };
+    document.addEventListener('keydown', this.documentEscCaptureHandler, true);
     this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => this.onMouseMove(ptr));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanupScene());
 
@@ -734,35 +764,53 @@ export class GameScene extends Phaser.Scene {
   }
 
   private cleanupScene() {
-    this.input.setDefaultCursor('default');
-    this.setGifCursorVisible(false);
-    this.clearButtonEffectUI();
-    this.debugController?.dispose();
-    this.debugController = undefined;
-    this.removeStorySamVideo();
-    this.endingOverlay.removeOverlay();
-    this.hideLoadingOverlay();
-    this.endingSequenceStarted = false;
-    this.suppressGameFrameMask = false;
-    this.stopStagePhaseClip();
-    this.stopPromptAudioSequence();
-    this.cursorGifAngleTween?.stop();
-    window.removeEventListener('resize', this.refreshGifCursorLayout);
-    window.removeEventListener('pointermove', this.onWindowPointerMove);
-    this.cursorCheckPointDot?.remove();
-    this.cursorClipFrame?.remove();
-    for (const panel of this.gameFrameMask) panel.remove();
-    this.gameFrameMask = [];
-    this.resetGifCursorCache();
-    this.beatTimer?.remove(false);
-    this.promptRotationTween?.stop();
-    for (const event of this.shrinkStartEvents) event.remove(false);
-    this.shrinkStartEvents = [];
-    for (const t of this.shrinkTweens.values()) t.stop();
-    this.shrinkTweens.clear();
-    this.activeShrinks.clear();
-    this.falseTouchedLines.clear();
-    this.penaltyCooldownUntil = 0;
+    try {
+      if (this.escKeyHandler) {
+        this.input.keyboard?.off('keydown-ESC', this.escKeyHandler);
+        this.escKeyHandler = undefined;
+      }
+      if (this.windowEscKeyHandler) {
+        window.removeEventListener('keydown', this.windowEscKeyHandler);
+        this.windowEscKeyHandler = undefined;
+      }
+      if (this.documentEscCaptureHandler) {
+        document.removeEventListener('keydown', this.documentEscCaptureHandler, true);
+        this.documentEscCaptureHandler = undefined;
+      }
+      this.input.setDefaultCursor('default');
+      this.setGifCursorVisible(false);
+      this.clearButtonEffectUI();
+      this.debugController?.dispose();
+      this.debugController = undefined;
+      this.removeStorySamVideo();
+      this.endingOverlay?.removeOverlay();
+      this.hideLoadingOverlay();
+      this.endingSequenceStarted = false;
+      this.suppressGameFrameMask = false;
+      this.stopStagePhaseClip();
+      this.stopPromptAudioSequence();
+      this.cursorGifAngleTween?.stop();
+      window.removeEventListener('resize', this.refreshGifCursorLayout);
+      window.removeEventListener('pointermove', this.onWindowPointerMove);
+      this.cursorCheckPointDot?.remove();
+      this.cursorClipFrame?.remove();
+      this.practiceReturnContainer?.destroy(true);
+      this.practiceReturnContainer = undefined;
+      for (const panel of this.gameFrameMask) panel.remove();
+      this.gameFrameMask = [];
+      this.resetGifCursorCache();
+      this.beatTimer?.remove(false);
+      this.promptRotationTween?.stop();
+      for (const event of this.shrinkStartEvents) event.remove(false);
+      this.shrinkStartEvents = [];
+      for (const t of this.shrinkTweens.values()) t.stop();
+      this.shrinkTweens.clear();
+      this.activeShrinks.clear();
+      this.falseTouchedLines.clear();
+      this.penaltyCooldownUntil = 0;
+    } catch (error) {
+      console.error('cleanupScene failed', error);
+    }
   }
 
   private createGameFrameMask() {
@@ -837,11 +885,27 @@ export class GameScene extends Phaser.Scene {
       return btn;
     };
 
-    const resumeBtn = makeBtn('繼續', -30, () => this.resumeWithCountdown());
-    const homeBtn = makeBtn('返回主頁', 30, () => this.returnToMenu());
+    const resumeBtn = makeBtn('取消', -30, () => this.resumeWithCountdown());
+    const homeBtn = makeBtn('返回主選單', 30, () => this.returnToMenu());
 
     this.pauseContainer.add([overlay, bg, title, resumeBtn, homeBtn]);
     this.countdownText = this.add.text(cx, cy, '', { fontSize: '80px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(SCENE_LAYER.COUNTDOWN).setVisible(false);
+  }
+
+  private createPracticeReturnButton() {
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+    const container = this.add.container(cx, cy).setDepth(SCENE_LAYER.HUD);
+    const label = this.add.text(0, -200, '按ESC返回練習畫面', {
+      fontSize: '30px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#111111',
+      strokeThickness: 5,
+    }).setOrigin(0.5);
+
+    container.add([label]);
+    this.practiceReturnContainer = container;
   }
 
   // ---------- Section flow ----------
@@ -2457,21 +2521,97 @@ export class GameScene extends Phaser.Scene {
   }
 
   private returnToMenu() {
-    this.isPaused = false;
-    this.clearButtonEffectUI();
-    this.removeStorySamVideo();
-    this.endingOverlay.removeOverlay();
-    this.stopStagePhaseClip();
-    this.stopPromptAudioSequence();
-    this.setGameplayTimersPaused(false);
-    this.input.setDefaultCursor('default');
-    this.setGifCursorVisible(false);
-    this.pauseContainer.setVisible(false);
-    this.countdownText.setVisible(false);
-    this.beatTimer?.remove(false);
-    this.promptRotationTween?.stop();
-    this.stopAllShrinks();
-    this.time.delayedCall(0, () => this.scene.start('MenuScene'));
+    if (this.isReturningToMenu) return;
+    this.isReturningToMenu = true;
+
+    try {
+      if (this.escKeyHandler) {
+        this.input.keyboard?.off('keydown-ESC', this.escKeyHandler);
+        this.escKeyHandler = undefined;
+      }
+      if (this.windowEscKeyHandler) {
+        window.removeEventListener('keydown', this.windowEscKeyHandler);
+        this.windowEscKeyHandler = undefined;
+      }
+      if (this.documentEscCaptureHandler) {
+        document.removeEventListener('keydown', this.documentEscCaptureHandler, true);
+        this.documentEscCaptureHandler = undefined;
+      }
+      this.isPaused = false;
+      this.clearButtonEffectUI();
+      this.removeStorySamVideo();
+      this.endingOverlay?.removeOverlay();
+      this.stopStagePhaseClip();
+      this.stopPromptAudioSequence();
+      this.beatTimer?.remove(false);
+      for (const event of this.shrinkStartEvents) event.remove(false);
+      this.shrinkStartEvents = [];
+      this.shrinkTweens.forEach(tween => tween.stop());
+      this.shrinkTweens.clear();
+      this.input.setDefaultCursor('default');
+      this.setGifCursorVisible(false);
+      this.pauseContainer?.setVisible(false);
+      this.countdownText?.setVisible(false);
+      this.promptRotationTween?.stop();
+      this.stopAllShrinks();
+    } catch (error) {
+      console.error('returnToMenu cleanup failed', error);
+    }
+
+    this.showLoadingOverlay();
+    window.setTimeout(() => {
+      window.location.reload();
+    }, 90);
+  }
+
+  private returnToPracticePanel() {
+    if (this.isReturningToMenu) return;
+    this.isReturningToMenu = true;
+
+    try {
+      window.localStorage.setItem(PRACTICE_RETURN_STORAGE_KEY, this.practiceReturnMode);
+    } catch {
+      // Ignore storage write failures.
+    }
+
+    try {
+      if (this.escKeyHandler) {
+        this.input.keyboard?.off('keydown-ESC', this.escKeyHandler);
+        this.escKeyHandler = undefined;
+      }
+      if (this.windowEscKeyHandler) {
+        window.removeEventListener('keydown', this.windowEscKeyHandler);
+        this.windowEscKeyHandler = undefined;
+      }
+      if (this.documentEscCaptureHandler) {
+        document.removeEventListener('keydown', this.documentEscCaptureHandler, true);
+        this.documentEscCaptureHandler = undefined;
+      }
+      this.isPaused = false;
+      this.clearButtonEffectUI();
+      this.removeStorySamVideo();
+      this.endingOverlay?.removeOverlay();
+      this.stopStagePhaseClip();
+      this.stopPromptAudioSequence();
+      this.beatTimer?.remove(false);
+      for (const event of this.shrinkStartEvents) event.remove(false);
+      this.shrinkStartEvents = [];
+      this.shrinkTweens.forEach(tween => tween.stop());
+      this.shrinkTweens.clear();
+      this.input.setDefaultCursor('default');
+      this.setGifCursorVisible(false);
+      this.pauseContainer?.setVisible(false);
+      this.countdownText?.setVisible(false);
+      this.promptRotationTween?.stop();
+      this.stopAllShrinks();
+    } catch (error) {
+      console.error('returnToPracticePanel cleanup failed', error);
+    }
+
+    this.showLoadingOverlay();
+    window.setTimeout(() => {
+      window.location.reload();
+    }, 90);
   }
 
   private playStoryEndingSequence() {
@@ -2541,10 +2681,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onEsc() {
+    if (this.showPracticeReturnButton) {
+      this.returnToPracticePanel();
+      return;
+    }
+
     if (this.isPaused || this.endingSequenceStarted) return;
     this.isPaused = true;
     this.setGameplayTimersPaused(true);
     this.pauseContainer.setVisible(true);
+    this.practiceReturnContainer?.setVisible(false);
     this.setGifCursorVisible(false);
     this.input.setDefaultCursor('default');
   }
@@ -2557,6 +2703,9 @@ export class GameScene extends Phaser.Scene {
         this.countdownText.setVisible(false);
         this.isPaused = false;
         this.setGameplayTimersPaused(false);
+        if (this.showPracticeReturnButton) {
+          this.practiceReturnContainer?.setVisible(true);
+        }
         this.input.setDefaultCursor(this.gamePhase === 'check' && !this.isButtonEffectActive ? 'none' : 'default');
         this.setGifCursorVisible(this.gamePhase === 'check' && !this.isButtonEffectActive);
       },
