@@ -1,23 +1,18 @@
 import Phaser from 'phaser';
 import { HTML_LAYER } from '../layers';
 import { EndingCelebrationParticleSystem } from './EndingCelebrationParticleSystem.ts';
+import {
+  ENDING_RANKS,
+  buildEndingSummary,
+  clampScore,
+  getEndingScoreDisplayPercent,
+  type EndingSummaryInput,
+  type EndingSummaryResult,
+} from './shared/endingSummary.ts';
 
 const ENDING_RETURN_COOLDOWN_MS = 1000;
 const ENDING_ROOT_ATTR = 'data-suto-ending-root';
 const ENDING_PROMPT_ATTR = 'data-suto-ending-prompt';
-
-export interface EndingSummaryInput {
-  perfectCount: number;
-  missCount: number;
-  falseTouchCount: number;
-  lifeValue: number;
-}
-
-export interface EndingSummaryResult {
-  accuracyPercent: number;
-  rank: string;
-  verdict: string;
-}
 
 interface EndingSequenceOverlayOptions {
   scene: Phaser.Scene;
@@ -139,21 +134,7 @@ export class EndingSequenceOverlay {
   }
 
   buildEndingSummary(summary: EndingSummaryInput): EndingSummaryResult {
-    const total = summary.perfectCount + summary.missCount;
-    const accuracy = total > 0 ? summary.perfectCount / total : 1;
-    const rawAccuracyPercent = Math.round(accuracy * 100);
-    const accuracyPercent = summary.falseTouchCount > 0 ? Math.min(99, rawAccuracyPercent) : rawAccuracyPercent;
-    const rank = this.computeRank(summary.perfectCount, summary.missCount, summary.falseTouchCount);
-    const verdicts: Record<string, string> = {
-      'S++': '不是, 誰會沒事把這遊戲練到S++拉= =',
-      'S+': '完美！你是控頭的神！<br>但不好意思喔, 沒誤觸"X"判定才有S++喔',
-      'S': ' 0..0 你比超負荷還快 !',
-      'A': '恭喜通關...欸欸欸不行...太快了太快了',
-      'B': '還能再更快嗎?',
-      'C': '很快了, 再快一點',
-      'D': '太慢摟',
-    };
-    return { accuracyPercent, rank, verdict: verdicts[rank] ?? '' };
+    return buildEndingSummary(summary);
   }
 
   syncVideoVolume() {
@@ -218,19 +199,6 @@ export class EndingSequenceOverlay {
     this.endingVideoRoot.style.height = `${rect.height}px`;
     this.endingCelebrationFx?.resize();
   };
-
-  private computeRank(perfect: number, miss: number, falseTouch: number): string {
-    const total = perfect + miss;
-    const accuracy = total > 0 ? perfect / total : 1;
-    const rawAccuracyPercent = Math.round(accuracy * 100);
-    const accuracyPercent = falseTouch > 0 ? Math.min(99, rawAccuracyPercent) : rawAccuracyPercent;
-    if (miss === 0) return falseTouch === 0 ? 'S++' : 'S+';
-    if (accuracyPercent >= 95) return 'S';
-    if (accuracyPercent >= 90) return 'A';
-    if (accuracyPercent >= 80) return 'B';
-    if (accuracyPercent >= 70) return 'C';
-    return 'D';
-  }
 
   private createEndingVideoRoot(videoUrl: string, loop: boolean) {
     this.endingVideoRoot = document.createElement('div');
@@ -297,16 +265,8 @@ export class EndingSequenceOverlay {
   }
 
   private buildEndingScoreBar(score: number, rank: string): string {
-    const clampedScore = Phaser.Math.Clamp(score, 0, 100);
-    const ranks = [
-      { label: 'D', min: 0, color: '#355CFF' },
-      { label: 'C', min: 70, color: '#17B7FF' },
-      { label: 'B', min: 80, color: '#FF9F43' },
-      { label: 'A', min: 90, color: '#FFC857' },
-      { label: 'S', min: 95, color: '#FFE66D' },
-      { label: 'S+', min: 99, color: '#8CE99A' },
-      { label: 'S++', min: 100, color: '#52D681' },
-    ];
+    const clampedScore = clampScore(score);
+    const ranks = ENDING_RANKS;
 
     const markerNudgeX: Record<string, number> = {
       S: 0,
@@ -315,12 +275,6 @@ export class EndingSequenceOverlay {
     };
     const markerBaseY = 96;
     const markerStemHeight = 60;
-    const toNonLinearPercent = (min: number): number => {
-      const t = Phaser.Math.Clamp(min / 100, 0, 1);
-      // Expand the dense high-score range near 100 for readable marker spacing.
-      const curved = 1 - Math.log10(1 + 9 * (1 - t));
-      return Phaser.Math.Clamp(curved * 100, 0, 100);
-    };
     const rankIndex = ranks.findIndex(item => item.label === rank);
     const aRankIndex = ranks.findIndex(item => item.label === 'A');
     const hasReachedSpecialEvent = rankIndex >= 0 && aRankIndex >= 0 && rankIndex >= aRankIndex;
@@ -328,8 +282,8 @@ export class EndingSequenceOverlay {
       ? ranks[rankIndex + 1].min
       : 100;
     const scoreForDisplay = Math.min(clampedScore, rankUpperBound - (rankUpperBound < 100 ? 0 : 0.01));
-    const scoreDisplayPercent = toNonLinearPercent(scoreForDisplay);
-    const markerLefts = ranks.map(item => toNonLinearPercent(item.min));
+    const scoreDisplayPercent = getEndingScoreDisplayPercent(scoreForDisplay);
+    const markerLefts = ranks.map(item => getEndingScoreDisplayPercent(item.min));
 
     const markers = ranks.map(({ label, min, color }, index) => {
       const left = markerLefts[index];
@@ -357,9 +311,9 @@ export class EndingSequenceOverlay {
     }).join('');
 
     const gradientStops = ranks.flatMap((item, index) => {
-      const start = toNonLinearPercent(item.min);
+      const start = getEndingScoreDisplayPercent(item.min);
       const nextMin = index < ranks.length - 1 ? ranks[index + 1].min : 100;
-      const end = Phaser.Math.Clamp(Math.max(start, toNonLinearPercent(nextMin)), 0, 100);
+      const end = clampScore(Math.max(start, getEndingScoreDisplayPercent(nextMin)));
       return [`${item.color} ${start}%`, `${item.color} ${end}%`];
     }).join(', ');
 

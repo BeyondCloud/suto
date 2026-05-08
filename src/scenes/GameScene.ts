@@ -30,7 +30,10 @@ import type { Stage, Section, NormalSection, RotationSection, DelaySection, Leve
 import { GameSceneDebugController } from './debug/GameSceneDebugController';
 import type { DebugEndingPreset } from './debug/GameSceneDebugController';
 import { EndingSequenceOverlay } from './EndingSequenceOverlay.ts';
-import type { EndingSummaryInput } from './EndingSequenceOverlay.ts';
+import {
+  buildEndingSummary,
+  type EndingSummaryInput,
+} from './shared/endingSummary.ts';
 import { runThreeTwoOneCountdown, type ThreeTwoOneCountdownController } from './shared/threeTwoOneCountdown';
 
 const ALL_DIRS: Direction[] = ['w', 'e', 'd', 'c', 'x', 'z', 'a', 'q'];
@@ -429,10 +432,12 @@ export class GameScene extends Phaser.Scene {
 
   private startIntroCountdown(intervalMs: number, onComplete: () => void) {
     this.introCountdownController?.cancel();
+    this.judgementText?.setVisible(false);
     this.introCountdownController = runThreeTwoOneCountdown(this, this.countdownText, {
       intervalMs,
       onComplete: () => {
         this.introCountdownController = undefined;
+        this.judgementText?.setVisible(true);
         onComplete();
       },
     });
@@ -544,7 +549,7 @@ export class GameScene extends Phaser.Scene {
       align: 'center',
       wordWrap: { width: 520 },
     }).setOrigin(0.5, 0.5).setDepth(SCENE_LAYER.HUD).setVisible(false);
-    this.judgementText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.72, '', { fontSize: '22px', color: '#ffffff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0.5).setDepth(SCENE_LAYER.HUD);
+    this.judgementText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '', { fontSize: '22px', color: '#b8b8b8', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0.5).setDepth(SCENE_LAYER.HUD);
     this.debugController?.createHud();
     this.updateHUD();
     this.updateJudgementText();
@@ -662,11 +667,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateJudgementText() {
-    this.judgementText.setText([
+    const lines = [
       `Perfect ${this.perfectCount}`,
       `Miss ${this.missCount}`,
       `X ${this.falseTouchCount}`,
-    ]);
+    ];
+    if (this.mode === 'story') {
+      const { accuracyPercent, rank } = buildEndingSummary(this.getEndingSummaryInput());
+      lines.push(`Accuracy: ${accuracyPercent}%  (Rank ${rank})`);
+    }
+    this.judgementText.setText(lines);
   }
 
   private createLifeBar() {
@@ -2754,10 +2764,12 @@ export class GameScene extends Phaser.Scene {
 
   private resumeWithCountdown() {
     this.pauseContainer.setVisible(false);
+    this.judgementText?.setVisible(false);
     runThreeTwoOneCountdown(this, this.countdownText, {
       intervalMs: this.beatMs,
       onComplete: () => {
         this.countdownText.setVisible(false);
+        this.judgementText?.setVisible(true);
         if (this.pauseStartedAtMs !== null) {
           this.compensatePausedTimeline(this.time.now - this.pauseStartedAtMs);
           this.pauseStartedAtMs = null;
