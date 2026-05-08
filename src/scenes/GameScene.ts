@@ -31,7 +31,7 @@ import { GameSceneDebugController } from './debug/GameSceneDebugController';
 import type { DebugEndingPreset } from './debug/GameSceneDebugController';
 import { EndingSequenceOverlay } from './EndingSequenceOverlay.ts';
 import type { EndingSummaryInput } from './EndingSequenceOverlay.ts';
-import { runThreeTwoOneCountdown } from './shared/threeTwoOneCountdown';
+import { runThreeTwoOneCountdown, type ThreeTwoOneCountdownController } from './shared/threeTwoOneCountdown';
 
 const ALL_DIRS: Direction[] = ['w', 'e', 'd', 'c', 'x', 'z', 'a', 'q'];
 const CARDINAL_DIRS: Direction[] = ['w', 'x', 'a', 'd'];
@@ -131,6 +131,10 @@ export class GameScene extends Phaser.Scene {
   // Timing
   private beatMs = 500;
   private beatCount = 0;
+  private introCountdownController?: ThreeTwoOneCountdownController;
+  private pendingSectionStartDelayEvent?: Phaser.Time.TimerEvent;
+  private phaseTransitionEvent?: Phaser.Time.TimerEvent;
+  private pauseStartedAtMs: number | null = null;
   // Cumulative absolute time the current section should end at, so frame jitter
   // from delayedCall doesn't compound across sections.
   private sectionTargetEndTimeMs: number | null = null;
@@ -398,14 +402,16 @@ export class GameScene extends Phaser.Scene {
     if (this.mode === 'story') {
       const startStorySection = () => {
         this.createStorySamVideo();
-        this.time.delayedCall(this.settings.storyStartDelayMs, () => this.startSection());
+        this.pendingSectionStartDelayEvent?.remove(false);
+        this.pendingSectionStartDelayEvent = this.time.delayedCall(this.settings.storyStartDelayMs, () => {
+          this.pendingSectionStartDelayEvent = undefined;
+          this.startSection();
+        });
+        this.pendingSectionStartDelayEvent.paused = this.isPaused;
       };
 
       if (this.introCountdownBpm) {
-        runThreeTwoOneCountdown(this, this.countdownText, {
-          intervalMs: 60000 / this.introCountdownBpm,
-          onComplete: startStorySection,
-        });
+        this.startIntroCountdown(60000 / this.introCountdownBpm, startStorySection);
       } else {
         startStorySection();
       }
@@ -416,11 +422,52 @@ export class GameScene extends Phaser.Scene {
         if (this.isGameOver || !this.scene.isActive()) return;
         const stageBpm = this.currentStage?.bpm;
         const intervalMs = (typeof stageBpm === 'number' && stageBpm > 0) ? 60000 / stageBpm : 60000 / 183.5;
-        runThreeTwoOneCountdown(this, this.countdownText, {
-          intervalMs,
-          onComplete: () => this.startSection(),
-        });
+        this.startIntroCountdown(intervalMs, () => this.startSection());
       });
+    }
+  }
+
+  private startIntroCountdown(intervalMs: number, onComplete: () => void) {
+    this.introCountdownController?.cancel();
+    this.introCountdownController = runThreeTwoOneCountdown(this, this.countdownText, {
+      intervalMs,
+      onComplete: () => {
+        this.introCountdownController = undefined;
+        onComplete();
+      },
+    });
+    this.introCountdownController.setPaused(this.isPaused);
+  }
+
+  private cancelIntroCountdown() {
+    this.introCountdownController?.cancel();
+    this.introCountdownController = undefined;
+  }
+
+  private setPhaseTransitionEvent(delayMs: number, callback: () => void) {
+    this.phaseTransitionEvent?.remove(false);
+    this.phaseTransitionEvent = this.time.delayedCall(delayMs, () => {
+      this.phaseTransitionEvent = undefined;
+      callback();
+    });
+    this.phaseTransitionEvent.paused = this.isPaused;
+  }
+
+  private clearPhaseTransitionEvent() {
+    this.phaseTransitionEvent?.remove(false);
+    this.phaseTransitionEvent = undefined;
+  }
+
+  private compensatePausedTimeline(pausedMs: number) {
+    if (!(pausedMs > 0)) return;
+    if (this.sectionTargetEndTimeMs !== null) {
+      this.sectionTargetEndTimeMs += pausedMs;
+    }
+    if (this.penaltyCooldownUntil > 0) {
+      this.penaltyCooldownUntil += pausedMs;
+    }
+    for (const active of this.activeShrinks.values()) {
+      active.judgementTimeMs += pausedMs;
     }
   }
 
@@ -787,6 +834,10 @@ export class GameScene extends Phaser.Scene {
       this.hideLoadingOverlay();
       this.endingSequenceStarted = false;
       this.suppressGameFrameMask = false;
+      this.cancelIntroCountdown();
+      this.pendingSectionStartDelayEvent?.remove(false);
+      this.pendingSectionStartDelayEvent = undefined;
+      this.clearPhaseTransitionEvent();
       this.stopStagePhaseClip();
       this.stopPromptAudioSequence();
       this.cursorGifAngleTween?.stop();
@@ -939,7 +990,7 @@ export class GameScene extends Phaser.Scene {
       this.setDelayText(this.currentSection.text, this.currentSection.color);
 
       const remaining = Math.max(0, this.sectionTargetEndTimeMs - this.time.now);
-      this.time.delayedCall(remaining, () => {
+      this.setPhaseTransitionEvent(remaining, () => {
         if (this.isGameOver) return;
         this.setDelayText();
         this.advanceToNextSection();
@@ -1028,7 +1079,7 @@ export class GameScene extends Phaser.Scene {
         if (this.beatCount >= 8) {
           this.beatTimer?.remove();
           const remaining = Math.max(0, (this.sectionTargetEndTimeMs ?? this.time.now) - this.time.now);
-          this.time.delayedCall(remaining, () => this.onCheckPhaseEnd());
+          this.setPhaseTransitionEvent(remaining, () => this.onCheckPhaseEnd());
         }
         return;
       }
@@ -1044,7 +1095,7 @@ export class GameScene extends Phaser.Scene {
         // Anchor section end to its cumulative absolute target so per-frame jitter
         // doesn't compound across sections.
         const remaining = Math.max(0, (this.sectionTargetEndTimeMs ?? this.time.now) - this.time.now);
-        this.time.delayedCall(remaining, () => this.onCheckPhaseEnd());
+        this.setPhaseTransitionEvent(remaining, () => this.onCheckPhaseEnd());
       }
     }
   }
@@ -1066,7 +1117,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.pendingShrinkStartCount > 0 || this.activeShrinks.size > 0) {
-      this.time.delayedCall(16, () => this.onCheckPhaseEnd());
+      this.setPhaseTransitionEvent(16, () => this.onCheckPhaseEnd());
       return;
     }
 
@@ -2480,6 +2531,9 @@ export class GameScene extends Phaser.Scene {
 
   private setGameplayTimersPaused(paused: boolean) {
     if (this.beatTimer) this.beatTimer.paused = paused;
+    this.introCountdownController?.setPaused(paused);
+    if (this.pendingSectionStartDelayEvent) this.pendingSectionStartDelayEvent.paused = paused;
+    if (this.phaseTransitionEvent) this.phaseTransitionEvent.paused = paused;
     if (paused) {
       this.pauseStagePhaseClip();
       this.pausePromptAudioSequence();
@@ -2686,8 +2740,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (this.introCountdownController) return;
+
     if (this.isPaused || this.endingSequenceStarted) return;
     this.isPaused = true;
+    this.pauseStartedAtMs = this.time.now;
     this.setGameplayTimersPaused(true);
     this.pauseContainer.setVisible(true);
     this.practiceReturnContainer?.setVisible(false);
@@ -2701,6 +2758,10 @@ export class GameScene extends Phaser.Scene {
       intervalMs: this.beatMs,
       onComplete: () => {
         this.countdownText.setVisible(false);
+        if (this.pauseStartedAtMs !== null) {
+          this.compensatePausedTimeline(this.time.now - this.pauseStartedAtMs);
+          this.pauseStartedAtMs = null;
+        }
         this.isPaused = false;
         this.setGameplayTimersPaused(false);
         if (this.showPracticeReturnButton) {
