@@ -725,7 +725,7 @@ export class MenuScene extends Phaser.Scene {
       this.practiceCustomBuilderContainer.add(bg);
       if (entry.label) {
         const text = this.add.text(x + cellW / 2, y + cellH / 2, entry.label, {
-          fontSize: '24px',
+          fontSize: '32px',
           color: '#ffffff',
           fontStyle: 'bold',
         }).setOrigin(0.5);
@@ -752,7 +752,7 @@ export class MenuScene extends Phaser.Scene {
     rotateLeftBtnBg.on('pointerover', () => rotateLeftBtnBg.setFillStyle(0x355b85, 1));
     rotateLeftBtnBg.on('pointerout', () => rotateLeftBtnBg.setFillStyle(0x27415f, 1));
     const rotateLeftBtn = this.add.text(rotateLeftBtnX, rotateBtnY, '⟲', {
-      fontSize: '24px',
+      fontSize: '32px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5);
@@ -765,7 +765,7 @@ export class MenuScene extends Phaser.Scene {
     rotateRightBtnBg.on('pointerover', () => rotateRightBtnBg.setFillStyle(0x754336, 1));
     rotateRightBtnBg.on('pointerout', () => rotateRightBtnBg.setFillStyle(0x563024, 1));
     const rotateRightBtn = this.add.text(rotateRightBtnX, rotateBtnY, '⟳', {
-      fontSize: '24px',
+      fontSize: '32px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5);
@@ -779,7 +779,7 @@ export class MenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     this.practiceCustomBpmInputBg = bpmInputBg;
     this.practiceCustomBpmValueText = this.add.text(bpmCenterX, bpmInputY, this.formatPracticeBpm(this.practiceCustomBpm), {
-      fontSize: '24px',
+      fontSize: '32px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5);
@@ -819,13 +819,13 @@ export class MenuScene extends Phaser.Scene {
       ...makeBpmAdjustControl(farRightX, '+10', '>>', 10),
     ];
 
-    const clearBtnBg = this.add.rectangle(actionBtnX, gridTop + 168, actionBtnWidth, actionBtnHeight, 0x5f3f27, 1)
+    const clearBtnBg = this.add.rectangle(actionBtnX, gridTop + 240, actionBtnWidth, actionBtnHeight, 0x5f3f27, 1)
       .setOrigin(0.5)
       .setStrokeStyle(2, 0xc08b62, 1)
       .setInteractive({ useHandCursor: true });
     clearBtnBg.on('pointerover', () => clearBtnBg.setFillStyle(0x7a5332, 1));
     clearBtnBg.on('pointerout', () => clearBtnBg.setFillStyle(0x5f3f27, 1));
-    const clearBtn = this.add.text(actionBtnX, gridTop + 168, '清空', {
+    const clearBtn = this.add.text(actionBtnX, gridTop + 240, '清空', {
       fontSize: '30px',
       color: '#ffe9d4',
       fontStyle: 'bold',
@@ -835,13 +835,13 @@ export class MenuScene extends Phaser.Scene {
       this.refreshPracticeCustomPreview();
     });
 
-    const undoBtnBg = this.add.rectangle(actionBtnX, gridTop + 240, actionBtnWidth, actionBtnHeight, 0x3a465f, 1)
+    const undoBtnBg = this.add.rectangle(actionBtnX, gridTop + 168, actionBtnWidth, actionBtnHeight, 0x3a465f, 1)
       .setOrigin(0.5)
       .setStrokeStyle(2, 0x8ea7c8, 1)
       .setInteractive({ useHandCursor: true });
     undoBtnBg.on('pointerover', () => undoBtnBg.setFillStyle(0x4c5c7c, 1));
     undoBtnBg.on('pointerout', () => undoBtnBg.setFillStyle(0x3a465f, 1));
-    const undoBtn = this.add.text(actionBtnX, gridTop + 240, '後退', {
+    const undoBtn = this.add.text(actionBtnX, gridTop + 168, '後退', {
       fontSize: '30px',
       color: '#eef4ff',
       fontStyle: 'bold',
