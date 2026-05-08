@@ -1815,7 +1815,11 @@ export class GameScene extends Phaser.Scene {
     if (this.isGameOver) return;
     // Scale lead by audio playback rate so visual judgment stays aligned with the
     // rate-shifted stage audio when section BPM differs from stage BPM.
-    const lead = this.settings.shrinkLeadMs / this.getStageAudioPlaybackRate();
+    // Clamp to the current note interval to prevent high-BPM sections from
+    // opening a note's perfect window only after the next note has already rotated in.
+    const rawLead = this.settings.shrinkLeadMs / this.getStageAudioPlaybackRate();
+    const noteIntervalMs = this.isRotation ? this.beatMs / 2 : this.beatMs;
+    const lead = Math.min(rawLead, noteIntervalMs);
     if (this.isRotation) {
       const [first, second] = this.beatTargetPairs[beat];
       this.rotateGifCursorTo(first, this.beatMs / 2);

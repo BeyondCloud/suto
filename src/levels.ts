@@ -41,173 +41,47 @@ export const LEVEL_DATA: LevelData = {
   stages: [
     {
       stage_number: 1,
-      bpm: 183.5,
+      bpm: 180,
     //   audio_clip: 'src/assets/audio/120.wav',
       audio_clip: 'src/assets/audio/loop/challenge.wav',
       sections: [
-        // lv3
         // {
-        //   bpm: 215.5,
         //   type: 'normal',
-        //   prompts: ['x', 'a', 'w', 'w',
-        //             'x', 'd', 'x', 'x'],
-        //   repeat: 10,
+        //   prompts: ['w', 'w', 'w', 'w',
+        //             'a', 'a', 'a', 'a']
         // },
         // {
-        //   bpm: 243.5,
         //   type: 'normal',
-        //   prompts: ['x', 'c', 'w', 'c',
-        //             'a', 'q', 'x', 'e'],
-        //   repeat: 10,
+        //   prompts: ['w', 'w', 'w', 'w',
+        //             'x', 'x', 'x', 'x'],
         // },
         // {
-        //   bpm: 257,
         //   type: 'normal',
-        //   prompts: ['c', 'x', 'a', 'c',
-        //             'w', 'q', 'c', 'e'],
+        //   prompts: ['w', 'w', 'w', 'x',
+        //             'x', 'x', 'x', 'w'],
         //     repeat: 10,
         // },
+        // //=============================
         // {
-        //   bpm: 275,
         //   type: 'normal',
-        //   prompts: ['x', 'w', 'c', 'w',
-        //             'q', 'c', 'z', 'x'],
-        //     repeat: 10,
+        //   prompts: ['w', 'q', 'w', 'q',
+        //             'q', 'q', 'q', 'q'],
+        // },
+        // {
+        //   type: 'normal',
+        //   prompts: ['x', 'd', 'w', 'a',
+        //             'x', 'd', 'w', 'a', ],
         // },
         {
-          bpm: 183.5,
-          type: 'normal',
-          prompts: ['w', 'x', 'a', 'd',
-                    'w', 'x', 'a', 'd'],
-            repeat: 10,
-        },
-        {
-          bpm: 291,
-          type: 'normal',
-          prompts: ['x', 'd', 'c', 'x',
-                    'w', 'x', 'a', 'x'],
-            repeat: 10,
-        },
-        //=============================
-        {
-          bpm: 183.5,
-          type: 'normal',
-          prompts: ['q', 'q', 'q', 'q',
-                    'q', 'q', 'q', 'q'],
-            repeat: 10,
-        },
-        {
-          type: 'normal',
-          prompts: ['x', 'd', 'w', 'a',
-                    'x', 'd', 'w', 'a', ],
-          repeat: 10,
-        },
-        {
-          bpm: 257,
           type: 'normal',
           prompts: ['w', 'w', 'w', 'w',
                     'w', 'w', 'w', 'w'],
-          repeat: 10,
-        },
-        {
-          bpm: 257,
-          type: 'normal',
-          prompts: ['c', 'x', 'a', 'c',
-                    'w', 'q', 'c', 'e'],
-            repeat: 10,
-        },
-        {
-          bpm: 275,
-          type: 'normal',
-          prompts: ['x', 'w', 'c', 'w',
-                    'q', 'c', 'z', 'x'],
-        },
-        {
-          bpm: 291,
-          type: 'normal',
-          prompts: ['x', 'd', 'c', 'x',
-                    'w', 'x', 'a', 'x'],
-        },
-        {
-          bpm: 183.5,
-          type: 'normal',
-          effect: 'button',
-          image: 'src/assets/cmonbruh.png',
-          prompts: ['x', 'x', 'x', 'x',
-                    'x', 'x', 'x', 'x'],
-        },
-
-        {
-          type: 'normal',
-          prompts: ['x', 'w', 'x', 'w',
-                    'x', 'a', 'd', 'x'],
-        },
-        {
-          type: 'normal',
-          prompts: ['x', 'w', 'x', 'w',
-                    'x', 'a', 'd', 'x'],
-        },
-        {
-          type: 'normal',
-          prompts: ['x', 'w', 'x', 'w',
-                    'x', 'a', 'd', 'x'],
-        },
-        {
-          type: 'rotation',
-          start: 'w',
-          rotate: ['R', 'R', 'L', 'L',
-                   'R', 'R', 'L', 'L'],
-        },
-        {
-          type: 'rotation',
-          start: 'w',
-          rotate: ['R', 'R', 'L', 'L',
-                   'R', 'R', 'L', 'L'],
-        },
-        {
-          type: 'rotation',
-          start: 'w',
-          rotate: ['R', 'R', 'L', 'L',
-                   'R', 'R', 'L', 'L'],
-        },
-        {
-          type: 'rotation',
-          start: 'w',
-          rotate: ['R', 'R', 'L', 'L',
-                   'R', 'R', 'L', 'L'],
-        },
-        {
-          type: 'normal',
-          prompts: ['w', 'd', 'd', 'a', 'x', 'a', 'd', 'w'],
         },
         {
           type: 'delay',
           ms: 1000,
           text: '準備下一段',
-        },
-        {
-          type: 'normal',
-          prompts: ['w', 'x', 'a', 'd', 'x', 'x', 'x', 'x'],
-        },
-        {
-          type: 'rotation',
-          start: 'w',
-          rotate: ['R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'],
-        },
-        {
-          type: 'rotation',
-          start: 'w',
-          rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
-        },
-        // {
-        //   type: 'normal',
-        //   prompts: ['U', 'D', 'L', 'R', 'U', 'D', 'L', 'R'],
-        // },
-        // {
-        //   type: 'normal',
-        //   prompts: ['L', 'R', 'U', 'R', 'L', 'D', 'U', 'L'],
-        // },
-
+        }
       ],
     },
     {
@@ -251,7 +125,7 @@ export const MAIN_LEVEL_DATA: LevelData = {
         {
           type: 'normal',
           prompts: ['x', 'w', 'x', 'w',
-                    'x', 'w', 'x', 'w'],
+                    'w', 'x', 'w', 'x'],
         },
         {
           type: 'normal',
@@ -321,7 +195,7 @@ export const MAIN_LEVEL_DATA: LevelData = {
         },
         {
           type: 'delay',
-          ms: 2220,
+          ms: 2263,
           text: 'Level - 3',
         },
       ],
