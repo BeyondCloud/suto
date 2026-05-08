@@ -1544,7 +1544,7 @@ export class GameScene extends Phaser.Scene {
   private buildBeatTargets() {
     this.beatTargets = [];
     this.beatTargetPairs = [];
-    const forceXJudge = this.mode === 'story' && this.settings.nodeConfirmToggle;
+    const forceXJudge = this.mode === 'story' && this.debugController?.enabled === true && this.settings.nodeConfirmToggle;
     if (this.isRotation) {
       const sec = this.currentSection as RotationSection;
       let cur: Direction = sec.start;

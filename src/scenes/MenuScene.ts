@@ -1514,6 +1514,7 @@ export class MenuScene extends Phaser.Scene {
         ...DEFAULT_SETTINGS,
         ...parsed,
         masterVolume: Phaser.Math.Clamp(parsed.masterVolume ?? DEFAULT_SETTINGS.masterVolume, MASTER_VOLUME_MIN, MASTER_VOLUME_MAX),
+        nodeConfirmToggle: DEBUG_MODE ? Boolean(parsed.nodeConfirmToggle) : false,
       };
     } catch {
       return { ...DEFAULT_SETTINGS };
@@ -1562,7 +1563,11 @@ export class MenuScene extends Phaser.Scene {
 
   private saveSettings() {
     try {
-      window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(this.settings));
+      const persistedSettings: GameSettings = {
+        ...this.settings,
+        nodeConfirmToggle: DEBUG_MODE ? this.settings.nodeConfirmToggle : false,
+      };
+      window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(persistedSettings));
     } catch {
       // Ignore storage write failures.
     }
