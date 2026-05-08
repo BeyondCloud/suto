@@ -29,6 +29,7 @@ import { LEVEL_DATA } from '../levels';
 import type { Stage, Section, NormalSection, RotationSection, DelaySection, LevelData } from '../levels';
 import { GameSceneDebugController } from './debug/GameSceneDebugController';
 import type { DebugEndingPreset } from './debug/GameSceneDebugController';
+import { EndingCelebrationParticleSystem } from './EndingCelebrationParticleSystem.ts';
 
 const ALL_DIRS: Direction[] = ['w', 'e', 'd', 'c', 'x', 'z', 'a', 'q'];
 const CARDINAL_DIRS: Direction[] = ['w', 'x', 'a', 'd'];
@@ -116,6 +117,7 @@ export class GameScene extends Phaser.Scene {
   private endingVideo?: HTMLVideoElement;
   private endingSummaryCard?: HTMLDivElement;
   private endingPromptText?: HTMLDivElement;
+  private endingCelebrationFx?: EndingCelebrationParticleSystem;
   private endingReturnReady = false;
   private endingSequenceStarted = false;
   private endingReturnReadyEvent?: Phaser.Time.TimerEvent;
@@ -141,6 +143,7 @@ export class GameScene extends Phaser.Scene {
     this.endingVideoRoot.style.top = `${rect.top}px`;
     this.endingVideoRoot.style.width = `${rect.width}px`;
     this.endingVideoRoot.style.height = `${rect.height}px`;
+    this.endingCelebrationFx?.resize();
   };
 
   // Timing
@@ -2534,6 +2537,7 @@ export class GameScene extends Phaser.Scene {
     return new Promise((resolve) => {
       this.removeEndingVideoOverlay();
       this.createEndingVideoRoot(videoUrl, this.shouldLoopEndingVideo(videoUrl));
+      this.startEndingCelebrationParticles();
       this.createEndingSummaryCard();
       this.createEndingPromptText();
       let finished = false;
@@ -2616,6 +2620,9 @@ export class GameScene extends Phaser.Scene {
     this.endingVideo.style.height = '100%';
     this.endingVideo.style.objectFit = 'contain';
     this.endingVideo.style.background = '#000000';
+    this.endingVideo.style.position = 'absolute';
+    this.endingVideo.style.inset = '0';
+    this.endingVideo.style.zIndex = '1';
 
     this.endingVideoRoot.appendChild(this.endingVideo);
     document.body.appendChild(this.endingVideoRoot);
@@ -2645,6 +2652,7 @@ export class GameScene extends Phaser.Scene {
     this.endingSummaryCard.style.color = '#ffffff';
     this.endingSummaryCard.style.fontFamily = "'Noto Sans TC', 'PingFang TC', sans-serif";
     this.endingSummaryCard.style.pointerEvents = 'none';
+    this.endingSummaryCard.style.zIndex = '10';
     this.endingSummaryCard.innerHTML = [
       `<div style=\"font-size:40px;font-weight:800;letter-spacing:1px;line-height:1.05;margin-bottom:10px;\">Accuracy ${accuracyPercent} %</div>`,
       `<div style=\"font-size:30px;font-weight:800;color:#ffe082;letter-spacing:1px;margin-bottom:12px;\">評價 ${rank}</div>`,
@@ -2759,7 +2767,21 @@ export class GameScene extends Phaser.Scene {
     this.endingPromptText.style.textShadow =
       '0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000';
     this.endingPromptText.style.pointerEvents = 'none';
+    this.endingPromptText.style.zIndex = '11';
     this.endingVideoRoot.appendChild(this.endingPromptText);
+  }
+
+  private startEndingCelebrationParticles() {
+    if (!this.endingVideoRoot) return;
+
+    this.stopEndingCelebrationParticles();
+    this.endingCelebrationFx = new EndingCelebrationParticleSystem();
+    this.endingCelebrationFx.start(this.endingVideoRoot);
+  }
+
+  private stopEndingCelebrationParticles() {
+    this.endingCelebrationFx?.stop();
+    this.endingCelebrationFx = undefined;
   }
 
   private applyMasterVolume() {
@@ -2794,7 +2816,7 @@ export class GameScene extends Phaser.Scene {
     const verdicts: Record<string, string> = {
       'S++': '不是, 誰會沒事把這遊戲練到S++拉= =',
       'S+':  '完美！你是控頭的神！<br>但不好意思喔, 沒誤觸"X"判定才有S++喔',
-      'S':   '真的假的 0..0 你比超負荷還快 !',
+      'S':   ' 0..0 你比超負荷還快 !',
       'A':   '恭喜通關...欸欸欸不行...太快了太快了',
       'B':   '還能再更快嗎?',
       'C':   '很快了, 再快一點',
@@ -2805,6 +2827,7 @@ export class GameScene extends Phaser.Scene {
 
   private removeEndingVideoOverlay() {
     window.removeEventListener('resize', this.refreshEndingVideoBounds);
+    this.stopEndingCelebrationParticles();
 
     this.endingReturnReadyEvent?.remove(false);
     this.endingReturnReadyEvent = undefined;
