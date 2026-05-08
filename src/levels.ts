@@ -41,37 +41,39 @@ export const LEVEL_DATA: LevelData = {
   stages: [
     {
       stage_number: 1,
-      bpm: 180,
-    //   audio_clip: 'src/assets/audio/120.wav',
+      bpm: 183,
+      // audio_clip必須為16拍整的循環音樂
       audio_clip: 'src/assets/audio/loop/challenge.wav',
       sections: [
-        // {
-        //   type: 'normal',
-        //   prompts: ['w', 'w', 'w', 'w',
-        //             'a', 'a', 'a', 'a']
-        // },
-        // {
-        //   type: 'normal',
-        //   prompts: ['w', 'w', 'w', 'w',
-        //             'x', 'x', 'x', 'x'],
-        // },
-        // {
-        //   type: 'normal',
-        //   prompts: ['w', 'w', 'w', 'x',
-        //             'x', 'x', 'x', 'w'],
-        //     repeat: 10,
-        // },
-        // //=============================
-        // {
-        //   type: 'normal',
-        //   prompts: ['w', 'q', 'w', 'q',
-        //             'q', 'q', 'q', 'q'],
-        // },
-        // {
-        //   type: 'normal',
-        //   prompts: ['x', 'd', 'w', 'a',
-        //             'x', 'd', 'w', 'a', ],
-        // },
+        {
+          bpm: 183,
+          type: 'normal',
+          prompts: ['x', 'x', 'x', 'x',
+                    'x', 'x', 'x', 'x'],
+          repeat: 10,
+        },
+        {
+          type: 'normal',
+          prompts: ['w', 'w', 'w', 'w',
+                    'x', 'x', 'x', 'x'],
+        },
+        {
+          type: 'normal',
+          prompts: ['w', 'w', 'w', 'x',
+                    'x', 'x', 'x', 'w'],
+            repeat: 10,
+        },
+        //=============================
+        {
+          type: 'normal',
+          prompts: ['w', 'q', 'w', 'q',
+                    'q', 'q', 'q', 'q'],
+        },
+        {
+          type: 'normal',
+          prompts: ['x', 'd', 'w', 'a',
+                    'x', 'd', 'w', 'a', ],
+        },
         {
           type: 'normal',
           prompts: ['w', 'w', 'w', 'w',
