@@ -429,11 +429,38 @@ export class GameScene extends Phaser.Scene {
       this.prewarmStageAudio().then(() => {
         this.hideLoadingOverlay();
         if (this.isGameOver || !this.scene.isActive()) return;
+        const clipDerivedBpm = this.getStageClipDerivedBpm();
         const stageBpm = this.currentStage?.bpm;
-        const intervalMs = (typeof stageBpm === 'number' && stageBpm > 0) ? 60000 / stageBpm : 60000 / 183.5;
+        const intervalMs = (typeof clipDerivedBpm === 'number' && clipDerivedBpm > 0)
+          ? 60000 / clipDerivedBpm
+          : (typeof stageBpm === 'number' && stageBpm > 0)
+            ? 60000 / stageBpm
+            : this.beatMs;
         this.startIntroCountdown(intervalMs, () => this.startSection());
       });
     }
+  }
+
+  // Stage clips are assumed to be seamless 16-beat loops.
+  // Derive BPM from the decoded clip length so countdown timing follows the
+  // actual audio file instead of relying on a fixed hardcoded BPM.
+  private getStageClipDerivedBpm(): number | undefined {
+    if (!this.currentStageAudioKey) return undefined;
+
+    const cachedAudio = this.cache.audio.get(this.currentStageAudioKey) as unknown;
+    let durationSec: number | undefined;
+    if (cachedAudio instanceof AudioBuffer) {
+      durationSec = cachedAudio.length / cachedAudio.sampleRate;
+    }
+
+    if (!(typeof durationSec === 'number' && Number.isFinite(durationSec) && durationSec > 0)) {
+      const probe = this.sound.add(this.currentStageAudioKey);
+      durationSec = probe.duration;
+      probe.destroy();
+    }
+
+    if (!Number.isFinite(durationSec) || durationSec <= 0) return undefined;
+    return (16 * 60) / durationSec;
   }
 
   private startIntroCountdown(intervalMs: number, onComplete: () => void) {
