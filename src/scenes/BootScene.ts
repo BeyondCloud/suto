@@ -29,6 +29,7 @@ import downImageUrl from '../assets/down.png';
 import downLeftImageUrl from '../assets/down_left.png';
 import gameoverBgUrl from '../assets/gameover.png';
 import loadingImageUrl from '../assets/loading.png';
+import { UI_CJK_FONT_FAMILY } from '../uiFonts';
 
 const CHALLENGE_TUTORIAL_AUDIO_KEY = 'challenge_tutorial_intro';
 
@@ -76,7 +77,7 @@ export class BootScene extends Phaser.Scene {
     overlay.style.zIndex = '2147483647';
     overlay.style.background = '#000000';
     overlay.style.color = '#ffffff';
-    overlay.style.fontFamily = "'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif";
+    overlay.style.fontFamily = UI_CJK_FONT_FAMILY;
     overlay.style.fontSize = '32px';
     overlay.style.display = 'flex';
     overlay.style.alignItems = 'center';

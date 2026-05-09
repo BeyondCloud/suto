@@ -5,9 +5,7 @@ import { BootScene } from './scenes/BootScene';
 import { MenuScene } from './scenes/MenuScene';
 import { GameScene } from './scenes/GameScene';
 import { MainlineIntroScene } from './scenes/MainlineIntroScene';
-
-const CJK_UI_FONT_FAMILY = "'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif";
-const CJK_TEXT_TEST_STRING = '回國語測試|MÉqgy';
+import { CJK_TEXT_TEST_STRING, UI_CJK_FONT_FAMILY } from './uiFonts';
 
 type PartialTextStyle = Phaser.Types.GameObjects.Text.TextStyle;
 
@@ -35,7 +33,7 @@ const applyCjkTextMetricsPatch = () => {
     testString?: string;
     baselineY?: number;
   };
-  styleProto.fontFamily = CJK_UI_FONT_FAMILY;
+  styleProto.fontFamily = UI_CJK_FONT_FAMILY;
   styleProto.testString = CJK_TEXT_TEST_STRING;
   styleProto.baselineY = 1.35;
 };
@@ -59,7 +57,7 @@ const applyCjkTextFactoryPatch = () => {
   ): Phaser.GameObjects.Text {
     const nextStyle: PartialTextStyle = style ? { ...style } : {};
     if (!nextStyle.fontFamily) {
-      nextStyle.fontFamily = CJK_UI_FONT_FAMILY;
+      nextStyle.fontFamily = UI_CJK_FONT_FAMILY;
     }
     if (!nextStyle.testString) {
       nextStyle.testString = CJK_TEXT_TEST_STRING;

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { HTML_LAYER } from '../layers';
+import { UI_CJK_FONT_FAMILY } from '../uiFonts';
 import { EndingCelebrationParticleSystem } from './EndingCelebrationParticleSystem.ts';
 import {
   ENDING_RANKS,
@@ -251,7 +252,7 @@ export class EndingSequenceOverlay {
     this.endingSummaryCard.style.borderRadius = '14px';
     this.endingSummaryCard.style.boxShadow = '0 16px 36px rgba(0, 0, 0, 0.5)';
     this.endingSummaryCard.style.color = '#ffffff';
-    this.endingSummaryCard.style.fontFamily = "'Noto Sans TC', 'PingFang TC', sans-serif";
+    this.endingSummaryCard.style.fontFamily = UI_CJK_FONT_FAMILY;
     this.endingSummaryCard.style.pointerEvents = 'none';
     this.endingSummaryCard.style.zIndex = '10';
     this.endingSummaryCard.innerHTML = [
@@ -347,7 +348,7 @@ export class EndingSequenceOverlay {
     this.endingPromptText.style.bottom = '6%';
     this.endingPromptText.style.transform = 'translateX(-50%)';
     this.endingPromptText.style.color = '#ffffff';
-    this.endingPromptText.style.fontFamily = "'Noto Sans TC', 'PingFang TC', sans-serif";
+    this.endingPromptText.style.fontFamily = UI_CJK_FONT_FAMILY;
     this.endingPromptText.style.fontSize = '30px';
     this.endingPromptText.style.fontWeight = '800';
     this.endingPromptText.style.letterSpacing = '1px';

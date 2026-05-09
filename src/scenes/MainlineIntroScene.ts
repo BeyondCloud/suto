@@ -5,9 +5,9 @@ import type { GameSettings } from '../config';
 import { DEFAULT_SETTINGS, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { HTML_LAYER, SCENE_LAYER } from '../layers';
 import { MAIN_LEVEL_DATA } from '../levels';
+import { UI_CJK_FONT_FAMILY } from '../uiFonts';
 
 const INTRO_COUNTDOWN_BPM = 183.5;
-const CJK_UI_FONT_FAMILY = "'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif";
 
 export class MainlineIntroScene extends Phaser.Scene {
   private settings!: GameSettings;
@@ -245,7 +245,7 @@ export class MainlineIntroScene extends Phaser.Scene {
     this.tutorial2PromptRoot.style.transform = 'translate(-50%, -50%)';
     this.tutorial2PromptRoot.style.zIndex = String(HTML_LAYER.FULLSCREEN_VIDEO_PROMPT);
     this.tutorial2PromptRoot.style.color = '#ffffff';
-    this.tutorial2PromptRoot.style.fontFamily = CJK_UI_FONT_FAMILY;
+    this.tutorial2PromptRoot.style.fontFamily = UI_CJK_FONT_FAMILY;
     this.tutorial2PromptRoot.style.fontWeight = 'bold';
     this.tutorial2PromptRoot.style.fontSize = '32px';
     this.tutorial2PromptRoot.style.webkitTextStroke = '6px #000000';

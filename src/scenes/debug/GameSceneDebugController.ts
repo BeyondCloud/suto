@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../../config';
 import { HTML_LAYER, SCENE_LAYER } from '../../layers';
+import { UI_CJK_FONT_FAMILY } from '../../uiFonts';
 import { wireDomButtonHoverSound } from '../shared/buttonHoverSound';
 import {
   DEBUG_ENDING_PRESETS,
@@ -108,7 +109,7 @@ export class GameSceneDebugController {
     root.style.border = '2px solid #ffd24d';
     root.style.borderRadius = '10px';
     root.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.45)';
-    root.style.fontFamily = "'Noto Sans TC', 'PingFang TC', sans-serif";
+    root.style.fontFamily = UI_CJK_FONT_FAMILY;
     root.style.pointerEvents = 'auto';
 
     const title = document.createElement('div');

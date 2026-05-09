@@ -14,6 +14,7 @@ import {
   installButtonHoverSound,
   wireDomButtonHoverSound,
 } from './shared/buttonHoverSound';
+import { UI_CJK_FONT_FAMILY } from '../uiFonts';
 
 const SETTINGS_STORAGE_KEY = 'suto.gameSettings';
 const MASTER_VOLUME_MIN = 0;
@@ -23,8 +24,6 @@ const MASTER_VOLUME_PREVIEW_INTERVAL_MS = 120;
 const PRACTICE_CUSTOM_STORAGE_KEY = 'suto.practice.custom.v1';
 const PRACTICE_RETURN_STORAGE_KEY = 'suto.practice.return.mode.once';
 const PRACTICE_REPEAT_COUNT = 999;
-const UI_CJK_FONT_FAMILY = "'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif";
-
 type PracticeMode = 'mainline' | 'custom';
 type PracticeCommand = Direction | 'L' | 'R';
 
@@ -332,7 +331,7 @@ export class MenuScene extends Phaser.Scene {
     root.style.border = '2px solid #ffd24d';
     root.style.borderRadius = '10px';
     root.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.45)';
-    root.style.fontFamily = "'Noto Sans TC', 'PingFang TC', sans-serif";
+    root.style.fontFamily = UI_CJK_FONT_FAMILY;
     root.style.pointerEvents = 'auto';
 
     const title = document.createElement('div');
