@@ -452,11 +452,25 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showChallengePrepareMessage() {
-    const stageBpm = this.currentStage?.bpm;
-    const bpmText = typeof stageBpm === 'number' && Number.isFinite(stageBpm) && stageBpm > 0
-      ? (Number.isInteger(stageBpm) ? `${stageBpm}` : stageBpm.toFixed(1))
+    const prepareBpm = this.getChallengePrepareBpm();
+    const bpmText = typeof prepareBpm === 'number' && Number.isFinite(prepareBpm) && prepareBpm > 0
+      ? (Number.isInteger(prepareBpm) ? `${prepareBpm}` : prepareBpm.toFixed(1))
       : '--';
     this.challengePrepareText?.setText(`BPM: ${bpmText} 請準備`).setVisible(true);
+  }
+
+  private getChallengePrepareBpm(): number | undefined {
+    const firstPlayableSection = this.currentStage?.sections.find((section): section is NormalSection | RotationSection => section.type !== 'delay');
+    if (firstPlayableSection?.bpm != null && Number.isFinite(firstPlayableSection.bpm) && firstPlayableSection.bpm > 0) {
+      return firstPlayableSection.bpm;
+    }
+
+    const stageBpm = this.currentStage?.bpm;
+    if (typeof stageBpm === 'number' && Number.isFinite(stageBpm) && stageBpm > 0) {
+      return stageBpm;
+    }
+
+    return undefined;
   }
 
   private hideChallengePrepareMessage() {
@@ -492,7 +506,7 @@ export class GameScene extends Phaser.Scene {
     if (this.mode !== 'challenge') return Promise.resolve();
 
     let rate = 1;
-    const stageBpm = this.currentStage?.bpm ?? 0;
+    const stageBpm = this.getChallengePrepareBpm() ?? 0;
     const tutorialBaseBpm = this.getClipDerivedBpm(CHALLENGE_TUTORIAL_AUDIO_KEY, CHALLENGE_TUTORIAL_BEATS);
     if (stageBpm > 0 && typeof tutorialBaseBpm === 'number' && tutorialBaseBpm > 0) {
       rate = Phaser.Math.Clamp(stageBpm / tutorialBaseBpm, 0.25, 4);
