@@ -1361,7 +1361,7 @@ export class MenuScene extends Phaser.Scene {
 
     const volumeSlider = this.createMasterVolumeSlider(-44);
 
-    const storyDelayRow = makeRow('開場 Delay (ms)',
+    const storyDelayRow = makeRow('主播模式開場延遲 (ms)',
       32,
       () => this.settings.storyStartDelayMs,
       () => {
