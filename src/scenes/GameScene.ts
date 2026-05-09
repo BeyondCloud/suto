@@ -2642,7 +2642,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPerfect(dir: Direction, judgementTimeMs: number) {
-    const penaltyCooldownMs = this.beatMs / 2;
+    const penaltyCooldownMs = this.beatMs * 0.7;
     this.penaltyCooldownUntil = Math.max(this.penaltyCooldownUntil, judgementTimeMs + penaltyCooldownMs);
     this.falseTouchedLines.clear();
     this.perfectCount++;
