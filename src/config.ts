@@ -19,7 +19,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   masterVolume: 0.6,
   bpm: 183,
   shrinkLeadMs: 500,
-  perfectJudgeWindowMs: 100,
+  perfectJudgeWindowMs: 200,
   nodeConfirmToggle: false,
   hitboxWidth: 500,
   hitboxHeight: 300,
