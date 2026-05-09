@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import suto400GifUrl from '../assets/suto400_2x.gif';
 import gameoverBgUrl from '../assets/gameover.png';
 import loadingImageUrl from '../assets/loading.png';
+import downImageUrl from '../assets/down.png';
+import downLeftImageUrl from '../assets/down_left.png';
 import samVideoUrl from '../assets/mp4/sam.mp4';
 import endingVideo1Url from '../assets/end1-1.mp4';
 import endingVideo2Url from '../assets/end1-2.mp4';
@@ -317,8 +319,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('down', 'src/assets/down.png');
-    this.load.image('down_left', 'src/assets/down_left.png');
+    this.load.image('down', downImageUrl);
+    this.load.image('down_left', downLeftImageUrl);
     this.load.image('gameover_bg', gameoverBgUrl);
     this.load.image('loading_overlay', loadingImageUrl);
     this.load.audio('prompt_U', promptUUrl);
