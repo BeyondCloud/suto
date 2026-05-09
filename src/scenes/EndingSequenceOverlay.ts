@@ -242,8 +242,8 @@ export class EndingSequenceOverlay {
     this.endingSummaryCard = document.createElement('div');
     this.endingSummaryCard.style.position = 'absolute';
     this.endingSummaryCard.style.left = '50%';
-    this.endingSummaryCard.style.top = '25%';
-    this.endingSummaryCard.style.bottom = '12.5%';
+    this.endingSummaryCard.style.top = '35%';
+    this.endingSummaryCard.style.bottom = '10%';
     this.endingSummaryCard.style.transform = 'translateX(-50%)';
     this.endingSummaryCard.style.width = 'min(72vw, 620px)';
     this.endingSummaryCard.style.maxWidth = '92%';
