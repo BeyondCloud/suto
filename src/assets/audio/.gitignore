@@ -1,2 +1,3 @@
 src
-long
+long/*
+!long/gameover.wav
