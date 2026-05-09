@@ -73,6 +73,7 @@ const CHALLENGE_TUTORIAL_BEATS = 8;
 
 type GameMode = 'challenge' | 'story';
 type PracticeReturnMode = 'mainline' | 'custom';
+type GameOverReason = 'default' | 'button-too-slow';
 
 const getStageAudioKey = (clipPath: string): string => `stage_audio_${clipPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
 const getCustomImageKey = (imgPath: string): string => `custom_img_${imgPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
@@ -271,6 +272,7 @@ export class GameScene extends Phaser.Scene {
   // Pause
   private isPaused = false;
   private isGameOver = false;
+  private gameOverReason: GameOverReason = 'default';
   private pauseContainer!: Phaser.GameObjects.Container;
   private countdownText!: Phaser.GameObjects.Text;
 
@@ -282,6 +284,7 @@ export class GameScene extends Phaser.Scene {
   private loadingOverlayRect?: Phaser.GameObjects.Rectangle;
   private loadingOverlayImage?: Phaser.GameObjects.Image;
   private pendingDebugEndingPreset?: DebugEndingPreset;
+  private pendingDebugGameOverReason?: GameOverReason;
   private introCountdownBpm?: number;
   private isReturningToMenu = false;
   private showPracticeReturnButton = false;
@@ -295,12 +298,13 @@ export class GameScene extends Phaser.Scene {
     super('GameScene');
   }
 
-  init(data: { settings: GameSettings; stageIndex: number; mode?: GameMode; levelData?: LevelData; debugEndingPreset?: DebugEndingPreset; introCountdownBpm?: number; showPracticeReturnButton?: boolean; practiceReturnMode?: PracticeReturnMode }) {
+  init(data: { settings: GameSettings; stageIndex: number; mode?: GameMode; levelData?: LevelData; debugEndingPreset?: DebugEndingPreset; debugGameOverReason?: GameOverReason; introCountdownBpm?: number; showPracticeReturnButton?: boolean; practiceReturnMode?: PracticeReturnMode }) {
     this.settings = data.settings;
     this.stageIndex = data.stageIndex ?? 0;
     this.mode = data.mode ?? 'challenge';
     this.levelData = data.levelData ?? LEVEL_DATA;
     this.pendingDebugEndingPreset = data.debugEndingPreset;
+    this.pendingDebugGameOverReason = data.debugGameOverReason;
     this.isReturningToMenu = false;
     this.showPracticeReturnButton = data.showPracticeReturnButton === true;
     this.practiceReturnMode = data.practiceReturnMode === 'custom' ? 'custom' : 'mainline';
@@ -356,6 +360,7 @@ export class GameScene extends Phaser.Scene {
     this.applyMasterVolume();
     installButtonHoverSound(this);
     this.isGameOver = false;
+    this.gameOverReason = 'default';
     this.endingSequenceStarted = false;
     this.suppressGameFrameMask = false;
     this.loadStage(this.stageIndex);
@@ -370,6 +375,7 @@ export class GameScene extends Phaser.Scene {
     this.debugController = new GameSceneDebugController({
       scene: this,
       onSelectEndingPreset: (preset) => this.applyEndingPreviewPreset(preset),
+      onPreviewButtonTooSlowGameOver: () => this.previewButtonTooSlowGameOver(),
     });
 
     this.hitboxGraphics = this.add.graphics().setDepth(SCENE_LAYER.HITBOX_DEBUG);
@@ -410,6 +416,19 @@ export class GameScene extends Phaser.Scene {
       this.pendingDebugEndingPreset = undefined;
       this.time.delayedCall(0, () => {
         this.debugController?.triggerEndingPreset(preset);
+      });
+      return;
+    }
+
+    if (this.pendingDebugGameOverReason) {
+      const reason = this.pendingDebugGameOverReason;
+      this.pendingDebugGameOverReason = undefined;
+      this.time.delayedCall(0, () => {
+        if (reason === 'button-too-slow') {
+          this.previewButtonTooSlowGameOver();
+          return;
+        }
+        this.triggerGameOver(reason);
       });
       return;
     }
@@ -1251,7 +1270,7 @@ export class GameScene extends Phaser.Scene {
       const success = this.buttonEffectClicks >= BUTTON_EFFECT_REQUIRED_CLICKS;
       this.clearButtonEffectUI();
       if (!success) {
-        this.triggerGameOver();
+        this.triggerGameOver('button-too-slow');
         return;
       }
       this.setCheckpointsVisible(false);
@@ -2650,10 +2669,11 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private triggerGameOver() {
+  private triggerGameOver(reason: GameOverReason = 'default') {
     if (this.isGameOver) return;
 
     this.isGameOver = true;
+    this.gameOverReason = reason;
     this.clearButtonEffectUI();
     this.input.setDefaultCursor('default');
     this.beatTimer?.remove();
@@ -2671,6 +2691,7 @@ export class GameScene extends Phaser.Scene {
     this.hitboxGraphics.clear();
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
     const homeY = cy + 84;
+    const showButtonTooSlowMessage = this.gameOverReason === 'button-too-slow';
     this.add.image(cx, cy, 'gameover_bg').setDisplaySize(GAME_WIDTH, GAME_HEIGHT).setDepth(SCENE_LAYER.GAMEOVER_BG);
     this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.62).setDepth(SCENE_LAYER.GAMEOVER_DIM);
     const homeBtn = this.add.rectangle(cx, homeY, 320, 92, 0x9147ff, 0.96)
@@ -2680,6 +2701,15 @@ export class GameScene extends Phaser.Scene {
     const homeBtnLabel = this.add.text(cx, homeY, '返回主頁', { fontSize: '42px', color: '#ffffff' })
       .setOrigin(0.5)
       .setDepth(SCENE_LAYER.GAMEOVER_BUTTON_LABEL);
+    if (showButtonTooSlowMessage) {
+      this.add.text(cx, homeY + 92, '哎呦~按太慢摟~可惜啦~', {
+        fontSize: '28px',
+        color: '#ffe1e1',
+        fontStyle: 'bold',
+      })
+        .setOrigin(0.5)
+        .setDepth(SCENE_LAYER.GAMEOVER_BUTTON_LABEL);
+    }
     homeBtn.on('pointerover', () => {
       homeBtn.setFillStyle(0xa45cff, 1);
       homeBtn.setStrokeStyle(3, 0xffffff, 1);
@@ -2695,6 +2725,12 @@ export class GameScene extends Phaser.Scene {
       homeBtnLabel.setScale(0.98);
       this.time.delayedCall(90, () => this.returnToMenu());
     });
+  }
+
+  private previewButtonTooSlowGameOver() {
+    if (this.isGameOver) return;
+    this.debugController?.hideEndingOverlay();
+    this.triggerGameOver('button-too-slow');
   }
 
   // ---------- Pause ----------

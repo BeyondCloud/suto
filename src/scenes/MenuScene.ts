@@ -422,8 +422,32 @@ export class MenuScene extends Phaser.Scene {
       root.appendChild(button);
     });
 
+    const buttonTooSlowPreviewButton = document.createElement('button');
+    buttonTooSlowPreviewButton.type = 'button';
+    buttonTooSlowPreviewButton.textContent = '預覽按太慢';
+    buttonTooSlowPreviewButton.style.gridColumn = '1 / -1';
+    buttonTooSlowPreviewButton.style.height = '42px';
+    buttonTooSlowPreviewButton.style.border = '2px solid #ffd4d4';
+    buttonTooSlowPreviewButton.style.borderRadius = '8px';
+    buttonTooSlowPreviewButton.style.background = '#7a1f30';
+    buttonTooSlowPreviewButton.style.color = '#ffffff';
+    buttonTooSlowPreviewButton.style.fontSize = '18px';
+    buttonTooSlowPreviewButton.style.fontWeight = '800';
+    buttonTooSlowPreviewButton.style.cursor = 'pointer';
+    buttonTooSlowPreviewButton.onmouseenter = () => {
+      buttonTooSlowPreviewButton.style.background = '#9a2c3f';
+      buttonTooSlowPreviewButton.style.borderColor = '#fff1f1';
+    };
+    wireDomButtonHoverSound(this, buttonTooSlowPreviewButton);
+    buttonTooSlowPreviewButton.onmouseleave = () => {
+      buttonTooSlowPreviewButton.style.background = '#7a1f30';
+      buttonTooSlowPreviewButton.style.borderColor = '#ffd4d4';
+    };
+    buttonTooSlowPreviewButton.onclick = () => this.startDebugButtonTooSlowPreview();
+    root.appendChild(buttonTooSlowPreviewButton);
+
     const hint = document.createElement('div');
-    hint.textContent = '快捷鍵: 1~7';
+    hint.textContent = '快捷鍵: 1~7, 8=按太慢';
     hint.style.gridColumn = '1 / -1';
     hint.style.fontSize = '14px';
     hint.style.fontWeight = '700';
@@ -434,6 +458,10 @@ export class MenuScene extends Phaser.Scene {
     this.debugEndingOverlayRoot = root;
 
     this.debugEndingHotkeyHandler = (event: KeyboardEvent) => {
+      if (event.key === '8') {
+        this.startDebugButtonTooSlowPreview();
+        return;
+      }
       const index = Number(event.key) - 1;
       if (!Number.isInteger(index) || index < 0 || index >= presets.length) return;
       this.startDebugEndingPreview(presets[index]);
@@ -456,6 +484,15 @@ export class MenuScene extends Phaser.Scene {
       stageIndex: 0,
       mode: 'challenge',
       debugEndingPreset: preset,
+    });
+  }
+
+  private startDebugButtonTooSlowPreview() {
+    this.scene.start('GameScene', {
+      settings: this.settings,
+      stageIndex: 0,
+      mode: 'challenge',
+      debugGameOverReason: 'button-too-slow',
     });
   }
 

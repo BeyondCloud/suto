@@ -36,11 +36,13 @@ export const DEBUG_ENDING_PRESETS: DebugEndingPreset[] = [
 interface GameSceneDebugControllerOptions {
   scene: Phaser.Scene;
   onSelectEndingPreset: (preset: DebugEndingPreset) => void;
+  onPreviewButtonTooSlowGameOver: () => void;
 }
 
 export class GameSceneDebugController {
   private readonly scene: Phaser.Scene;
   private readonly onSelectEndingPreset: (preset: DebugEndingPreset) => void;
+  private readonly onPreviewButtonTooSlowGameOver: () => void;
   private debugText?: Phaser.GameObjects.Text;
   private overlayRoot?: HTMLDivElement;
   private hotkeyHandler?: (event: KeyboardEvent) => void;
@@ -48,6 +50,7 @@ export class GameSceneDebugController {
   constructor(options: GameSceneDebugControllerOptions) {
     this.scene = options.scene;
     this.onSelectEndingPreset = options.onSelectEndingPreset;
+    this.onPreviewButtonTooSlowGameOver = options.onPreviewButtonTooSlowGameOver;
   }
 
   get enabled(): boolean {
@@ -150,6 +153,30 @@ export class GameSceneDebugController {
       button.onclick = () => this.onSelectEndingPreset(preset);
       root.appendChild(button);
     });
+
+    const gameOverPreviewButton = document.createElement('button');
+    gameOverPreviewButton.type = 'button';
+    gameOverPreviewButton.textContent = '預覽按太慢';
+    gameOverPreviewButton.style.gridColumn = '1 / -1';
+    gameOverPreviewButton.style.height = '42px';
+    gameOverPreviewButton.style.border = '2px solid #ffd4d4';
+    gameOverPreviewButton.style.borderRadius = '8px';
+    gameOverPreviewButton.style.background = '#7a1f30';
+    gameOverPreviewButton.style.color = '#ffffff';
+    gameOverPreviewButton.style.fontSize = '18px';
+    gameOverPreviewButton.style.fontWeight = '800';
+    gameOverPreviewButton.style.cursor = 'pointer';
+    gameOverPreviewButton.onmouseenter = () => {
+      gameOverPreviewButton.style.background = '#9a2c3f';
+      gameOverPreviewButton.style.borderColor = '#fff1f1';
+    };
+    wireDomButtonHoverSound(this.scene, gameOverPreviewButton);
+    gameOverPreviewButton.onmouseleave = () => {
+      gameOverPreviewButton.style.background = '#7a1f30';
+      gameOverPreviewButton.style.borderColor = '#ffd4d4';
+    };
+    gameOverPreviewButton.onclick = () => this.onPreviewButtonTooSlowGameOver();
+    root.appendChild(gameOverPreviewButton);
 
     const hint = document.createElement('div');
     hint.textContent = '快捷鍵: 1~7';
