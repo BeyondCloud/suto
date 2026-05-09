@@ -1,4 +1,6 @@
 import cmonbruhImageUrl from './assets/cmonbruh.png';
+import stage120AudioUrl from './assets/audio/120.wav';
+import challengeLoopAudioUrl from './assets/audio/loop/challenge.wav';
 import type { Direction } from './config';
 
 export interface NormalSection {
@@ -47,7 +49,7 @@ export const LEVEL_DATA: LevelData = {
       stage_number: 1,
       bpm: 160,
       // audio_clip必須為16拍整的循環音樂
-      audio_clip: 'src/assets/audio/loop/challenge.wav',
+      audio_clip: challengeLoopAudioUrl,
       sections: [
         {
           type: 'normal',
@@ -86,7 +88,7 @@ export const LEVEL_DATA: LevelData = {
     {
       stage_number: 2,
       bpm: 183,
-      audio_clip: 'src/assets/audio/120.wav',
+      audio_clip: stage120AudioUrl,
       sections: [
         {
           type: 'normal',
@@ -97,7 +99,7 @@ export const LEVEL_DATA: LevelData = {
     {
       stage_number: 3,
       bpm: 120,
-      audio_clip: 'src/assets/audio/120.wav',
+      audio_clip: stage120AudioUrl,
       sections: [
         {
           type: 'rotation',

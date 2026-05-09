@@ -7,6 +7,7 @@ import endingDUrl from '../assets/D.mp4';
 import endingCUrl from '../assets/C.mp4';
 import endingBUrl from '../assets/B.mp4';
 import stage120Url from '../assets/audio/120.wav';
+import challengeLoopUrl from '../assets/audio/loop/challenge.wav';
 import {
   DEFAULT_SETTINGS,
   GAME_WIDTH, GAME_HEIGHT,
@@ -47,6 +48,7 @@ const GAME_FRAME_HEIGHT = GAME_FRAME_BOTTOM - GAME_FRAME_TOP;
 const FALSE_TOUCH_DAMAGE = 2;
 const MISS_DAMAGE = 5;
 const DEFAULT_STAGE_AUDIO_CLIP = 'src/assets/audio/120.wav';
+const DEFAULT_CHALLENGE_STAGE_AUDIO_CLIP = 'src/assets/audio/loop/challenge.wav';
 const HIT_SPARK_TEXTURE_KEY = 'hit_spark';
 const PROMPT_AUDIO_KEYS: Partial<Record<Direction, string>> = {
   w: 'prompt_U',
@@ -71,6 +73,7 @@ const getCustomImageKey = (imgPath: string): string => `custom_img_${imgPath.rep
 
 const resolveStageAudioClipUrl = (clipPath: string): string => {
   if (clipPath === DEFAULT_STAGE_AUDIO_CLIP) return stage120Url;
+  if (clipPath === DEFAULT_CHALLENGE_STAGE_AUDIO_CLIP) return challengeLoopUrl;
   return clipPath;
 };
 
@@ -493,11 +496,19 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    const probe = this.sound.add(audioKey);
-    const durationSec = probe.duration;
-    probe.destroy();
-    if (!Number.isFinite(durationSec) || durationSec <= 0) return undefined;
-    return durationSec;
+    if (cachedAudio == null) {
+      return undefined;
+    }
+
+    try {
+      const probe = this.sound.add(audioKey);
+      const durationSec = probe.duration;
+      probe.destroy();
+      if (!Number.isFinite(durationSec) || durationSec <= 0) return undefined;
+      return durationSec;
+    } catch {
+      return undefined;
+    }
   }
 
   private getClipDerivedBpm(audioKey: string, beats: number): number | undefined {
