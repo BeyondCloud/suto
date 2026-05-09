@@ -515,9 +515,16 @@ export class GameScene extends Phaser.Scene {
     let rate = 1;
     const stageBpm = this.getChallengePrepareBpm() ?? 0;
     const tutorialBaseBpm = this.getClipDerivedBpm(CHALLENGE_TUTORIAL_AUDIO_KEY, CHALLENGE_TUTORIAL_BEATS);
+    const tutorialDurationSec = this.getAudioClipDurationSec(CHALLENGE_TUTORIAL_AUDIO_KEY);
     if (stageBpm > 0 && typeof tutorialBaseBpm === 'number' && tutorialBaseBpm > 0) {
       rate = Phaser.Math.Clamp(stageBpm / tutorialBaseBpm, 0.25, 4);
     }
+
+    const cueDurationMs = stageBpm > 0
+      ? (CHALLENGE_TUTORIAL_BEATS * 60000) / stageBpm
+      : (typeof tutorialDurationSec === 'number' && tutorialDurationSec > 0
+        ? (tutorialDurationSec * 1000) / rate
+        : undefined);
 
     this.challengeTutorialAudio?.stop();
     this.challengeTutorialAudio?.destroy();
@@ -527,9 +534,14 @@ export class GameScene extends Phaser.Scene {
 
     return new Promise<void>(resolve => {
       let settled = false;
+      let cueTimer: Phaser.Time.TimerEvent | undefined;
       const finish = () => {
         if (settled) return;
         settled = true;
+        cueTimer?.remove(false);
+        if (tutorialAudio.isPlaying) {
+          tutorialAudio.stop();
+        }
         if (this.challengeTutorialAudio === tutorialAudio) {
           this.challengeTutorialAudio = undefined;
         }
@@ -539,7 +551,15 @@ export class GameScene extends Phaser.Scene {
 
       tutorialAudio.once(Phaser.Sound.Events.COMPLETE, finish);
       const started = tutorialAudio.play({ rate });
-      if (!started) finish();
+      if (!started) {
+        finish();
+        return;
+      }
+
+      if (typeof cueDurationMs === 'number' && Number.isFinite(cueDurationMs) && cueDurationMs > 0) {
+        cueTimer = this.time.delayedCall(cueDurationMs, finish);
+        cueTimer.paused = this.isPaused;
+      }
     });
   }
 
