@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { HTML_LAYER } from '../layers';
 import { UI_CJK_FONT_FAMILY } from '../uiFonts';
 import { EndingCelebrationParticleSystem } from './EndingCelebrationParticleSystem.ts';
@@ -37,6 +38,8 @@ export class EndingSequenceOverlay {
   private endingPointerHandler?: (event: PointerEvent) => void;
   private endingMouseHandler?: (event: MouseEvent) => void;
   private endingTouchHandler?: (event: TouchEvent) => void;
+
+  private readonly endingUiScaleCssVar = '--suto-ending-ui-scale';
 
   constructor(options: EndingSequenceOverlayOptions) {
     this.scene = options.scene;
@@ -198,6 +201,7 @@ export class EndingSequenceOverlay {
     this.endingVideoRoot.style.top = `${rect.top}px`;
     this.endingVideoRoot.style.width = `${rect.width}px`;
     this.endingVideoRoot.style.height = `${rect.height}px`;
+    this.endingVideoRoot.style.setProperty(this.endingUiScaleCssVar, String(this.getEndingUiScale(rect)));
     this.endingCelebrationFx?.resize();
   };
 
@@ -209,6 +213,7 @@ export class EndingSequenceOverlay {
     this.endingVideoRoot.style.background = '#000000';
     this.endingVideoRoot.style.zIndex = String(HTML_LAYER.FULLSCREEN_VIDEO);
     this.endingVideoRoot.style.overflow = 'hidden';
+    this.endingVideoRoot.style.setProperty(this.endingUiScaleCssVar, '1');
 
     this.endingVideo = document.createElement('video');
     this.endingVideo.src = videoUrl;
@@ -238,6 +243,7 @@ export class EndingSequenceOverlay {
 
     const { accuracyPercent, rank, verdict } = this.buildEndingSummary(summary);
     const scoreBar = this.buildEndingScoreBar(accuracyPercent, rank);
+    const px = (value: number) => this.scaledUiPx(value);
 
     this.endingSummaryCard = document.createElement('div');
     this.endingSummaryCard.style.position = 'absolute';
@@ -245,13 +251,13 @@ export class EndingSequenceOverlay {
     this.endingSummaryCard.style.top = '35%';
     this.endingSummaryCard.style.bottom = '10%';
     this.endingSummaryCard.style.transform = 'translateX(-50%)';
-    this.endingSummaryCard.style.width = 'min(72vw, 620px)';
+    this.endingSummaryCard.style.width = `min(72%, ${px(620)})`;
     this.endingSummaryCard.style.maxWidth = '92%';
-    this.endingSummaryCard.style.padding = '22px 26px';
+    this.endingSummaryCard.style.padding = `${px(22)} ${px(26)}`;
     this.endingSummaryCard.style.background = 'rgba(8, 12, 18, 0.74)';
-    this.endingSummaryCard.style.border = '2px solid rgba(255, 255, 255, 0.84)';
-    this.endingSummaryCard.style.borderRadius = '14px';
-    this.endingSummaryCard.style.boxShadow = '0 16px 36px rgba(0, 0, 0, 0.5)';
+    this.endingSummaryCard.style.border = `${px(2)} solid rgba(255, 255, 255, 0.84)`;
+    this.endingSummaryCard.style.borderRadius = px(14);
+    this.endingSummaryCard.style.boxShadow = `0 ${px(16)} ${px(36)} rgba(0, 0, 0, 0.5)`;
     this.endingSummaryCard.style.color = '#ffffff';
     this.endingSummaryCard.style.fontFamily = UI_CJK_FONT_FAMILY;
     this.endingSummaryCard.style.display = 'flex';
@@ -260,11 +266,11 @@ export class EndingSequenceOverlay {
     this.endingSummaryCard.style.pointerEvents = 'none';
     this.endingSummaryCard.style.zIndex = '10';
     this.endingSummaryCard.innerHTML = [
-      `<div style=\"font-size:40px;font-weight:800;letter-spacing:1px;line-height:1.05;margin-bottom:10px;\">Accuracy ${accuracyPercent} %</div>`,
-      `<div style=\"font-size:30px;font-weight:800;color:#ffe082;letter-spacing:1px;margin-bottom:12px;\">評價 ${rank}</div>`,
+      `<div style=\"font-size:${px(40)};font-weight:800;letter-spacing:${px(1)};line-height:1.05;margin-bottom:${px(10)};\">Accuracy ${accuracyPercent} %</div>`,
+      `<div style=\"font-size:${px(30)};font-weight:800;color:#ffe082;letter-spacing:${px(1)};margin-bottom:${px(12)};\">評價 ${rank}</div>`,
       scoreBar,
-      `<div style=\"font-size:26px;font-weight:700;line-height:1.3;margin-bottom:12px;color:#7a7a7a;\">${verdict}</div>`,
-      `<div style=\"font-size:22px;line-height:1.55;color:#d9e3f0;\"><span style=\"color:#7cff8f;font-weight:700;\">Perfect ${summary.perfectCount}</span> / <span style=\"color:#ff5a6b;font-weight:700;\">Miss ${summary.missCount}</span> / <span style=\"color:#ffb14a;font-weight:700;\">X ${summary.falseTouchCount}</span> / HP ${summary.lifeValue}</div>`,
+      `<div style=\"font-size:${px(26)};font-weight:700;line-height:1.3;margin-bottom:${px(12)};color:#7a7a7a;\">${verdict}</div>`,
+      `<div style=\"font-size:${px(22)};line-height:1.55;color:#d9e3f0;\"><span style=\"color:#7cff8f;font-weight:700;\">Perfect ${summary.perfectCount}</span> / <span style=\"color:#ff5a6b;font-weight:700;\">Miss ${summary.missCount}</span> / <span style=\"color:#ffb14a;font-weight:700;\">X ${summary.falseTouchCount}</span> / HP ${summary.lifeValue}</div>`,
     ].join('');
     this.endingVideoRoot.appendChild(this.endingSummaryCard);
   }
@@ -272,6 +278,7 @@ export class EndingSequenceOverlay {
   private buildEndingScoreBar(score: number, rank: string): string {
     const clampedScore = clampScore(score);
     const ranks = ENDING_RANKS;
+    const px = (value: number) => this.scaledUiPx(value);
 
     const markerNudgeX: Record<string, number> = {
       S: 0,
@@ -303,15 +310,15 @@ export class EndingSequenceOverlay {
       const labelTop = stemTop - 18;
       const minTop = labelTop - 14;
 
-      return `<div style=\"position:absolute;left:${left}%;top:0;transform:${anchorTransform};min-width:36px;\">`
-        + `<div style=\"position:absolute;left:${stemLeft};top:${stemTop}px;transform:translateX(-50%);width:2px;height:${markerStemHeight}px;background:rgba(255,255,255,0.58);\"></div>`
+      return `<div style=\"position:absolute;left:${left}%;top:0;transform:${anchorTransform};min-width:${px(36)};\">`
+        + `<div style=\"position:absolute;left:${stemLeft};top:${px(stemTop)};transform:translateX(-50%);width:${px(2)};height:${px(markerStemHeight)};background:rgba(255,255,255,0.58);\"></div>`
         + (isSpecialEventMarker
           ? `${hasReachedSpecialEvent
-            ? `<div style=\"position:absolute;left:${stemLeft};top:${minTop - 42}px;transform:translateX(-50%);margin-left:${nudgeX}px;padding:1px 8px;border-radius:999px;border:1px solid rgba(146,255,190,0.85);background:rgba(16,45,32,0.9);font-size:10px;font-weight:800;letter-spacing:0.06em;color:#b6ffd2;white-space:nowrap;\">已達成!</div>`
-            : ''}<div style=\"position:absolute;left:${stemLeft};top:${minTop - 20}px;transform:translateX(-50%);margin-left:${nudgeX}px;padding:1px 8px;border-radius:999px;border:1px solid rgba(255,220,150,0.85);background:rgba(23,28,38,0.9);font-size:10px;font-weight:800;letter-spacing:0.06em;color:#ffe4a3;white-space:nowrap;\">特殊事件</div>`
+            ? `<div style=\"position:absolute;left:${stemLeft};top:${px(minTop - 42)};transform:translateX(-50%);margin-left:${px(nudgeX)};padding:${px(1)} ${px(8)};border-radius:999px;border:${px(1)} solid rgba(146,255,190,0.85);background:rgba(16,45,32,0.9);font-size:${px(10)};font-weight:800;letter-spacing:0.06em;color:#b6ffd2;white-space:nowrap;\">已達成!</div>`
+            : ''}<div style=\"position:absolute;left:${stemLeft};top:${px(minTop - 20)};transform:translateX(-50%);margin-left:${px(nudgeX)};padding:${px(1)} ${px(8)};border-radius:999px;border:${px(1)} solid rgba(255,220,150,0.85);background:rgba(23,28,38,0.9);font-size:${px(10)};font-weight:800;letter-spacing:0.06em;color:#ffe4a3;white-space:nowrap;\">特殊事件</div>`
           : '')
-        + `<div style=\"position:absolute;left:${stemLeft};top:${labelTop}px;transform:translateX(-50%);margin-left:${nudgeX}px;font-size:14px;font-weight:800;letter-spacing:0.08em;color:${isCurrentRank ? color : 'rgba(232, 239, 248, 0.88)'};white-space:nowrap;\">${label}</div>`
-        + `<div style=\"position:absolute;left:${stemLeft};top:${minTop}px;transform:translateX(-50%);margin-left:${nudgeX}px;font-size:11px;color:rgba(217, 227, 240, 0.72);white-space:nowrap;\">${min}</div>`
+        + `<div style=\"position:absolute;left:${stemLeft};top:${px(labelTop)};transform:translateX(-50%);margin-left:${px(nudgeX)};font-size:${px(14)};font-weight:800;letter-spacing:0.08em;color:${isCurrentRank ? color : 'rgba(232, 239, 248, 0.88)'};white-space:nowrap;\">${label}</div>`
+        + `<div style=\"position:absolute;left:${stemLeft};top:${px(minTop)};transform:translateX(-50%);margin-left:${px(nudgeX)};font-size:${px(11)};color:rgba(217, 227, 240, 0.72);white-space:nowrap;\">${min}</div>`
         + `</div>`;
     }).join('');
 
@@ -324,20 +331,20 @@ export class EndingSequenceOverlay {
 
     return [
       '<style>@keyframes sutoScoreTopFill{from{transform:scaleX(0);}to{transform:scaleX(1);}}</style>',
-      '<div style="margin:0 0 16px;">',
-      '<div style="display:flex;justify-content:flex-start;align-items:center;margin-bottom:8px;font-size:15px;font-weight:700;color:#d9e3f0;letter-spacing:0.04em;">',
+      `<div style="margin:0 0 ${px(16)};">`,
+      `<div style="display:flex;justify-content:flex-start;align-items:center;margin-bottom:${px(8)};font-size:${px(15)};font-weight:700;color:#d9e3f0;letter-spacing:0.04em;">`,
       '<span>Score</span>',
       '</div>',
-      '<div style="position:relative;padding-top:84px;padding-bottom:0px;">',
-      '<div style="position:absolute;left:0;right:0;top:50px;height:40px;border-radius:999px;background:rgba(64, 120, 72, 0.35);overflow:hidden;box-shadow:inset 0 0 0 1px rgba(140, 255, 162, 0.18);">',
+      `<div style="position:relative;padding-top:${px(84)};padding-bottom:0;">`,
+      `<div style="position:absolute;left:0;right:0;top:${px(50)};height:${px(40)};border-radius:999px;background:rgba(64, 120, 72, 0.35);overflow:hidden;box-shadow:inset 0 0 0 ${px(1)} rgba(140, 255, 162, 0.18);">`,
       `<div style="width:${scoreDisplayPercent}%;height:100%;background:linear-gradient(90deg,#3cff84 0%,#31d66f 55%,#23b95d 100%);transform-origin:left center;transform:scaleX(0);animation:sutoScoreTopFill 0.5s ease-out forwards;"></div>`,
       '</div>',
-      '<div style="position:relative;height:16px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,0.12);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.12);">',
+      `<div style="position:relative;height:${px(16)};border-radius:999px;overflow:hidden;background:rgba(255,255,255,0.12);box-shadow:inset 0 0 0 ${px(1)} rgba(255,255,255,0.12);">`,
       `<div style="position:absolute;inset:0;background:linear-gradient(90deg, ${gradientStops});"></div>`,
       '</div>',
       markers,
       '</div>',
-      `<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:800;color:#ffffff;letter-spacing:0.04em;">${clampedScore} / 100</div>`,
+      `<div style="display:flex;justify-content:flex-end;font-size:${px(13)};font-weight:800;color:#ffffff;letter-spacing:0.04em;">${clampedScore} / 100</div>`,
       '</div>',
     ].join('');
   }
@@ -353,14 +360,22 @@ export class EndingSequenceOverlay {
     this.endingPromptText.style.transform = 'translateX(-50%)';
     this.endingPromptText.style.color = '#ffffff';
     this.endingPromptText.style.fontFamily = UI_CJK_FONT_FAMILY;
-    this.endingPromptText.style.fontSize = '30px';
+    this.endingPromptText.style.fontSize = this.scaledUiPx(30);
     this.endingPromptText.style.fontWeight = '800';
-    this.endingPromptText.style.letterSpacing = '1px';
+    this.endingPromptText.style.letterSpacing = this.scaledUiPx(1);
     this.endingPromptText.style.textShadow =
-      '0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000, 0 0 2px #000';
+      `0 0 ${this.scaledUiPx(2)} #000, 0 0 ${this.scaledUiPx(2)} #000, 0 0 ${this.scaledUiPx(2)} #000, 0 0 ${this.scaledUiPx(2)} #000, 0 0 ${this.scaledUiPx(2)} #000, 0 0 ${this.scaledUiPx(2)} #000`;
     this.endingPromptText.style.pointerEvents = 'none';
     this.endingPromptText.style.zIndex = '11';
     this.endingVideoRoot.appendChild(this.endingPromptText);
+  }
+
+  private getEndingUiScale(rect: Pick<DOMRect, 'width' | 'height'>): number {
+    return Phaser.Math.Clamp(Math.min(rect.width / GAME_WIDTH, rect.height / GAME_HEIGHT), 0.65, 1);
+  }
+
+  private scaledUiPx(value: number): string {
+    return `calc(${value}px * var(${this.endingUiScaleCssVar}, 1))`;
   }
 
   private startEndingCelebrationParticles() {
