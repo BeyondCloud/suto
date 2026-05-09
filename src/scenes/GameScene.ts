@@ -420,11 +420,16 @@ export class GameScene extends Phaser.Scene {
         this.pendingSectionStartDelayEvent.paused = this.isPaused;
       };
 
-      if (this.introCountdownBpm) {
-        this.startIntroCountdown(60000 / this.introCountdownBpm, startStorySection);
-      } else {
-        startStorySection();
-      }
+      // 等 stage audio buffer source 預熱完才啟動倒數，避免第一次 play 比 game timer
+      // 慢一截導致 prompt 跟拍點 off-sync。
+      this.prewarmStageAudio().then(() => {
+        if (this.isGameOver || !this.scene.isActive()) return;
+        if (this.introCountdownBpm) {
+          this.startIntroCountdown(60000 / this.introCountdownBpm, startStorySection);
+        } else {
+          startStorySection();
+        }
+      });
     } else {
       this.beginChallengeStageIntro(() => this.startSection());
     }
@@ -613,18 +618,21 @@ export class GameScene extends Phaser.Scene {
   // an earlier fire-and-forget version of this didn't, and the cold-start was
   // still hitting the first real play.
   private prewarmStageAudio(): Promise<void> {
-    if (!this.currentStageAudioKey || this.mode !== 'challenge') return Promise.resolve();
+    if (!this.currentStageAudioKey) return Promise.resolve();
     const baseBpm = this.getStageAudioBaseBpm();
     if (baseBpm <= 0) return Promise.resolve();
 
+    // 一律 warmup，包含 story mode 與 rate=1。第一次 play 在 cold AudioContext / 新 buffer
+    // source path 上有額外 startup 延遲，會讓 stage audio 比 game timer 慢一拍 → 永久
+    // off-sync，要等到第二次進 GameScene 才會跟上。先用 volume 0 跑一輪把路徑暖好。
     const rates = new Set<number>();
+    rates.add(1);
     for (const section of this.currentStage.sections) {
       if (section.type === 'delay') continue;
       const sectionBpm = (section as NormalSection | RotationSection).bpm ?? baseBpm;
       if (sectionBpm <= 0) continue;
       rates.add(Phaser.Math.Clamp(sectionBpm / baseBpm, 0.25, 4));
     }
-    rates.delete(1);
     if (rates.size === 0) return Promise.resolve();
 
     const warmups: Phaser.Sound.BaseSound[] = [];
