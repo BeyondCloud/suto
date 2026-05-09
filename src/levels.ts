@@ -1,7 +1,7 @@
 import cmonbruhImageUrl from './assets/cmonbruh.png';
-import stage120AudioUrl from './assets/audio/120.wav';
 import challengeLoopAudioUrl from './assets/audio/loop/challenge.wav';
 import type { Direction } from './config';
+import { generateChallengeLevelData } from './challengeGenerator';
 
 export interface NormalSection {
   type: 'normal';
@@ -43,73 +43,83 @@ export interface LevelData {
   stages: Stage[];
 }
 
-export const LEVEL_DATA: LevelData = {
-  stages: [
-    {
-      stage_number: 1,
-      bpm: 160,
-      // audio_clip必須為16拍整的循環音樂
-      audio_clip: challengeLoopAudioUrl,
-      sections: [
-        {
-          type: 'normal',
-          prompts: ['w', 'w', 'w', 'w',
-                    'x', 'x', 'x', 'x'],
-        },
-        {
-          type: 'normal',
-          prompts: ['w', 'w', 'x', 'x',
-                    'w', 'w', 'x', 'x'],
-        },
+// export const LEVEL_DATA: LevelData = {
+//   stages: [
+//     {
+//       stage_number: 1,
+//       bpm: 160,
+//       // audio_clip必須為16拍整的循環音樂
+//       audio_clip: challengeLoopAudioUrl,
+//       sections: [
+//         {
+//           type: 'normal',
+//           prompts: ['w', 'w', 'w', 'w',
+//                     'x', 'x', 'x', 'x'],
+//         },
+//         {
+//           type: 'normal',
+//           prompts: ['w', 'w', 'x', 'x',
+//                     'w', 'w', 'x', 'x'],
+//         },
 
-        {
-          type: 'normal',
-          prompts: ['w', 'w', 'w', 'x',
-                    'x', 'x', 'x', 'w'],
-        },
-        //=============================
-        {
-          type: 'normal',
-          prompts: ['w', 'q', 'w', 'q',
-                    'q', 'q', 'q', 'q'],
-        },
-        {
-          type: 'normal',
-          prompts: ['x', 'd', 'w', 'a',
-                    'x', 'd', 'w', 'a', ],
-        },
-        {
-          type: 'normal',
-          prompts: ['w', 'w', 'w', 'w',
-                    'w', 'w', 'w', 'w'],
-        }
-      ],
-    },
-    {
-      stage_number: 2,
-      bpm: 183,
-      audio_clip: stage120AudioUrl,
-      sections: [
-        {
-          type: 'normal',
-          prompts: ['q', 'e', 'z', 'c', 'q', 'e', 'z', 'c'],
-        },
-      ],
-    },
-    {
-      stage_number: 3,
-      bpm: 120,
-      audio_clip: stage120AudioUrl,
-      sections: [
-        {
-          type: 'rotation',
-          start: 'w',
-          rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
-        },
-      ],
-    },
-  ],
-};
+//         {
+//           type: 'normal',
+//           prompts: ['w', 'w', 'w', 'x',
+//                     'x', 'x', 'x', 'w'],
+//         },
+//         //=============================
+//         {
+//           type: 'normal',
+//           prompts: ['w', 'q', 'w', 'q',
+//                     'q', 'q', 'q', 'q'],
+//         },
+//         {
+//           type: 'normal',
+//           prompts: ['x', 'd', 'w', 'a',
+//                     'x', 'd', 'w', 'a', ],
+//         },
+//         {
+//           type: 'normal',
+//           prompts: ['w', 'w', 'w', 'w',
+//                     'w', 'w', 'w', 'w'],
+//         }
+//       ],
+//     },
+//     {
+//       stage_number: 2,
+//       bpm: 183,
+//       audio_clip: stage120AudioUrl,
+//       sections: [
+//         {
+//           type: 'normal',
+//           prompts: ['q', 'e', 'z', 'c', 'q', 'e', 'z', 'c'],
+//         },
+//       ],
+//     },
+//     {
+//       stage_number: 3,
+//       bpm: 120,
+//       audio_clip: stage120AudioUrl,
+//       sections: [
+//         {
+//           type: 'rotation',
+//           start: 'w',
+//           rotate: ['R', 'R', 'L', 'L', 'L', 'L', 'R', 'R'],
+//         },
+//       ],
+//     },
+//   ],
+// };
+// LEVEL_DATA 由 challengeGenerator 自動生成。
+// audio_clip 必須為 16 拍整的循環音樂(隨 BPM 變速)。
+export const LEVEL_DATA: LevelData = generateChallengeLevelData({
+  bpm: 180,
+  sectionsPerStage: 3,
+  rotationChance: 1 / 8,
+  audioClip: challengeLoopAudioUrl,
+  loops: 10,
+  bpmIncrementPerLoop: 20,
+});
 
 // Copy for mainline mode. You can edit this without affecting challenge mode data.
 export const MAIN_LEVEL_DATA: LevelData = {
