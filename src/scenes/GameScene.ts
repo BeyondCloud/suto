@@ -223,6 +223,7 @@ export class GameScene extends Phaser.Scene {
   private stageText!: Phaser.GameObjects.Text;
   private roundText!: Phaser.GameObjects.Text;
   private challengePrepareText?: Phaser.GameObjects.Text;
+  private lastChallengeIntroBpm?: number;
   private beatTimer!: Phaser.Time.TimerEvent;
 
   // Prompt phase
@@ -300,6 +301,7 @@ export class GameScene extends Phaser.Scene {
     this.pendingDebugEndingPreset = data.debugEndingPreset;
     this.pendingDebugGameOverReason = data.debugGameOverReason;
     this.isReturningToMenu = false;
+    this.lastChallengeIntroBpm = undefined;
     this.showPracticeReturnButton = data.showPracticeReturnButton === true;
     this.practiceReturnMode = data.practiceReturnMode === 'custom' ? 'custom' : 'mainline';
     const countdownBpm = data.introCountdownBpm;
@@ -446,6 +448,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private beginChallengeStageIntro(onComplete: () => void) {
+    // Only show 請準備 + tutorial cue on (1) first stage entry, or (2) BPM change.
+    // Same-BPM stage transitions skip straight to the next section.
+    const stageBpm = this.getChallengePrepareBpm();
+    if (this.lastChallengeIntroBpm !== undefined && stageBpm === this.lastChallengeIntroBpm) {
+      onComplete();
+      return;
+    }
+    this.lastChallengeIntroBpm = stageBpm;
+
     this.showChallengePrepareMessage();
     this.prewarmStageAudio()
       .then(() => this.playChallengeTutorialCue())
