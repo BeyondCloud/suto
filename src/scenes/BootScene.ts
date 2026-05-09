@@ -13,6 +13,12 @@ import missUrl from '../assets/audio/miss.wav';
 import storyCheckStartUrl from '../assets/audio/short/suto.wav';
 import gameoverSfxUrl from '../assets/audio/long/gameover.wav';
 
+// 大檔影片在 BootScene 階段就用 link rel="prefetch" 開始下載，避免進主線時
+// sam.mp4 還沒 buffer 完導致音樂晚一拍進來。Vite 會把 import 換成 hashed URL。
+import samVideoUrl from '../assets/mp4/sam.mp4';
+import openingVideoUrl from '../assets/mp4/開頭影片.mp4';
+import tutorial2VideoUrl from '../assets/tutorial-2.mp4';
+
 import suto400ImageUrl from '../assets/suto400.png';
 import openingBgImageUrl from '../assets/opening.png';
 import judgementRules1ImageUrl from '../assets/判定規則.png';
@@ -59,6 +65,14 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
+    for (const url of [samVideoUrl, openingVideoUrl, tutorial2VideoUrl]) {
+      const link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = url;
+      link.as = 'video';
+      document.head.appendChild(link);
+    }
+
     // 用 DOM overlay 而非 Phaser canvas text：z-index 蓋過 Phaser canvas 與所有 HTML
     // overlay（含 GAME_FRAME_BEZEL）。永遠顯示提示，即使 sound.locked 已是 false ——
     // 上一場 session 的 user activation 可能讓 context 已 running，但仍想用 splash 確保

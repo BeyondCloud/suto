@@ -412,12 +412,18 @@ export class GameScene extends Phaser.Scene {
     if (this.mode === 'story') {
       const startStorySection = () => {
         this.createStorySamVideo();
-        this.pendingSectionStartDelayEvent?.remove(false);
-        this.pendingSectionStartDelayEvent = this.time.delayedCall(this.settings.storyStartDelayMs, () => {
-          this.pendingSectionStartDelayEvent = undefined;
-          this.startSection();
+        // sam.mp4 是 DOM <video>，第一次（cache 冷）時 src→buffer→play 有額外
+        // 延遲；如果直接用 Phaser timer 排 storyStartDelayMs 之後叫 startSection，
+        // beat timer 會比影片音樂提前開始 → 拍點永遠慢一拍。
+        // 改成等 video 真的 'playing' 事件後才起算 storyStartDelayMs。
+        this.scheduleStorySectionAfterVideoPlaying(() => {
+          this.pendingSectionStartDelayEvent?.remove(false);
+          this.pendingSectionStartDelayEvent = this.time.delayedCall(this.settings.storyStartDelayMs, () => {
+            this.pendingSectionStartDelayEvent = undefined;
+            this.startSection();
+          });
+          this.pendingSectionStartDelayEvent.paused = this.isPaused;
         });
-        this.pendingSectionStartDelayEvent.paused = this.isPaused;
       };
 
       // 等 stage audio buffer source 預熱完才啟動倒數，避免第一次 play 比 game timer
@@ -1701,6 +1707,34 @@ export class GameScene extends Phaser.Scene {
     this.storySamVideo.play().catch(() => {
       // Browser autoplay policy may require user interaction.
     });
+  }
+
+  // 等 sam video 真的進入 'playing' 狀態才執行 callback。3 秒安全網保證網路爛時不會卡死。
+  private scheduleStorySectionAfterVideoPlaying(callback: () => void) {
+    const video = this.storySamVideo;
+    if (!video) {
+      callback();
+      return;
+    }
+    if (!video.paused && video.readyState >= 3 && video.currentTime > 0) {
+      callback();
+      return;
+    }
+
+    let fired = false;
+    const fire = () => {
+      if (fired) return;
+      fired = true;
+      video.removeEventListener('playing', fire);
+      window.clearTimeout(safetyTimer);
+      callback();
+    };
+    video.addEventListener('playing', fire, { once: true });
+    const safetyTimer = window.setTimeout(() => {
+      if (fired) return;
+      console.warn('[GameScene] sam video play 逾時，仍啟動 section');
+      fire();
+    }, 3000);
   }
 
   private pauseStorySamVideo() {
