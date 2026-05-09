@@ -2114,6 +2114,13 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private getChallengeJudgeDelayMs(): number {
+    if (this.mode !== 'challenge') return 0;
+    const delay = this.settings.challengeJudgeDelayMs ?? DEFAULT_SETTINGS.challengeJudgeDelayMs;
+    if (!Number.isFinite(delay)) return 0;
+    return Phaser.Math.Clamp(delay, -300, 300);
+  }
+
   private startShrink(dir: Direction, leadMs: number) {
     if (this.isGameOver) return;
     const cp = this.checkpoints.find(c => c.dir === dir)!;
@@ -2121,7 +2128,8 @@ export class GameScene extends Phaser.Scene {
     outer.setRadius(60).setAlpha(1).setVisible(false);
     cp.edgeLine?.setAlpha(1).setVisible(this.shouldShowCardinalGuideLine());
 
-    const delay = Math.max(0, this.beatMs - leadMs);
+    const targetJudgementTimeMs = this.time.now + this.beatMs + this.getChallengeJudgeDelayMs();
+    const delay = Math.max(0, targetJudgementTimeMs - this.time.now - leadMs);
     this.pendingShrinkStartCount++;
     const event = this.time.delayedCall(delay, () => {
       if (this.isGameOver) {
@@ -2130,11 +2138,12 @@ export class GameScene extends Phaser.Scene {
       }
       this.pendingShrinkStartCount = Math.max(0, this.pendingShrinkStartCount - 1);
       const id = this.nextShrinkId++;
+      const remainingLeadMs = Math.max(0, targetJudgementTimeMs - this.time.now);
       const active: ActiveShrink = {
         id,
         dir,
         hit: false,
-        judgementTimeMs: this.time.now + leadMs,
+        judgementTimeMs: targetJudgementTimeMs,
       };
       this.activeShrinks.set(id, active);
 
@@ -2144,7 +2153,7 @@ export class GameScene extends Phaser.Scene {
         const t = this.tweens.add({
           targets: [cp.edgeZone, cp.edgeLine].filter(Boolean),
           alpha: 0.45,
-          duration: leadMs,
+          duration: remainingLeadMs,
           ease: 'Linear',
           onComplete: () => this.finishShrink(id),
         });
@@ -2155,7 +2164,7 @@ export class GameScene extends Phaser.Scene {
         const t = this.tweens.add({
           targets: outer,
           radius: CHECKPOINT_RADIUS,
-          duration: leadMs,
+          duration: remainingLeadMs,
           ease: 'Linear',
           onComplete: () => this.finishShrink(id),
         });

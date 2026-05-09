@@ -12,6 +12,7 @@ export interface GameSettings {
   checkDepth: number;
   cornerLineDepth: number;
   storyStartDelayMs: number;
+  challengeJudgeDelayMs: number;
 }
 
 export const DEFAULT_SETTINGS: GameSettings = {
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   checkDepth: 50,
   cornerLineDepth: 270,
   storyStartDelayMs: 0, // 開場 Delay (ms)
+  challengeJudgeDelayMs: 0, // 挑戰模式判定延遲 (ms); 負數=更早判定
 };
 
 export const D_RANK_ACC = 75;

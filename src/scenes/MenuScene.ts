@@ -21,6 +21,8 @@ const MASTER_VOLUME_MIN = 0;
 const MASTER_VOLUME_MAX = 1;
 const MASTER_VOLUME_STEP = 0.01;
 const MASTER_VOLUME_PREVIEW_INTERVAL_MS = 120;
+const CHALLENGE_JUDGE_DELAY_MIN_MS = -300;
+const CHALLENGE_JUDGE_DELAY_MAX_MS = 300;
 const PRACTICE_CUSTOM_STORAGE_KEY = 'suto.practice.custom.v1';
 const PRACTICE_RETURN_STORAGE_KEY = 'suto.practice.return.mode.once';
 const PRACTICE_REPEAT_COUNT = 999;
@@ -1342,8 +1344,8 @@ export class MenuScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const inputBlocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.001)
       .setInteractive({ useHandCursor: false });
-    const bg = this.add.rectangle(0, 0, 620, 340, 0x111122, 0.95);
-    const title = this.add.text(0, -122, '設定', { fontSize: '28px', color: '#fff' }).setOrigin(0.5);
+    const bg = this.add.rectangle(0, 0, 620, 390, 0x111122, 0.95);
+    const title = this.add.text(0, -148, '設定', { fontSize: '28px', color: '#fff' }).setOrigin(0.5);
 
     const makeRow = (label: string, yOff: number, getValue: () => string | number, onMinus: () => void, onPlus: () => void, onMinusTen?: () => void, onPlusTen?: () => void) => {
       const lbl = this.add.text(-230, yOff, label, { fontSize: '20px', color: '#ccc' }).setOrigin(0, 0.5);
@@ -1359,10 +1361,10 @@ export class MenuScene extends Phaser.Scene {
       return [lbl, valText, minusTen, minus, plus, plusTen];
     };
 
-    const volumeSlider = this.createMasterVolumeSlider(-44);
+    const volumeSlider = this.createMasterVolumeSlider(-76);
 
-    const storyDelayRow = makeRow('主播模式開場延遲 (ms)',
-      32,
+    const storyDelayRow = makeRow('主播模式延遲 (ms)',
+      0,
       () => this.settings.storyStartDelayMs,
       () => {
         this.settings.storyStartDelayMs = Math.max(0, this.settings.storyStartDelayMs - 1);
@@ -1382,11 +1384,32 @@ export class MenuScene extends Phaser.Scene {
       },
     );
 
+    const challengeJudgeDelayRow = makeRow('挑戰判定延遲 (ms)',
+      44,
+      () => this.settings.challengeJudgeDelayMs,
+      () => {
+        this.settings.challengeJudgeDelayMs = Math.max(CHALLENGE_JUDGE_DELAY_MIN_MS, this.settings.challengeJudgeDelayMs - 1);
+        this.saveSettings();
+      },
+      () => {
+        this.settings.challengeJudgeDelayMs = Math.min(CHALLENGE_JUDGE_DELAY_MAX_MS, this.settings.challengeJudgeDelayMs + 1);
+        this.saveSettings();
+      },
+      () => {
+        this.settings.challengeJudgeDelayMs = Math.max(CHALLENGE_JUDGE_DELAY_MIN_MS, this.settings.challengeJudgeDelayMs - 10);
+        this.saveSettings();
+      },
+      () => {
+        this.settings.challengeJudgeDelayMs = Math.min(CHALLENGE_JUDGE_DELAY_MAX_MS, this.settings.challengeJudgeDelayMs + 10);
+        this.saveSettings();
+      },
+    );
+
     const debugNodeConfirmToggleRow: Phaser.GameObjects.GameObject[] = [];
     if (DEBUG_MODE) {
-      const label = this.add.text(-230, 82, '拍點確認', { fontSize: '20px', color: '#ccc' }).setOrigin(0, 0.5);
-      const value = this.add.text(95, 82, this.settings.nodeConfirmToggle ? 'ON (全節拍判定 x)' : 'OFF', { fontSize: '20px', color: '#fff' }).setOrigin(0.5);
-      const button = this.add.text(190, 82, '[ TOGGLE ]', { fontSize: '17px', color: '#8fd3ff', fontStyle: 'bold' })
+      const label = this.add.text(-230, 92, '拍點確認', { fontSize: '20px', color: '#ccc' }).setOrigin(0, 0.5);
+      const value = this.add.text(95, 92, this.settings.nodeConfirmToggle ? 'ON (全節拍判定 x)' : 'OFF', { fontSize: '20px', color: '#fff' }).setOrigin(0.5);
+      const button = this.add.text(190, 92, '[ TOGGLE ]', { fontSize: '17px', color: '#8fd3ff', fontStyle: 'bold' })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
 
@@ -1399,7 +1422,7 @@ export class MenuScene extends Phaser.Scene {
       debugNodeConfirmToggleRow.push(label, value, button);
     }
 
-    const closeBtn = this.add.text(0, 134, '[ CLOSE ]', { fontSize: '22px', color: '#ffaaaa' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const closeBtn = this.add.text(0, 154, '[ CLOSE ]', { fontSize: '22px', color: '#ffaaaa' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => this.toggleSettings());
 
     this.settingsContainer.add([
@@ -1407,6 +1430,7 @@ export class MenuScene extends Phaser.Scene {
       bg, title,
       ...volumeSlider,
       ...storyDelayRow,
+      ...challengeJudgeDelayRow,
       ...debugNodeConfirmToggleRow,
       closeBtn,
     ]);
@@ -1539,6 +1563,11 @@ export class MenuScene extends Phaser.Scene {
         ...DEFAULT_SETTINGS,
         ...parsed,
         masterVolume: Phaser.Math.Clamp(parsed.masterVolume ?? DEFAULT_SETTINGS.masterVolume, MASTER_VOLUME_MIN, MASTER_VOLUME_MAX),
+        challengeJudgeDelayMs: Phaser.Math.Clamp(
+          Math.trunc(parsed.challengeJudgeDelayMs ?? DEFAULT_SETTINGS.challengeJudgeDelayMs),
+          CHALLENGE_JUDGE_DELAY_MIN_MS,
+          CHALLENGE_JUDGE_DELAY_MAX_MS,
+        ),
         nodeConfirmToggle: DEBUG_MODE ? Boolean(parsed.nodeConfirmToggle) : false,
       };
     } catch {
