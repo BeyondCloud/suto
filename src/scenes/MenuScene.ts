@@ -149,10 +149,14 @@ export class MenuScene extends Phaser.Scene {
 
     const shouldPlayWelcomeAudio = !this.pendingOpenPracticeMode;
     if (shouldPlayWelcomeAudio) {
-      this.playWelcomeAudio();
-      if (this.sound.locked) {
-        this.input.once('pointerdown', () => this.playWelcomeAudio());
-        this.input.keyboard?.once('keydown', () => this.playWelcomeAudio());
+      // 正常路徑下 BootScene 已先 unlock，這裡 sound.locked === false 直接播。
+      // 萬一 BootScene 安全網逾時放行，仍會落在 locked 狀態，這時等真正 UNLOCKED 才播，
+      // 不要在 once('pointerdown') 時 play —— Phaser 的 manager.locked 翻 false 是 update
+      // tick 才更新，比 input 事件晚，會讓 buffer 排到 suspended context 上 → silent fail。
+      if (!this.sound.locked) {
+        this.playWelcomeAudio();
+      } else {
+        this.sound.once(Phaser.Sound.Events.UNLOCKED, () => this.playWelcomeAudio());
       }
     }
 

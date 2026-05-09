@@ -27,24 +27,10 @@ import loadingImageUrl from '../assets/loading.png';
 // challenge tutorial cue 與 tutorial_loop 共用音檔但走獨立 cache key
 const CHALLENGE_TUTORIAL_AUDIO_KEY = 'challenge_tutorial_intro';
 
-// preload 後等待 decode 的安全網（毫秒）。decodeAudioData 對巨大檔案理論上幾百毫秒就完成，
-// 設長一點以防 mobile 慢機。逾時就放行，不卡 user 進不了主畫面。
-const DECODE_TIMEOUT_MS = 3000;
+// 等 UNLOCKED 事件最多 2 秒；瀏覽器拒絕 resume 時 fallback 進主畫面
+const UNLOCK_TIMEOUT_MS = 2000;
 
-const AUDIO_KEYS_TO_PRELOAD: readonly string[] = [
-  'welcome',
-  'mainline-click',
-  'tutorial_loop',
-  'prompt_U',
-  'prompt_D',
-  'prompt_L',
-  'prompt_R',
-  'clap',
-  'miss',
-  'story_check_start',
-  'gameover_sfx',
-  CHALLENGE_TUTORIAL_AUDIO_KEY,
-];
+const PROMPT_FONT_FAMILY = "'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -52,7 +38,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    // images
     this.load.image('suto400', suto400ImageUrl);
     this.load.image('opening_bg', openingBgImageUrl);
     this.load.image('judgement_rules_1', judgementRules1ImageUrl);
@@ -63,7 +48,6 @@ export class BootScene extends Phaser.Scene {
     this.load.image('gameover_bg', gameoverBgUrl);
     this.load.image('loading_overlay', loadingImageUrl);
 
-    // audio
     this.load.audio('welcome', welcomeAudioUrl);
     this.load.audio('mainline-click', mainlineClickAudioUrl);
     this.load.audio('tutorial_loop', tutorialLoopUrl);
@@ -81,58 +65,56 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor('#000000');
-    const loadingText = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '載入中...', {
-        fontFamily: "'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif",
-        fontSize: '24px',
+
+    // Phaser 的 audio loader 已經在 preload 階段同步 decode 完，這裡不用再等 decode。
+    // 真正會卡到 first-play 同步的是 AudioContext 的 lock：
+    // 瀏覽器 autoplay policy 一定要先有 user gesture 才能 resume，且 manager.locked
+    // 翻 false 還要等 resume 的 promise + 一輪 game update。如果在 lock 狀態下 play，
+    // BaseSound.play 不會擋下來，buffer source 會被排程到 suspended context 上，等 resume
+    // 時時間軸已過 → 短音直接被吃掉、長音從中段播 → 與遊戲 timer 永久 off-sync。
+    //
+    // 所以這邊明確等 user 點一下，並等 Phaser.Sound.Events.UNLOCKED 確認 context 真的 resumed
+    // 才轉場到 MenuScene。這樣後面 welcome / stage audio 第一次播都不會撞 race。
+
+    if (!this.sound.locked) {
+      this.scene.start('MenuScene');
+      return;
+    }
+
+    const promptText = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, '點擊任意處開始', {
+        fontFamily: PROMPT_FONT_FAMILY,
+        fontSize: '32px',
         color: '#ffffff',
       })
       .setOrigin(0.5);
 
-    // Phaser 在 audio 下載完之後會自動 queue decode（WebAudioSoundManager.decodeAudio）。
-    // 這邊用 sound.add(key).duration > 0 判斷單檔是否已 decode，未 decode 的等
-    // Phaser.Sound.Events.DECODED 事件，全部 ready 才切到 MenuScene，避免第一次進主畫面時
-    // sound.play 撞 decode race 而 silent fail / 與 stage timer off-sync。
-    const pending = new Set<string>();
-    for (const key of AUDIO_KEYS_TO_PRELOAD) {
-      if (!this.cache.audio.exists(key)) continue;
-      const probe = this.sound.add(key, { volume: 0 });
-      if (probe.duration > 0) {
-        probe.destroy();
-        continue;
-      }
-      probe.destroy();
-      pending.add(key);
-    }
-    // include button-hover separately (key from helper)
-    if (this.cache.audio.exists('button-hover')) {
-      const probe = this.sound.add('button-hover', { volume: 0 });
-      if (probe.duration <= 0) pending.add('button-hover');
-      probe.destroy();
-    }
-
+    let proceeded = false;
     const proceed = () => {
-      this.sound.off(Phaser.Sound.Events.DECODED, onDecoded);
-      loadingText.destroy();
-      this.scene.start('MenuScene');
-    };
+      if (proceeded) return;
+      proceeded = true;
+      promptText.setText('載入中...');
 
-    if (pending.size === 0) {
-      proceed();
-      return;
-    }
+      const startMenu = () => {
+        promptText.destroy();
+        this.scene.start('MenuScene');
+      };
 
-    const onDecoded = (decodedKey: string) => {
-      pending.delete(decodedKey);
-      if (pending.size === 0) proceed();
-    };
-    this.sound.on(Phaser.Sound.Events.DECODED, onDecoded);
-
-    this.time.delayedCall(DECODE_TIMEOUT_MS, () => {
-      if (pending.size > 0) {
-        console.warn('[BootScene] decode 逾時，未完成:', [...pending]);
-        proceed();
+      if (!this.sound.locked) {
+        startMenu();
+        return;
       }
-    });
+
+      this.sound.once(Phaser.Sound.Events.UNLOCKED, startMenu);
+      this.time.delayedCall(UNLOCK_TIMEOUT_MS, () => {
+        if (!this.sound.locked) return;
+        console.warn('[BootScene] AudioContext unlock 逾時，仍進入主畫面');
+        this.sound.off(Phaser.Sound.Events.UNLOCKED, startMenu);
+        startMenu();
+      });
+    };
+
+    this.input.once('pointerdown', proceed);
+    this.input.keyboard?.once('keydown', proceed);
   }
 }
