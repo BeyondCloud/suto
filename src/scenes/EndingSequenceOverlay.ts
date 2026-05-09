@@ -242,8 +242,9 @@ export class EndingSequenceOverlay {
     this.endingSummaryCard = document.createElement('div');
     this.endingSummaryCard.style.position = 'absolute';
     this.endingSummaryCard.style.left = '50%';
-    this.endingSummaryCard.style.top = '60%';
-    this.endingSummaryCard.style.transform = 'translate(-50%, -50%)';
+    this.endingSummaryCard.style.top = '25%';
+    this.endingSummaryCard.style.bottom = '12.5%';
+    this.endingSummaryCard.style.transform = 'translateX(-50%)';
     this.endingSummaryCard.style.width = 'min(72vw, 620px)';
     this.endingSummaryCard.style.maxWidth = '92%';
     this.endingSummaryCard.style.padding = '22px 26px';
@@ -253,6 +254,9 @@ export class EndingSequenceOverlay {
     this.endingSummaryCard.style.boxShadow = '0 16px 36px rgba(0, 0, 0, 0.5)';
     this.endingSummaryCard.style.color = '#ffffff';
     this.endingSummaryCard.style.fontFamily = UI_CJK_FONT_FAMILY;
+    this.endingSummaryCard.style.display = 'flex';
+    this.endingSummaryCard.style.flexDirection = 'column';
+    this.endingSummaryCard.style.justifyContent = 'center';
     this.endingSummaryCard.style.pointerEvents = 'none';
     this.endingSummaryCard.style.zIndex = '10';
     this.endingSummaryCard.innerHTML = [
