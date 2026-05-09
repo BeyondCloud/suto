@@ -181,9 +181,9 @@ export class MenuScene extends Phaser.Scene {
       .setVisible(false);
 
     // Mainline mode button
-    const mainlineBtn = this.add.text(cx, menuBaseY, '[ 主播模式 ]', {
-      fontSize: '33px',
-      color: '#ffd58f',
+    const mainlineBtn = this.add.text(cx, menuBaseY, '[ 開始遊玩 ]', {
+      fontSize: '50px',
+      color: '#e3ff8e',
       fontStyle: 'bold',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
@@ -201,10 +201,10 @@ export class MenuScene extends Phaser.Scene {
     });
 
     // Challenge mode button
-    const startBtn = this.add.text(cx, menuBaseY + menuGapY, '[ 挑戰模式 ]', {
+    const startBtn = this.add.text(cx, menuBaseY + menuGapY * 2, '[ 挑戰模式 ]', {
       fontStyle: 'bold',
       fontSize: '33px',
-      color: '#aaffaa',
+      color: '#2faffe',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     startBtn.on('pointerover', () => {
@@ -219,10 +219,10 @@ export class MenuScene extends Phaser.Scene {
       this.scene.start('GameScene', { settings: this.settings, stageIndex: 0, mode: 'challenge' });
     });
 
-    const practiceBtn = this.add.text(cx, menuBaseY + menuGapY * 2, '[ 練習模式 ]', {
+    const practiceBtn = this.add.text(cx, menuBaseY + menuGapY * 3, '[ 練習模式 ]', {
       fontStyle: 'bold',
       fontSize: '33px',
-      color: '#ffd6a5',
+      color: '#2bf99c',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     practiceBtn.on('pointerover', () => {
@@ -238,7 +238,7 @@ export class MenuScene extends Phaser.Scene {
       this.openPracticeMode();
     });
 
-    const judgementRulesBtn = this.add.text(cx, menuBaseY + menuGapY * 3, '[ 判定規則 ]', {
+    const judgementRulesBtn = this.add.text(cx, menuBaseY + menuGapY, '[ 判定規則 ]', {
       fontSize: '33px',
       fontStyle: 'bold',
       color: '#ffb3dc',
@@ -274,9 +274,21 @@ export class MenuScene extends Phaser.Scene {
     });
     settingsBtn.on('pointerdown', () => this.toggleSettings());
 
+    const menuPanelTop = mainlineBtn.y - mainlineBtn.height / 2 - 24;
+    const menuPanelBottom = settingsBtn.y + settingsBtn.height / 2 + 24;
+    const menuPanel = this.add.rectangle(
+      cx,
+      (menuPanelTop + menuPanelBottom) / 2,
+      width * 0.92,
+      menuPanelBottom - menuPanelTop,
+      0x000000,
+      0.52,
+    ).setOrigin(0.5);
+
     this.menuContainer.add([
       title,
       selectionStripe,
+      menuPanel,
       mainlineBtn,
       startBtn,
       practiceBtn,
