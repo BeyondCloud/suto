@@ -32,8 +32,6 @@ import loadingImageUrl from '../assets/loading.png';
 
 const CHALLENGE_TUTORIAL_AUDIO_KEY = 'challenge_tutorial_intro';
 
-const UNLOCK_TIMEOUT_MS = 2000;
-
 const STORY_VIDEO_URLS: readonly string[] = [
   samVideoUrl,
   openingVideoUrl,
@@ -84,83 +82,41 @@ export class BootScene extends Phaser.Scene {
     overlay.style.alignItems = 'center';
     overlay.style.justifyContent = 'center';
     overlay.style.textAlign = 'center';
-    overlay.style.cursor = 'pointer';
     overlay.style.userSelect = 'none';
     overlay.style.touchAction = 'none';
-    overlay.textContent = '點擊任意處開始';
+    overlay.textContent = '載入素材中... 0%';
     document.body.appendChild(overlay);
 
-    let proceeded = false;
-    const proceed = () => {
-      if (proceeded) return;
-      proceeded = true;
-
-      overlay.style.cursor = 'default';
-      overlay.textContent = '載入素材中... 0%';
-
-      const cleanup = () => {
-        overlay.removeEventListener('pointerdown', onPointer);
-        window.removeEventListener('keydown', onKey);
-        overlay.remove();
-      };
-
-      const startMenu = () => {
-        cleanup();
-        this.scene.start('MenuScene');
-      };
-
-      const waitForUnlock = () => {
-        if (!this.sound.locked) {
-          startMenu();
-          return;
-        }
-        let resolved = false;
-        const onUnlocked = () => {
-          if (resolved) return;
-          resolved = true;
-          startMenu();
-        };
-        this.sound.once(Phaser.Sound.Events.UNLOCKED, onUnlocked);
-        this.time.delayedCall(UNLOCK_TIMEOUT_MS, () => {
-          if (resolved) return;
-          resolved = true;
-          this.sound.off(Phaser.Sound.Events.UNLOCKED, onUnlocked);
-          console.warn('[BootScene] AudioContext unlock 逾時，仍進入主畫面');
-          startMenu();
-        });
-      };
-
-      // 用顯式 fetch 把 body 全部讀完，瀏覽器一定會把回應放進 HTTP cache，
-      // 之後 GameScene 的 <video src=...> 直接讀 cache，DOM video 的 'playing'
-      // 事件就不會比音訊輸出提早 fire（即 GameScene 的 sync gate 才能正確生效）。
-      let completed = 0;
-      const total = STORY_VIDEO_URLS.length;
-      const updateProgress = () => {
-        const pct = total === 0 ? 100 : Math.round((completed / total) * 100);
-        overlay.textContent = `載入素材中... ${pct}%`;
-      };
-
-      Promise.allSettled(
-        STORY_VIDEO_URLS.map(async url => {
-          try {
-            const resp = await fetch(url);
-            await resp.arrayBuffer();
-          } catch (e) {
-            console.warn('[BootScene] 預載失敗:', url, e);
-          } finally {
-            completed += 1;
-            updateProgress();
-          }
-        }),
-      ).then(() => {
-        overlay.textContent = '進入主畫面...';
-        waitForUnlock();
-      });
+    const startMenu = () => {
+      overlay.remove();
+      this.scene.start('MenuScene');
     };
 
-    const onPointer = () => proceed();
-    const onKey = () => proceed();
-    overlay.addEventListener('pointerdown', onPointer);
-    window.addEventListener('keydown', onKey);
+    // 用顯式 fetch 把 body 全部讀完，瀏覽器一定會把回應放進 HTTP cache，
+    // 之後 GameScene 的 <video src=...> 直接讀 cache，DOM video 的 'playing'
+    // 事件就不會比音訊輸出提早 fire（即 GameScene 的 sync gate 才能正確生效）。
+    let completed = 0;
+    const total = STORY_VIDEO_URLS.length;
+    const updateProgress = () => {
+      const pct = total === 0 ? 100 : Math.round((completed / total) * 100);
+      overlay.textContent = `載入素材中... ${pct}%`;
+    };
+
+    Promise.allSettled(
+      STORY_VIDEO_URLS.map(async url => {
+        try {
+          const resp = await fetch(url);
+          await resp.arrayBuffer();
+        } catch (e) {
+          console.warn('[BootScene] 預載失敗:', url, e);
+        } finally {
+          completed += 1;
+          updateProgress();
+        }
+      }),
+    ).then(() => {
+      overlay.textContent = '進入主畫面...';
+      startMenu();
+    });
   }
 }
