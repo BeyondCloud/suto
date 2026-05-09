@@ -14,6 +14,7 @@ import {
   installButtonHoverSound,
   wireDomButtonHoverSound,
 } from './shared/buttonHoverSound';
+import { Tutorial2VideoOverlay } from './shared/tutorial2VideoOverlay';
 import { UI_CJK_FONT_FAMILY } from '../uiFonts';
 
 const SETTINGS_STORAGE_KEY = 'suto.gameSettings';
@@ -50,8 +51,10 @@ export class MenuScene extends Phaser.Scene {
   private menuContainer!: Phaser.GameObjects.Container;
   private judgementRulesContainer!: Phaser.GameObjects.Container;
   private judgementRulesImage!: Phaser.GameObjects.Image;
+  private judgementRulesPrompt!: Phaser.GameObjects.Text;
   private judgementRulesStep = 0;
   private judgementRulesKeyHandler?: (event: KeyboardEvent) => void;
+  private judgementRulesTutorial2Overlay?: Tutorial2VideoOverlay;
   private tutorialLoopSound?: Phaser.Sound.BaseSound;
   private welcomeSound?: Phaser.Sound.BaseSound;
   private lastVolumePreviewAt = 0;
@@ -85,6 +88,8 @@ export class MenuScene extends Phaser.Scene {
   private practiceBpmKeyHandler?: (event: KeyboardEvent) => void;
   private practiceWheelListener?: (pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.GameObject[], deltaX: number, deltaY: number) => void;
   private practicePointerListener?: (pointer: Phaser.Input.Pointer) => void;
+  private readonly judgementRulesTutorial2RootAttr = 'data-suto-menu-tutorial2-root';
+  private readonly judgementRulesTutorial2PromptAttr = 'data-suto-menu-tutorial2-prompt';
 
   constructor() {
     super('MenuScene');
@@ -127,6 +132,8 @@ export class MenuScene extends Phaser.Scene {
       this.endPracticeBpmInlineEdit(false);
       this.stopWelcomeAudio();
       this.stopTutorialLoop();
+      this.judgementRulesTutorial2Overlay?.remove();
+      this.judgementRulesTutorial2Overlay?.forceRemoveArtifacts();
       this.removeDebugEndingOverlay();
       this.practiceListMaskGraphics?.destroy();
       this.practiceListMaskGraphics = undefined;
@@ -519,6 +526,7 @@ export class MenuScene extends Phaser.Scene {
     this.judgementRulesContainer.setDepth(20);
     this.judgementRulesContainer.setVisible(false);
     this.judgementRulesImage = image;
+    this.judgementRulesPrompt = prompt;
 
     background.on('pointerdown', () => this.advanceJudgementRules());
     image.setInteractive({ useHandCursor: true });
@@ -1504,8 +1512,12 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private openJudgementRules() {
-    this.judgementRulesStep = 1;
-    this.judgementRulesImage.setTexture('judgement_rules_1');
+    this.judgementRulesTutorial2Overlay?.remove();
+    this.ensureJudgementRulesTutorial2Overlay();
+    this.judgementRulesTutorial2Overlay?.forceRemoveArtifacts();
+    this.judgementRulesStep = 0;
+    this.setJudgementRulesImage('tutorial', 0.92, 0.84);
+    this.judgementRulesPrompt.setY(this.scale.height - 68);
     this.menuContainer.setVisible(false);
     this.settingsVisible = false;
     this.settingsContainer.setVisible(false);
@@ -1518,17 +1530,72 @@ export class MenuScene extends Phaser.Scene {
       return;
     }
 
-    if (this.judgementRulesStep === 1) {
-      this.judgementRulesStep = 2;
-      this.judgementRulesImage.setTexture('judgement_rules_2');
+    if (this.judgementRulesStep === 0) {
+      this.judgementRulesStep = 1;
+      this.showJudgementRulesTutorial2VideoScreen();
+      return;
+    }
+
+    if (this.judgementRulesStep === 2) {
+      this.judgementRulesStep = 3;
+      this.setJudgementRulesImage('judgement_rules_2');
       return;
     }
 
     this.judgementRulesStep = 0;
+    this.judgementRulesTutorial2Overlay?.remove();
     this.stopTutorialLoop();
     this.judgementRulesContainer.setVisible(false);
     this.menuContainer.setVisible(true);
     this.playWelcomeAudio();
+  }
+
+  private showJudgementRulesTutorial2VideoScreen() {
+    this.ensureJudgementRulesTutorial2Overlay();
+    this.judgementRulesTutorial2Overlay?.remove();
+    this.judgementRulesTutorial2Overlay?.forceRemoveArtifacts();
+    this.judgementRulesContainer.setVisible(false);
+
+    this.judgementRulesTutorial2Overlay?.show();
+  }
+
+  private ensureJudgementRulesTutorial2Overlay() {
+    this.judgementRulesTutorial2Overlay ??= new Tutorial2VideoOverlay({
+      canvas: this.game.canvas,
+      sceneWidth: this.scale.width,
+      sceneHeight: this.scale.height,
+      rootAttr: this.judgementRulesTutorial2RootAttr,
+      promptAttr: this.judgementRulesTutorial2PromptAttr,
+      volume: () => Phaser.Math.Clamp(this.settings.masterVolume, MASTER_VOLUME_MIN, MASTER_VOLUME_MAX),
+      targetRect: () => ({
+        x: this.judgementRulesImage?.x ?? this.scale.width / 2,
+        y: this.judgementRulesImage?.y ?? this.scale.height / 2,
+        width: this.judgementRulesImage?.displayWidth ?? this.scale.width * 0.92,
+        height: this.judgementRulesImage?.displayHeight ?? this.scale.height * 0.84,
+      }),
+      onContinue: () => {
+        this.judgementRulesStep = 2;
+        this.judgementRulesTutorial2Overlay?.remove();
+        this.setJudgementRulesImage('judgement_rules_1');
+        this.judgementRulesPrompt.setY(this.scale.height - 42);
+        this.time.delayedCall(0, () => {
+          if (this.judgementRulesStep === 2) {
+            this.judgementRulesContainer.setVisible(true);
+          }
+        });
+      },
+    });
+  }
+
+  private setJudgementRulesImage(textureKey: string, maxWidthRatio = 0.94, maxHeightRatio = 0.86) {
+    const { width, height } = this.scale;
+    this.judgementRulesImage.setTexture(textureKey);
+    this.judgementRulesImage.setScale(1);
+    const imageScale = Math.min(
+      (width * maxWidthRatio) / this.judgementRulesImage.width,
+      (height * maxHeightRatio) / this.judgementRulesImage.height,
+    );
+    this.judgementRulesImage.setScale(imageScale);
   }
 
   private playTutorialLoop() {
@@ -1605,6 +1672,7 @@ export class MenuScene extends Phaser.Scene {
   private applyMasterVolume() {
     this.settings.masterVolume = Phaser.Math.Clamp(this.settings.masterVolume, MASTER_VOLUME_MIN, MASTER_VOLUME_MAX);
     this.sound.volume = this.settings.masterVolume;
+    this.judgementRulesTutorial2Overlay?.setVolume(this.settings.masterVolume);
   }
 
   private playMasterVolumePreview() {
