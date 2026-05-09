@@ -15,10 +15,10 @@ export interface GameSettings {
 }
 
 export const DEFAULT_SETTINGS: GameSettings = {
-  masterVolume: 1,
+  masterVolume: 0.6,
   bpm: 183,
   shrinkLeadMs: 500,
-  perfectJudgeWindowMs: 220,
+  perfectJudgeWindowMs: 100,
   nodeConfirmToggle: false,
   hitboxWidth: 500,
   hitboxHeight: 300,
