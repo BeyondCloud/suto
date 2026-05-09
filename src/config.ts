@@ -27,6 +27,14 @@ export const DEFAULT_SETTINGS: GameSettings = {
   storyStartDelayMs: 0, // 開場 Delay (ms)
 };
 
+export const D_RANK_ACC = 75;
+export const C_RANK_ACC = 80;
+export const B_RANK_ACC = 85;
+export const A_RANK_ACC = 90;
+export const S_RANK_ACC = 95;
+export const S_PLUS_RANK_ACC = 99;
+export const S_DOUBLE_PLUS_RANK_ACC = 100;
+
 // Directions
 export type Direction = 'w' | 'x' | 'a' | 'd' | 'q' | 'e' | 'z' | 'c';
 

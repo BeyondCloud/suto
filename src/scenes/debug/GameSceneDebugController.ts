@@ -2,6 +2,14 @@ import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../../config';
 import { HTML_LAYER, SCENE_LAYER } from '../../layers';
 import { wireDomButtonHoverSound } from '../shared/buttonHoverSound';
+import {
+  DEBUG_ENDING_PRESETS,
+  type DebugEndingPreset,
+} from '../shared/endingSummary.ts';
+
+export { DEBUG_ENDING_PRESETS };
+export type { DebugEndingPreset };
+
 // Turn on debug mode by adding ?debug=1 to the URL, e.g., http://localhost:5173/?debug=1
 function parseDebugModeFromUrl(): boolean {
   if (typeof window === 'undefined') return false;
@@ -14,24 +22,6 @@ function parseDebugModeFromUrl(): boolean {
 }
 
 export const DEBUG_MODE = parseDebugModeFromUrl();
-
-export interface DebugEndingPreset {
-  rank: string;
-  perfect: number;
-  miss: number;
-  falseTouch: number;
-  life: number;
-}
-
-export const DEBUG_ENDING_PRESETS: DebugEndingPreset[] = [
-  { rank: 'S++', perfect: 100, miss: 0, falseTouch: 0, life: 100 },
-  { rank: 'S+', perfect: 100, miss: 0, falseTouch: 3, life: 96 },
-  { rank: 'S', perfect: 95, miss: 5, falseTouch: 2, life: 92 },
-  { rank: 'A', perfect: 90, miss: 10, falseTouch: 4, life: 84 },
-  { rank: 'B', perfect: 80, miss: 20, falseTouch: 5, life: 72 },
-  { rank: 'C', perfect: 70, miss: 30, falseTouch: 6, life: 58 },
-  { rank: 'D', perfect: 60, miss: 40, falseTouch: 8, life: 36 },
-];
 
 interface GameSceneDebugControllerOptions {
   scene: Phaser.Scene;
