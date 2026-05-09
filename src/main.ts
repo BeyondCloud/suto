@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from './config';
 import { HTML_LAYER } from './layers';
+import { BootScene } from './scenes/BootScene';
 import { MenuScene } from './scenes/MenuScene';
 import { GameScene } from './scenes/GameScene';
 import { MainlineIntroScene } from './scenes/MainlineIntroScene';
@@ -76,7 +77,7 @@ const config: Phaser.Types.Core.GameConfig = {
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
   transparent: true,
-  scene: [MenuScene, MainlineIntroScene, GameScene],
+  scene: [BootScene, MenuScene, MainlineIntroScene, GameScene],
   parent: 'app',
   scale: {
     mode: Phaser.Scale.FIT,

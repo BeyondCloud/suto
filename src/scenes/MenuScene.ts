@@ -1,11 +1,4 @@
 import Phaser from 'phaser';
-import welcomeAudioUrl from '../assets/audio/welcome.wav';
-import mainlineClickAudioUrl from '../assets/audio/short/來.wav';
-import tutorialLoopUrl from '../assets/audio/loop/tutorial.wav';
-import suto400ImageUrl from '../assets/suto400.png';
-import openingBgImageUrl from '../assets/opening.png';
-import judgementRules1ImageUrl from '../assets/判定規則.png';
-import judgementRules2ImageUrl from '../assets/判定規則2.png';
 import type { Direction } from '../config';
 import { DEFAULT_SETTINGS } from '../config';
 import type { GameSettings } from '../config';
@@ -19,7 +12,6 @@ import {
 import type { DebugEndingPreset } from './debug/GameSceneDebugController';
 import {
   installButtonHoverSound,
-  preloadButtonHoverSound,
   wireDomButtonHoverSound,
 } from './shared/buttonHoverSound';
 
@@ -96,17 +88,6 @@ export class MenuScene extends Phaser.Scene {
   constructor() {
     super('MenuScene');
     this.settings = this.loadSettings();
-  }
-
-  preload() {
-    this.load.image('suto400', suto400ImageUrl);
-    this.load.image('opening_bg', openingBgImageUrl);
-    this.load.image('judgement_rules_1', judgementRules1ImageUrl);
-    this.load.image('judgement_rules_2', judgementRules2ImageUrl);
-    this.load.audio('welcome', welcomeAudioUrl);
-    this.load.audio('mainline-click', mainlineClickAudioUrl);
-    this.load.audio('tutorial_loop', tutorialLoopUrl);
-    preloadButtonHoverSound(this);
   }
 
   init(data?: { openPracticeMode?: boolean; practiceMode?: PracticeMode }) {

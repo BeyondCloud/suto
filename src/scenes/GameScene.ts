@@ -1,24 +1,11 @@
 import Phaser from 'phaser';
 import suto400GifUrl from '../assets/suto400_2x.gif';
-import gameoverBgUrl from '../assets/gameover.png';
-import loadingImageUrl from '../assets/loading.png';
-import downImageUrl from '../assets/down.png';
-import downLeftImageUrl from '../assets/down_left.png';
 import samVideoUrl from '../assets/mp4/sam.mp4';
 import endingVideo1Url from '../assets/end1-1.mp4';
 import endingVideo2Url from '../assets/end1-2.mp4';
 import endingDUrl from '../assets/D.mp4';
 import endingCUrl from '../assets/C.mp4';
 import endingBUrl from '../assets/B.mp4';
-import promptDUrl from '../assets/audio/D.wav';
-import promptLUrl from '../assets/audio/L.wav';
-import promptRUrl from '../assets/audio/R.wav';
-import promptUUrl from '../assets/audio/U.wav';
-import clapUrl from '../assets/audio/clap.wav';
-import missUrl from '../assets/audio/miss.wav';
-import storyCheckStartUrl from '../assets/audio/short/suto.wav';
-import gameoverSfxUrl from '../assets/audio/long/gameover.wav';
-import tutorialLoopUrl from '../assets/audio/loop/tutorial.wav';
 import stage120Url from '../assets/audio/120.wav';
 import {
   DEFAULT_SETTINGS,
@@ -40,7 +27,6 @@ import {
 import { runThreeTwoOneCountdown, type ThreeTwoOneCountdownController } from './shared/threeTwoOneCountdown';
 import {
   installButtonHoverSound,
-  preloadButtonHoverSound,
 } from './shared/buttonHoverSound';
 
 const ALL_DIRS: Direction[] = ['w', 'e', 'd', 'c', 'x', 'z', 'a', 'q'];
@@ -319,21 +305,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('down', downImageUrl);
-    this.load.image('down_left', downLeftImageUrl);
-    this.load.image('gameover_bg', gameoverBgUrl);
-    this.load.image('loading_overlay', loadingImageUrl);
-    this.load.audio('prompt_U', promptUUrl);
-    this.load.audio('prompt_D', promptDUrl);
-    this.load.audio('prompt_L', promptLUrl);
-    this.load.audio('prompt_R', promptRUrl);
-    this.load.audio('clap', clapUrl);
-    this.load.audio('miss', missUrl);
-    this.load.audio('story_check_start', storyCheckStartUrl);
-    this.load.audio('gameover_sfx', gameoverSfxUrl);
-    this.load.audio(CHALLENGE_TUTORIAL_AUDIO_KEY, tutorialLoopUrl);
-    preloadButtonHoverSound(this);
-
+    // 靜態 asset 由 BootScene 預先 load + decode；這裡只處理 stage data 推導出的動態 asset。
     const customSectionImages = new Set(
       this.levelData.stages.flatMap(stage =>
         stage.sections

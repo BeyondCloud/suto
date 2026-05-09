@@ -1,8 +1,6 @@
 import Phaser from 'phaser';
 import openingVideoUrl from '../assets/mp4/開頭影片.mp4';
 import tutorial2VideoUrl from '../assets/tutorial-2.mp4';
-import tutorialLoopUrl from '../assets/audio/loop/tutorial.wav';
-import tutorialImageUrl from '../assets/tutorial.png';
 import type { GameSettings } from '../config';
 import { DEFAULT_SETTINGS, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { HTML_LAYER, SCENE_LAYER } from '../layers';
@@ -68,11 +66,6 @@ export class MainlineIntroScene extends Phaser.Scene {
 
   init(data: { settings: GameSettings }) {
     this.settings = data.settings;
-  }
-
-  preload() {
-    this.load.image('tutorial', tutorialImageUrl);
-    this.load.audio('tutorial_loop', tutorialLoopUrl);
   }
 
   create() {
