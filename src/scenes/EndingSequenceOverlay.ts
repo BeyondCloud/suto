@@ -93,7 +93,7 @@ export class EndingSequenceOverlay {
 
       this.endingReturnReady = false;
       if (this.endingPromptText) {
-        this.endingPromptText.textContent = '讀取結算中...';
+        this.endingPromptText.textContent = '---------';
       }
       this.endingReturnReadyEvent = this.scene.time.delayedCall(ENDING_RETURN_COOLDOWN_MS, () => {
         this.endingReturnReady = true;
