@@ -547,7 +547,9 @@ export class MenuScene extends Phaser.Scene {
   private buildMainlinePracticeItems(): PracticeMainlineItem[] {
     const items: PracticeMainlineItem[] = [];
 
-    for (const stage of MAIN_LEVEL_DATA.stages) {
+    for (let stageIndex = 0; stageIndex < MAIN_LEVEL_DATA.stages.length; stageIndex++) {
+      const stage = MAIN_LEVEL_DATA.stages[stageIndex];
+      const stageNumber = stageIndex + 1;
       let stageSectionNumber = 0;
       for (const section of stage.sections) {
         if (section.type === 'delay') continue;
@@ -556,8 +558,8 @@ export class MenuScene extends Phaser.Scene {
         if (section.type !== 'normal' && section.type !== 'rotation') continue;
 
         items.push({
-          id: `mainline-${stage.stage_number}-${stageSectionNumber}`,
-          label: `${stage.stage_number}-${stageSectionNumber}`,
+          id: `mainline-${stageNumber}-${stageSectionNumber}`,
+          label: `${stageNumber}-${stageSectionNumber}`,
           stageBpm: stage.bpm,
           section,
         });
@@ -1306,7 +1308,7 @@ export class MenuScene extends Phaser.Scene {
     const levelData: LevelData = {
       stages: [
         {
-          stage_number: 1,
+          stage_text: 'Practice',
           bpm: practiceAudioBaseBpm,
           ...(practiceAudioClip ? { audio_clip: practiceAudioClip } : {}),
           sections: [section],
@@ -1344,7 +1346,7 @@ export class MenuScene extends Phaser.Scene {
     const practiceAudioClip = LEVEL_DATA.stages[0]?.audio_clip;
     const practiceAudioBaseBpm = LEVEL_DATA.stages[0]?.bpm ?? item.bpm;
     const stage: Stage = {
-      stage_number: 1,
+      stage_text: 'Practice',
       bpm: practiceAudioBaseBpm,
       ...(practiceAudioClip ? { audio_clip: practiceAudioClip } : {}),
       sections: [section],

@@ -887,7 +887,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateHUD() {
-    this.stageText.setText(`Stage ${this.currentStage.stage_number}`);
+    this.stageText.setText(this.currentStage.stage_text);
     const { current, total } = this.getPhaseProgress();
     this.roundText.setText(`${current}/${total}`);
   }

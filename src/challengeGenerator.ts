@@ -316,7 +316,7 @@ export function generateChallengeLevelData(options: GenerateOptions = {}): Level
     };
   }
 
-  function generateStage(recipe: StageRecipe, stageNumber: number, currentBpm: number): Stage {
+  function generateStage(recipe: StageRecipe, stageIndex: number, currentBpm: number): Stage {
     const sections: Section[] = [];
     for (let i = 0; i < sectionsPerStage; i++) {
       sections.push(rng() < rotationChance
@@ -324,7 +324,7 @@ export function generateChallengeLevelData(options: GenerateOptions = {}): Level
         : generateNormalSection(recipe));
     }
     return {
-      stage_number: stageNumber,
+      stage_text: `Stage ${stageIndex + 1}`,
       bpm: currentBpm,
       mode: 'random',
       audio_clip: audioClip,
@@ -333,11 +333,10 @@ export function generateChallengeLevelData(options: GenerateOptions = {}): Level
   }
 
   const stages: Stage[] = [];
-  let stageNumber = 1;
   for (let loop = 0; loop < loops; loop++) {
     const loopBpm = bpm + loop * bpmIncrementPerLoop;
     for (const recipe of progression) {
-      stages.push(generateStage(recipe, stageNumber++, loopBpm));
+      stages.push(generateStage(recipe, stages.length, loopBpm));
     }
   }
 

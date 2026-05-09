@@ -32,7 +32,7 @@ export type Section = NormalSection | RotationSection | DelaySection;
 export type StageMode = 'normal' | 'random';
 
 export interface Stage {
-  stage_number: number;
+  stage_text: string;
   bpm: number;
   mode?: StageMode;
   audio_clip?: string;
@@ -46,7 +46,7 @@ export interface LevelData {
 // export const LEVEL_DATA: LevelData = {
 //   stages: [
 //     {
-//       stage_number: 1,
+//       stage_text: 'Stage 1',
 //       bpm: 160,
 //       // audio_clip必須為16拍整的循環音樂
 //       audio_clip: challengeLoopAudioUrl,
@@ -86,7 +86,7 @@ export interface LevelData {
 //       ],
 //     },
 //     {
-//       stage_number: 2,
+//       stage_text: 'Stage 2',
 //       bpm: 183,
 //       audio_clip: stage120AudioUrl,
 //       sections: [
@@ -97,7 +97,7 @@ export interface LevelData {
 //       ],
 //     },
 //     {
-//       stage_number: 3,
+//       stage_text: 'Stage 3',
 //       bpm: 120,
 //       audio_clip: stage120AudioUrl,
 //       sections: [
@@ -125,7 +125,7 @@ export const LEVEL_DATA: LevelData = generateChallengeLevelData({
 export const MAIN_LEVEL_DATA: LevelData = {
   stages: [
     {
-      stage_number: 1,
+      stage_text: 'Stage 1',
       bpm: 183.5,
       sections: [
         {
@@ -167,7 +167,7 @@ export const MAIN_LEVEL_DATA: LevelData = {
       ],
     },
    {
-      stage_number: 2,
+      stage_text: 'Stage 2',
       bpm: 183.5,
       sections: [
 
@@ -212,7 +212,7 @@ export const MAIN_LEVEL_DATA: LevelData = {
       ],
     },
    {
-      stage_number: 3,
+      stage_text: 'Last Stage',
       bpm: 183,
       sections: [
         {
