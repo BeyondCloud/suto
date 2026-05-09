@@ -41,15 +41,21 @@ export const LEVEL_DATA: LevelData = {
   stages: [
     {
       stage_number: 1,
-      bpm: 120,
+      bpm: 160,
       // audio_clip必須為16拍整的循環音樂
       audio_clip: 'src/assets/audio/loop/challenge.wav',
       sections: [
         {
           type: 'normal',
-          prompts: ['x', 'x', 'x', 'x',
+          prompts: ['w', 'w', 'w', 'w',
                     'x', 'x', 'x', 'x'],
         },
+        {
+          type: 'normal',
+          prompts: ['w', 'w', 'x', 'x',
+                    'w', 'w', 'x', 'x'],
+        },
+
         {
           type: 'normal',
           prompts: ['w', 'w', 'w', 'x',
@@ -184,7 +190,7 @@ export const MAIN_LEVEL_DATA: LevelData = {
         },
         {
           type: 'delay',
-          ms: 2363,
+          ms: 2320,
           text: 'Level - 3',
         },
       ],
