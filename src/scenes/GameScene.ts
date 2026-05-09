@@ -60,6 +60,7 @@ const DEFAULT_DELAY_TEXT_COLOR = '#37ff55';
 const PRACTICE_RETURN_STORAGE_KEY = 'suto.practice.return.mode.once';
 const CHALLENGE_TUTORIAL_AUDIO_KEY = 'challenge_tutorial_intro';
 const CHALLENGE_TUTORIAL_BEATS = 8;
+const STORY_SECTION_START_AUDIO_KEY = 'story_check_start';
 
 type GameMode = 'challenge' | 'story';
 type PracticeReturnMode = 'mainline' | 'custom';
@@ -1292,6 +1293,9 @@ export class GameScene extends Phaser.Scene {
       this.beatCount++;
       if (this.beatCount >= 8) {
         this.beatTimer?.remove();
+        if (this.mode === 'story') {
+          this.sound.play(STORY_SECTION_START_AUDIO_KEY);
+        }
         this.startCheckPhase();
       }
     } else {
