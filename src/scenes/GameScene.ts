@@ -2533,7 +2533,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPerfect(dir: Direction, judgementTimeMs: number) {
-    this.penaltyCooldownUntil = this.time.now + this.beatMs;
+    const penaltyCooldownMs = this.isRotation ? this.beatMs / 2 : this.beatMs;
+    this.penaltyCooldownUntil = Math.max(this.penaltyCooldownUntil, judgementTimeMs + penaltyCooldownMs);
     this.falseTouchedLines.clear();
     this.perfectCount++;
     this.playPerfectClapAligned(judgementTimeMs);
