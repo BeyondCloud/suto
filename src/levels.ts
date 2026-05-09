@@ -114,7 +114,7 @@ export interface LevelData {
 // audio_clip 必須為 16 拍整的循環音樂(隨 BPM 變速)。
 export const LEVEL_DATA: LevelData = generateChallengeLevelData({
   bpm: 180,
-  sectionsPerStage: 3,
+  sectionsPerStage: 2,
   rotationChance: 1 / 8,
   audioClip: challengeLoopAudioUrl,
   loops: 10,

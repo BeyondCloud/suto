@@ -47,6 +47,8 @@ const GAME_FRAME_WIDTH = GAME_FRAME_RIGHT - GAME_FRAME_LEFT;
 const GAME_FRAME_HEIGHT = GAME_FRAME_BOTTOM - GAME_FRAME_TOP;
 const FALSE_TOUCH_DAMAGE = 2;
 const MISS_DAMAGE = 5;
+const CHALLENGE_FALSE_TOUCH_DAMAGE = 10;
+const CHALLENGE_MISS_DAMAGE = 10;
 const DEFAULT_STAGE_AUDIO_CLIP = 'src/assets/audio/120.wav';
 const DEFAULT_CHALLENGE_STAGE_AUDIO_CLIP = 'src/assets/audio/loop/challenge.wav';
 const HIT_SPARK_TEXTURE_KEY = 'hit_spark';
@@ -2725,7 +2727,8 @@ export class GameScene extends Phaser.Scene {
     this.missCount++;
     this.sound.play('miss');
     this.updateJudgementText();
-    this.lifeValue = Math.max(0, this.lifeValue - MISS_DAMAGE);
+    const missDamage = this.mode === 'challenge' ? CHALLENGE_MISS_DAMAGE : MISS_DAMAGE;
+    this.lifeValue = Math.max(0, this.lifeValue - missDamage);
     this.drawLifeBar();
     this.showJudgement(dir, 'miss', '#ff5a6b');
     if (this.lifeValue <= 0) this.triggerGameOver();
@@ -2734,7 +2737,8 @@ export class GameScene extends Phaser.Scene {
   private onFalseTouch(dir: Direction) {
     this.falseTouchCount++;
     this.updateJudgementText();
-    this.lifeValue = Math.max(0, this.lifeValue - FALSE_TOUCH_DAMAGE);
+    const falseTouchDamage = this.mode === 'challenge' ? CHALLENGE_FALSE_TOUCH_DAMAGE : FALSE_TOUCH_DAMAGE;
+    this.lifeValue = Math.max(0, this.lifeValue - falseTouchDamage);
     this.drawLifeBar();
     this.showJudgement(dir, 'X', '#ffb14a');
     if (this.lifeValue <= 0) this.triggerGameOver();
