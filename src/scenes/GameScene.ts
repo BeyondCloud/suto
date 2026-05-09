@@ -43,6 +43,8 @@ import {
 
 const ALL_DIRS: Direction[] = ['w', 'e', 'd', 'c', 'x', 'z', 'a', 'q'];
 const CARDINAL_DIRS: Direction[] = ['w', 'x', 'a', 'd'];
+const RANDOM_SHIFT_CARDINAL_ORDER: Direction[] = ['w', 'd', 'x', 'a'];
+const RANDOM_SHIFT_DIAGONAL_ORDER: Direction[] = ['q', 'e', 'c', 'z'];
 const CHECKPOINT_RADIUS = 18;
 const CURSOR_CHECK_POINT_DOT_SIZE = 10;
 const CURSOR_CHECK_POINT_EDGE_INSET_PX = 2;
@@ -672,8 +674,76 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private cloneSection(section: Section): Section {
+    if (section.type === 'normal') {
+      return {
+        ...section,
+        prompts: [...section.prompts],
+      };
+    }
+
+    if (section.type === 'rotation') {
+      return {
+        ...section,
+        rotate: [...section.rotate],
+      };
+    }
+
+    return { ...section };
+  }
+
+  private shiftDirectionalPrompt(dir: Direction, offset: number): Direction {
+    const cardinalIndex = RANDOM_SHIFT_CARDINAL_ORDER.indexOf(dir);
+    if (cardinalIndex >= 0) {
+      return RANDOM_SHIFT_CARDINAL_ORDER[(cardinalIndex + offset) % RANDOM_SHIFT_CARDINAL_ORDER.length] as Direction;
+    }
+
+    const diagonalIndex = RANDOM_SHIFT_DIAGONAL_ORDER.indexOf(dir);
+    if (diagonalIndex >= 0) {
+      return RANDOM_SHIFT_DIAGONAL_ORDER[(diagonalIndex + offset) % RANDOM_SHIFT_DIAGONAL_ORDER.length] as Direction;
+    }
+
+    return dir;
+  }
+
+  private randomizeSection(section: Section): Section {
+    if (section.type === 'delay') {
+      return { ...section };
+    }
+
+    if (section.type === 'normal') {
+      const offset = Phaser.Math.Between(0, 3);
+      return {
+        ...section,
+        prompts: section.prompts.map(dir => this.shiftDirectionalPrompt(dir, offset)),
+      };
+    }
+
+    const startIndex = Phaser.Math.Between(0, RANDOM_SHIFT_CARDINAL_ORDER.length - 1);
+    const invertRotation = Phaser.Math.Between(0, 1) === 1;
+    return {
+      ...section,
+      start: RANDOM_SHIFT_CARDINAL_ORDER[startIndex] as Direction,
+      rotate: section.rotate.map(dir => {
+        if (!invertRotation) return dir;
+        return dir === 'R' ? 'L' : 'R';
+      }),
+    };
+  }
+
+  private resolveStageForPlay(stage: Stage): Stage {
+    const sections = (stage.mode ?? 'normal') === 'random'
+      ? stage.sections.map(section => this.randomizeSection(section))
+      : stage.sections.map(section => this.cloneSection(section));
+
+    return {
+      ...stage,
+      sections,
+    };
+  }
+
   private loadStage(index: number) {
-    this.currentStage = this.levelData.stages[index];
+    this.currentStage = this.resolveStageForPlay(this.levelData.stages[index]);
     this.sectionRepeatIteration = 1;
     this.sectionTargetEndTimeMs = null;
     this.beatMs = 60000 / this.currentStage.bpm;

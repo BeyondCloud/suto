@@ -26,9 +26,12 @@ export interface DelaySection {
 
 export type Section = NormalSection | RotationSection | DelaySection;
 
+export type StageMode = 'normal' | 'random';
+
 export interface Stage {
   stage_number: number;
   bpm: number;
+  mode?: StageMode;
   audio_clip?: string;
   sections: Section[];
 }
