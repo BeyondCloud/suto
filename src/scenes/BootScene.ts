@@ -13,8 +13,9 @@ import missUrl from '../assets/audio/miss.wav';
 import storyCheckStartUrl from '../assets/audio/short/suto.wav';
 import gameoverSfxUrl from '../assets/audio/long/gameover.wav';
 
-// 大檔影片在 BootScene 階段就用 link rel="prefetch" 開始下載，避免進主線時
-// sam.mp4 還沒 buffer 完導致音樂晚一拍進來。Vite 會把 import 換成 hashed URL。
+// 主線會用到的大檔影片：在 BootScene splash 階段先 fetch 完進 HTTP cache，
+// 不然第一次進主線時 sam.mp4 還沒 buffer 完，DOM video 的 'playing' 事件
+// 在 Firefox 會比實際音訊輸出早 fire 導致 beat timer 起算太早。
 import samVideoUrl from '../assets/mp4/sam.mp4';
 import openingVideoUrl from '../assets/mp4/開頭影片.mp4';
 import tutorial2VideoUrl from '../assets/tutorial-2.mp4';
@@ -32,6 +33,12 @@ import loadingImageUrl from '../assets/loading.png';
 const CHALLENGE_TUTORIAL_AUDIO_KEY = 'challenge_tutorial_intro';
 
 const UNLOCK_TIMEOUT_MS = 2000;
+
+const STORY_VIDEO_URLS: readonly string[] = [
+  samVideoUrl,
+  openingVideoUrl,
+  tutorial2VideoUrl,
+];
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -65,18 +72,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    for (const url of [samVideoUrl, openingVideoUrl, tutorial2VideoUrl]) {
-      const link = document.createElement('link');
-      link.rel = 'prefetch';
-      link.href = url;
-      link.as = 'video';
-      document.head.appendChild(link);
-    }
-
-    // 用 DOM overlay 而非 Phaser canvas text：z-index 蓋過 Phaser canvas 與所有 HTML
-    // overlay（含 GAME_FRAME_BEZEL）。永遠顯示提示，即使 sound.locked 已是 false ——
-    // 上一場 session 的 user activation 可能讓 context 已 running，但仍想用 splash 確保
-    // user 知道遊戲正要開始 + 給 audio graph 一個明確的 warm-up 起點。
     const overlay = document.createElement('div');
     overlay.style.position = 'fixed';
     overlay.style.inset = '0';
@@ -88,6 +83,7 @@ export class BootScene extends Phaser.Scene {
     overlay.style.display = 'flex';
     overlay.style.alignItems = 'center';
     overlay.style.justifyContent = 'center';
+    overlay.style.textAlign = 'center';
     overlay.style.cursor = 'pointer';
     overlay.style.userSelect = 'none';
     overlay.style.touchAction = 'none';
@@ -98,7 +94,9 @@ export class BootScene extends Phaser.Scene {
     const proceed = () => {
       if (proceeded) return;
       proceeded = true;
-      overlay.textContent = '載入中...';
+
+      overlay.style.cursor = 'default';
+      overlay.textContent = '載入素材中... 0%';
 
       const cleanup = () => {
         overlay.removeEventListener('pointerdown', onPointer);
@@ -111,24 +109,52 @@ export class BootScene extends Phaser.Scene {
         this.scene.start('MenuScene');
       };
 
-      if (!this.sound.locked) {
-        startMenu();
-        return;
-      }
-
-      let resolved = false;
-      const onUnlocked = () => {
-        if (resolved) return;
-        resolved = true;
-        startMenu();
+      const waitForUnlock = () => {
+        if (!this.sound.locked) {
+          startMenu();
+          return;
+        }
+        let resolved = false;
+        const onUnlocked = () => {
+          if (resolved) return;
+          resolved = true;
+          startMenu();
+        };
+        this.sound.once(Phaser.Sound.Events.UNLOCKED, onUnlocked);
+        this.time.delayedCall(UNLOCK_TIMEOUT_MS, () => {
+          if (resolved) return;
+          resolved = true;
+          this.sound.off(Phaser.Sound.Events.UNLOCKED, onUnlocked);
+          console.warn('[BootScene] AudioContext unlock 逾時，仍進入主畫面');
+          startMenu();
+        });
       };
-      this.sound.once(Phaser.Sound.Events.UNLOCKED, onUnlocked);
-      this.time.delayedCall(UNLOCK_TIMEOUT_MS, () => {
-        if (resolved) return;
-        resolved = true;
-        this.sound.off(Phaser.Sound.Events.UNLOCKED, onUnlocked);
-        console.warn('[BootScene] AudioContext unlock 逾時，仍進入主畫面');
-        startMenu();
+
+      // 用顯式 fetch 把 body 全部讀完，瀏覽器一定會把回應放進 HTTP cache，
+      // 之後 GameScene 的 <video src=...> 直接讀 cache，DOM video 的 'playing'
+      // 事件就不會比音訊輸出提早 fire（即 GameScene 的 sync gate 才能正確生效）。
+      let completed = 0;
+      const total = STORY_VIDEO_URLS.length;
+      const updateProgress = () => {
+        const pct = total === 0 ? 100 : Math.round((completed / total) * 100);
+        overlay.textContent = `載入素材中... ${pct}%`;
+      };
+
+      Promise.allSettled(
+        STORY_VIDEO_URLS.map(async url => {
+          try {
+            const resp = await fetch(url);
+            await resp.arrayBuffer();
+          } catch (e) {
+            console.warn('[BootScene] 預載失敗:', url, e);
+          } finally {
+            completed += 1;
+            updateProgress();
+          }
+        }),
+      ).then(() => {
+        overlay.textContent = '進入主畫面...';
+        waitForUnlock();
       });
     };
 
