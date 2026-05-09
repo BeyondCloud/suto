@@ -1,3 +1,4 @@
+import cmonbruhImageUrl from './assets/cmonbruh.png';
 import type { Direction } from './config';
 
 export interface NormalSection {
@@ -247,7 +248,7 @@ export const MAIN_LEVEL_DATA: LevelData = {
           bpm: 183.5,
           type: 'normal',
           effect: 'button',
-          image: 'src/assets/cmonbruh.png',
+          image: cmonbruhImageUrl,
           prompts: ['x', 'x', 'x', 'x',
                     'x', 'x', 'x', 'x'],
         }
