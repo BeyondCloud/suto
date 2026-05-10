@@ -48,8 +48,8 @@ const GAME_FRAME_WIDTH = GAME_FRAME_RIGHT - GAME_FRAME_LEFT;
 const GAME_FRAME_HEIGHT = GAME_FRAME_BOTTOM - GAME_FRAME_TOP;
 const FALSE_TOUCH_DAMAGE = 2;
 const MISS_DAMAGE = 3;
-const CHALLENGE_FALSE_TOUCH_DAMAGE = 5;
-const CHALLENGE_MISS_DAMAGE = 8;
+const CHALLENGE_FALSE_TOUCH_DAMAGE = 4;
+const CHALLENGE_MISS_DAMAGE = 6;
 const DEFAULT_STAGE_AUDIO_CLIP = 'src/assets/audio/120.wav';
 const DEFAULT_CHALLENGE_STAGE_AUDIO_CLIP = 'src/assets/audio/loop/challenge.wav';
 const HIT_SPARK_TEXTURE_KEY = 'hit_spark';
@@ -2738,7 +2738,9 @@ export class GameScene extends Phaser.Scene {
     this.missCount++;
     this.sound.play('miss');
     this.updateJudgementText();
-    const missDamage = this.mode === 'challenge' ? CHALLENGE_MISS_DAMAGE : MISS_DAMAGE;
+    const missDamage = this.mode === 'challenge'
+      ? (this.isRotation ? CHALLENGE_MISS_DAMAGE / 2 : CHALLENGE_MISS_DAMAGE)
+      : MISS_DAMAGE;
     this.lifeValue = Math.max(0, this.lifeValue - missDamage);
     this.drawLifeBar();
     this.showJudgement(dir, 'miss', '#ff5a6b');
