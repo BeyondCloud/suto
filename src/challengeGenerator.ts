@@ -245,17 +245,18 @@ export interface StageRecipe {
 
 export const DEFAULT_PROGRESSION: StageRecipe[] = [
   { family: 'cardinal', numTokens: 2, patternBucket: 'easy', rotationDifficulty: 'easy' },
+  { family: 'diagonal', numTokens: 2, patternBucket: 'easy', rotationDifficulty: 'easy'  },
   { family: 'cardinal', numTokens: 2, patternBucket: 'hard', rotationDifficulty: 'easy' },
+  { family: 'diagonal', numTokens: 2, patternBucket: 'hard', rotationDifficulty: 'easy'  },
+  { family: 'mixed',    numTokens: 2, patternBucket: 'any',  rotationDifficulty: 'easy',  mixedStepRange: [1, 1] }, // 鄰跳
+  { family: 'mixed',    numTokens: 3, patternBucket: 'any',  rotationDifficulty: 'mid',   mixedStepRange: [1, 2] },
   { family: 'cardinal', numTokens: 3, patternBucket: 'any',  rotationDifficulty: 'mid'  },
   { family: 'cardinal', numTokens: 4, patternBucket: 'any',  rotationDifficulty: 'mid'  },
-  { family: 'diagonal', numTokens: 2, patternBucket: 'easy', rotationDifficulty: 'mid'  },
-  { family: 'diagonal', numTokens: 2, patternBucket: 'hard', rotationDifficulty: 'mid'  },
-  { family: 'diagonal', numTokens: 3, patternBucket: 'any',  rotationDifficulty: 'hard' },
+  { family: 'diagonal', numTokens: 3, patternBucket: 'any',  rotationDifficulty: 'mid' },
   { family: 'diagonal', numTokens: 4, patternBucket: 'any',  rotationDifficulty: 'hard' },
-  { family: 'mixed',    numTokens: 2, patternBucket: 'any',  rotationDifficulty: 'mid',  mixedStepRange: [1, 1] }, // 鄰跳
-  { family: 'mixed',    numTokens: 3, patternBucket: 'any',  rotationDifficulty: 'hard', mixedStepRange: [1, 2] },
   { family: 'mixed',    numTokens: 2, patternBucket: 'any',  rotationDifficulty: 'hard', mixedStepRange: [3, 3] }, // 斜對跳
-  { family: 'mixed',    numTokens: 4, patternBucket: 'any',  rotationDifficulty: 'hard', mixedStepRange: [1, 4] },
+  { family: 'mixed',    numTokens: 4, patternBucket: 'any',  rotationDifficulty: 'hard', mixedStepRange: [1, 4] }, // 自由
+  { family: 'mixed',    numTokens: 4, patternBucket: 'any',  rotationDifficulty: 'hard', mixedStepRange: [1, 4] }, // 自由
 ];
 
 // ---------------------------------------------------------------------------
