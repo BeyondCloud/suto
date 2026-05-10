@@ -1429,7 +1429,7 @@ export class MenuScene extends Phaser.Scene {
       },
     );
 
-    const challengeJudgeDelayRow = makeRow('挑戰判定延遲 (ms)',
+    const challengeJudgeDelayRow = makeRow('挑戰模式延遲 (ms)',
       44,
       () => this.settings.challengeJudgeDelayMs,
       () => {
