@@ -80,7 +80,7 @@ const ENDING_RANK_DEFINITIONS: EndingRankDefinition[] = [
     label: 'S+',
     min: S_PLUS_RANK_ACC,
     color: '#8CE99A',
-    verdict: '完美！你是控頭的神！<br>但不好意思喔, 沒誤觸"X"判定才有S++喔',
+    verdict: '你是控頭的神！<br>提示: 沒誤觸"X"判定才有S++喔',
     debugPreset: { perfect: S_DOUBLE_PLUS_RANK_ACC, miss: 0, falseTouch: 3, life: 96 },
   },
   {
@@ -119,11 +119,10 @@ export const computeEndingRank = (perfect: number, miss: number, falseTouch: num
   const accuracy = total > 0 ? perfect / total : 1;
   const rawAccuracyPercent = Math.round(accuracy * 100);
   const accuracyPercent = falseTouch > 0 ? Math.min(S_PLUS_RANK_ACC, rawAccuracyPercent) : rawAccuracyPercent;
-  if (miss === 0) return falseTouch === 0 ? 'S++' : 'S+';
-  if (accuracyPercent >= S_RANK_ACC) return 'S';
-  if (accuracyPercent >= A_RANK_ACC) return 'A';
-  if (accuracyPercent >= B_RANK_ACC) return 'B';
-  if (accuracyPercent >= C_RANK_ACC) return 'C';
+  const matchedRank = [...ENDING_RANK_DEFINITIONS]
+    .reverse()
+    .find(({ label, min }) => accuracyPercent >= min && !(label === 'S++' && falseTouch > 0));
+  if (matchedRank) return matchedRank.label;
   return 'D';
 };
 

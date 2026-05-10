@@ -29,12 +29,12 @@ export const DEFAULT_SETTINGS: GameSettings = {
   challengeJudgeDelayMs: 0, // 挑戰模式判定延遲 (ms); 負數=更早判定
 };
 
-export const D_RANK_ACC = 75;
-export const C_RANK_ACC = 80;
-export const B_RANK_ACC = 85;
-export const A_RANK_ACC = 90;
-export const S_RANK_ACC = 95;
-export const S_PLUS_RANK_ACC = 99;
+export const D_RANK_ACC = 60;
+export const C_RANK_ACC = 75;
+export const B_RANK_ACC = 80;
+export const A_RANK_ACC = 85;
+export const S_RANK_ACC = 90;
+export const S_PLUS_RANK_ACC = 95;
 export const S_DOUBLE_PLUS_RANK_ACC = 100;
 
 // Directions
