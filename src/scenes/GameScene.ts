@@ -18,6 +18,7 @@ import type { GameSettings, Direction } from '../config';
 import { HTML_LAYER, CURSOR_SUBLAYER, SCENE_LAYER } from '../layers';
 import { LEVEL_DATA } from '../levels';
 import type { Stage, Section, NormalSection, RotationSection, DelaySection, LevelData } from '../levels';
+import { recordChallengeBestStage } from '../challengeProgress';
 import { GameSceneDebugController } from './debug/GameSceneDebugController';
 import type { DebugEndingPreset } from './debug/GameSceneDebugController';
 import { EndingSequenceOverlay } from './EndingSequenceOverlay.ts';
@@ -1417,6 +1418,7 @@ export class GameScene extends Phaser.Scene {
         if (this.mode === 'story') {
           this.playStoryEndingSequence();
         } else {
+          this.recordStandardChallengeProgress(this.levelData.stages.length);
           this.time.delayedCall(500, () => this.scene.start('MenuScene'));
         }
       } else {
@@ -2818,6 +2820,7 @@ export class GameScene extends Phaser.Scene {
     if (this.isGameOver) return;
 
     this.isGameOver = true;
+    this.recordStandardChallengeProgress(this.stageIndex + 1);
     this.gameOverReason = reason;
     this.clearButtonEffectUI();
     this.input.setDefaultCursor('default');
@@ -2876,6 +2879,13 @@ export class GameScene extends Phaser.Scene {
     if (this.isGameOver) return;
     this.debugController?.hideEndingOverlay();
     this.triggerGameOver('button-too-slow');
+  }
+
+  private recordStandardChallengeProgress(stageNumber: number) {
+    if (this.mode !== 'challenge') return;
+    if (this.showPracticeReturnButton) return;
+    if (this.levelData !== LEVEL_DATA) return;
+    recordChallengeBestStage(stageNumber);
   }
 
   // ---------- Pause ----------

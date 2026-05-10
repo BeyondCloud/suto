@@ -5,6 +5,7 @@ import type { GameSettings } from '../config';
 import { HTML_LAYER, SCENE_LAYER } from '../layers';
 import { MAIN_LEVEL_DATA, LEVEL_DATA } from '../levels';
 import type { LevelData, NormalSection, RotationSection, Stage } from '../levels';
+import { getChallengeBestStage } from '../challengeProgress';
 import {
   DEBUG_ENDING_PRESETS,
   DEBUG_MODE,
@@ -214,6 +215,18 @@ export class MenuScene extends Phaser.Scene {
       color: '#2faffe',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
+    const challengeBestStageText = this.add.text(startBtn.x + startBtn.width / 2 + 28, startBtn.y, '', {
+      fontSize: '22px',
+      color: '#b8b8b8',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+      align: 'center',
+    }).setOrigin(0, 0.5);
+    const bestStage = getChallengeBestStage();
+    challengeBestStageText
+      .setText(bestStage > 0 ? `(最高紀錄：Stage ${bestStage})` : '')
+      .setVisible(bestStage > 0);
     startBtn.on('pointerover', () => {
       selectionStripe.setY(startBtn.y).setVisible(true);
       startBtn.setColor('#ffffff');
@@ -298,6 +311,7 @@ export class MenuScene extends Phaser.Scene {
       menuPanel,
       mainlineBtn,
       startBtn,
+      challengeBestStageText,
       practiceBtn,
       judgementRulesBtn,
       settingsBtn,
