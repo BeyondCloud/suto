@@ -305,6 +305,14 @@ export class MenuScene extends Phaser.Scene {
       0.52,
     ).setOrigin(0.5);
 
+    const poweredByText = this.add.text(24, height - 24, 'powered by Beyond_cloud', {
+      fontSize: '20px',
+      color: '#d7e6ff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+    }).setOrigin(0, 1);
+
     this.menuContainer.add([
       title,
       selectionStripe,
@@ -315,6 +323,7 @@ export class MenuScene extends Phaser.Scene {
       practiceBtn,
       judgementRulesBtn,
       settingsBtn,
+      poweredByText,
     ]);
 
     this.practiceMainlineItems = this.buildMainlinePracticeItems();
