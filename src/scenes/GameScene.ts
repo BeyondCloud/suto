@@ -2767,6 +2767,8 @@ export class GameScene extends Phaser.Scene {
     const baseFontSize = label === 'perfect' ? 34 : 30;
     const fontScale = Math.min(this.cursorScaleX, this.cursorScaleY);
     text.textContent = label;
+    text.setAttribute('translate', 'no');
+    text.classList.add('notranslate');
     text.style.position = 'absolute';
     text.style.left = `${pos.x * this.cursorScaleX}px`;
     text.style.top = `${(pos.y - 48) * this.cursorScaleY}px`;

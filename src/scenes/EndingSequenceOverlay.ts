@@ -246,6 +246,8 @@ export class EndingSequenceOverlay {
     const px = (value: number) => this.scaledUiPx(value);
 
     this.endingSummaryCard = document.createElement('div');
+    this.endingSummaryCard.setAttribute('translate', 'no');
+    this.endingSummaryCard.classList.add('notranslate');
     this.endingSummaryCard.style.position = 'absolute';
     this.endingSummaryCard.style.left = '50%';
     this.endingSummaryCard.style.top = '35%';
@@ -266,11 +268,11 @@ export class EndingSequenceOverlay {
     this.endingSummaryCard.style.pointerEvents = 'none';
     this.endingSummaryCard.style.zIndex = '10';
     this.endingSummaryCard.innerHTML = [
-      `<div style=\"font-size:${px(40)};font-weight:800;letter-spacing:${px(1)};line-height:1.05;margin-bottom:${px(10)};\">Accuracy ${accuracyPercent} %</div>`,
-      `<div style=\"font-size:${px(30)};font-weight:800;color:#ffe082;letter-spacing:${px(1)};margin-bottom:${px(12)};\">評價 ${rank}</div>`,
+      `<div translate=\"no\" class=\"notranslate\" style=\"font-size:${px(40)};font-weight:800;letter-spacing:${px(1)};line-height:1.05;margin-bottom:${px(10)};\">Accuracy ${accuracyPercent} %</div>`,
+      `<div translate=\"no\" class=\"notranslate\" style=\"font-size:${px(30)};font-weight:800;color:#ffe082;letter-spacing:${px(1)};margin-bottom:${px(12)};\">評價 ${rank}</div>`,
       scoreBar,
       `<div style=\"font-size:${px(26)};font-weight:700;line-height:1.3;margin-bottom:${px(12)};color:#7a7a7a;\">${verdict}</div>`,
-      `<div style=\"font-size:${px(22)};line-height:1.55;color:#d9e3f0;\"><span style=\"color:#7cff8f;font-weight:700;\">Perfect ${summary.perfectCount}</span> / <span style=\"color:#ff5a6b;font-weight:700;\">Miss ${summary.missCount}</span> / <span style=\"color:#ffb14a;font-weight:700;\">X ${summary.falseTouchCount}</span> / HP ${summary.lifeValue}</div>`,
+      `<div translate=\"no\" class=\"notranslate\" style=\"font-size:${px(22)};line-height:1.55;color:#d9e3f0;\"><span style=\"color:#7cff8f;font-weight:700;\">Perfect ${summary.perfectCount}</span> / <span style=\"color:#ff5a6b;font-weight:700;\">Miss ${summary.missCount}</span> / <span style=\"color:#ffb14a;font-weight:700;\">X ${summary.falseTouchCount}</span> / HP ${summary.lifeValue}</div>`,
     ].join('');
     this.endingVideoRoot.appendChild(this.endingSummaryCard);
   }
@@ -310,7 +312,7 @@ export class EndingSequenceOverlay {
       const labelTop = stemTop - 18;
       const minTop = labelTop - 14;
 
-      return `<div style=\"position:absolute;left:${left}%;top:0;transform:${anchorTransform};min-width:${px(36)};\">`
+      return `<div translate=\"no\" class=\"notranslate\" style=\"position:absolute;left:${left}%;top:0;transform:${anchorTransform};min-width:${px(36)};\">`
         + `<div style=\"position:absolute;left:${stemLeft};top:${px(stemTop)};transform:translateX(-50%);width:${px(2)};height:${px(markerStemHeight)};background:rgba(255,255,255,0.58);\"></div>`
         + (isSpecialEventMarker
           ? `${hasReachedSpecialEvent
