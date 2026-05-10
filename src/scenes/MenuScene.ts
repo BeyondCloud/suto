@@ -307,7 +307,7 @@ export class MenuScene extends Phaser.Scene {
 
     const poweredByText = this.add.text(24, height - 24, 'powered by Beyond_cloud', {
       fontSize: '20px',
-      color: '#d7e6ff',
+      color: '#b7b7b7',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 4,
